@@ -1,0 +1,35 @@
+# Build artifacts
+bin/
+obj/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# User secrets and sensitive configs
+*.sqlite
+*.sqlite3
+appsettings.Development.json
+appsettings.json
+.env
+
+# Rider / Visual Studio / VS Code settings
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# OS-specific files
+.DS_Store
+Thumbs.db

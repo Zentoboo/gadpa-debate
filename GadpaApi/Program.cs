@@ -25,23 +25,58 @@ public class Program
             options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
         // JWT Authentication
-        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
-                options.TokenValidationParameters = new TokenValidationParameters
+                ValidateIssuer = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+                RequireExpirationTime = true
+            };
+
+            // Add debugging (remove in production)
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
                 {
-                    ValidateIssuer = true,
-                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = builder.Configuration["Jwt:Audience"],
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateLifetime = true
-                };
-            });
+                    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    Console.WriteLine($"Token validated for: {context.Principal?.Identity?.Name}");
+                    return Task.CompletedTask;
+                }
+            };
+        });
 
         builder.Services.AddAuthorization();
+
+        // Add CORS for frontend
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("ReactApp", builder =>
+            {
+                builder
+                    .WithOrigins("http://localhost:5173") // React dev server URLs
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+            });
+        });
 
         // TokenService (singleton to generate JWTs)
         builder.Services.AddSingleton<TokenService>();
@@ -81,6 +116,9 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // Enable CORS
+        app.UseCors("ReactApp");
 
         // ===========================
         // ===== PUBLIC ROUTES ======

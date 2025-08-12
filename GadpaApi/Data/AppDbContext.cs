@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public DbSet<FireEvent> FireEvents => Set<FireEvent>();
     public DbSet<BannedIp> BannedIps => Set<BannedIp>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 }
 
 public class BannedIp
@@ -31,4 +32,12 @@ public class User
     public string Username { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string Role { get; set; } = "Admin";
+}
+
+public class AppSetting
+{
+    public int Id { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

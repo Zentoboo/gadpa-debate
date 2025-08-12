@@ -86,69 +86,54 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseAuthRateLimit();
         app.UseCors("ReactApp");
+        app.UseAuthRateLimit();
 
         // ===========================
-        // ===== PUBLIC ROUTES ======
+        // ===== PUBLIC ROUTES =======
         // ===========================
-
-        // Configurable limits for fire events
         const int LIMIT_PER_WINDOW = 5;
         var WINDOW = TimeSpan.FromMinutes(1);
 
-        // Guest: POST fire emoji with "5-per-minute" soft cooldown
         app.MapPost("/debate/fire", async (
             HttpContext context,
             AppDbContext db,
             IMemoryCache cache) =>
         {
-            // Prefer X-Forwarded-For when behind proxy/load balancer
             string GetClientIp()
             {
                 if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
                 {
-                    // X-Forwarded-For may contain comma separated list
                     var first = xff.ToString().Split(',').First().Trim();
                     if (!string.IsNullOrWhiteSpace(first)) return first;
                 }
-
                 return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             }
 
             var ip = GetClientIp();
 
-            // Optional: check manual ban list
             if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
                 return Results.Forbid();
 
             var key = $"fire:rl:{ip}";
-
-            // Try get existing entry
             var now = DateTime.UtcNow;
             if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
             {
-                // No entry -> create new with 1 click
                 entry = new RateLimitEntry(1, now);
-                // Set cache to expire when window ends to auto-reset
                 cache.Set(key, entry, entry.WindowStart.Add(WINDOW) - now);
             }
             else
             {
-                // Check if current window has expired
                 if (now - entry.WindowStart >= WINDOW)
                 {
-                    // Reset window: start now with count = 1
                     entry = new RateLimitEntry(1, now);
                     cache.Set(key, entry, WINDOW);
                 }
                 else
                 {
-                    // Same window: check limit
                     if (entry.Count >= LIMIT_PER_WINDOW)
                     {
                         var retryAfter = (int)Math.Ceiling((entry.WindowStart.Add(WINDOW) - now).TotalSeconds);
-                        // Return 429 with retry info
                         context.Response.Headers["Retry-After"] = retryAfter.ToString();
                         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                         return Results.Json(new
@@ -157,15 +142,12 @@ public class Program
                             retryAfterSeconds = retryAfter
                         });
                     }
-
-                    // Increment count and update cache with remaining TTL
                     var newCount = entry.Count + 1;
                     entry = new RateLimitEntry(newCount, entry.WindowStart);
                     cache.Set(key, entry, entry.WindowStart.Add(WINDOW) - now);
                 }
             }
 
-            // Allowed: update DB aggregates
             var existing = await db.FireEvents.FirstOrDefaultAsync(f => f.IpAddress == ip);
             if (existing != null)
             {
@@ -184,12 +166,10 @@ public class Program
             }
 
             await db.SaveChangesAsync();
-
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        // Guest: GET heatmap total
         app.MapGet("/debate/heatmap", async (AppDbContext db) =>
         {
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
@@ -197,12 +177,16 @@ public class Program
         });
 
         // ===========================
-        // ===== ADMIN ROUTES =======
+        // ===== ADMIN ROUTES ========
         // ===========================
 
-        // Admin register - now with rate limiting via middleware
+        // Admin register with enable/disable check
         app.MapPost("/admin/register", async (AppDbContext db, AdminCredentials creds) =>
         {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
+            if (setting != null && setting.Value == "false")
+                return Results.BadRequest(new { message = "Admin registration is currently disabled." });
+
             if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
                 return Results.BadRequest(new { message = "Username and password required." });
 
@@ -222,7 +206,34 @@ public class Program
             return Results.Created($"/admin/{user.Id}", new { user.Id, user.Username });
         });
 
-        // Admin login -> JWT - now with rate limiting via middleware
+        // Toggle admin register
+        app.MapPost("/admin/toggle-register", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
+
+            if (setting == null)
+            {
+                setting = new AppSetting { Key = "AdminRegisterEnabled", Value = "true" };
+                db.AppSettings.Add(setting);
+            }
+            else
+            {
+                setting.Value = (setting.Value?.ToLower() == "true") ? "false" : "true";
+                db.AppSettings.Update(setting);
+            }
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { enabled = setting.Value == "true" });
+        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+        // Get register status
+        app.MapGet("/admin/register-status", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
+            return Results.Ok(new { enabled = setting?.Value != "false" });
+        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+        // Admin login
         app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
@@ -233,7 +244,7 @@ public class Program
             return Results.Ok(new { token });
         });
 
-        // Admin-protected endpoints (NO rate limiting - admins need unrestricted access)
+        // Admin-protected endpoints
         app.MapGet("/admin/heatmap", async (AppDbContext db) =>
         {
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
@@ -247,7 +258,6 @@ public class Program
             return Results.Ok(new { message = "Heatmap reset." });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Fixed: Use request body instead of query parameter for security
         app.MapPost("/admin/ban-ip", async (AppDbContext db, BanIpRequest request) =>
         {
             if (string.IsNullOrWhiteSpace(request.IpAddress))

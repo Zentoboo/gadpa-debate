@@ -47,8 +47,8 @@ public class AuthRateLimitMiddleware
     private bool IsAuthEndpoint(string? path)
     {
         return path != null && (
-            path.Contains("/admin/login") ||
-            path.Contains("/admin/register")
+            path.Equals("/admin/login", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/admin/register", StringComparison.OrdinalIgnoreCase)
         );
     }
 

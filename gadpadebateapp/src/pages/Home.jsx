@@ -5,14 +5,14 @@ export default function Home() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/debate/heatmap")
+    fetch("http://localhost:5076/debate/heatmap")
       .then(res => res.json())
       .then(data => setTotal(data.total))
       .catch(console.error);
   }, []);
 
   const sendFire = () => {
-    fetch("http://localhost:5000/debate/fire", {
+    fetch("http://localhost:5076/debate/fire", {
       method: "POST"
     })
       .then(async res => {

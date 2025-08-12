@@ -18,26 +18,26 @@ export default function AdminDashboard() {
     });
 
   useEffect(() => {
-    authFetch("http://localhost:5000/admin/heatmap")
+    authFetch("http://localhost:5076/admin/heatmap")
       .then(res => res.json())
       .then(data => setTotal(data.total))
       .catch(console.error);
 
-    authFetch("http://localhost:5000/admin/banned-ips")
+    authFetch("http://localhost:5076/admin/banned-ips")
       .then(res => res.json())
       .then(data => setBannedIps(data))
       .catch(console.error);
   }, []);
 
   const resetHeatmap = () => {
-    authFetch("http://localhost:5000/admin/reset", { method: "POST" })
+    authFetch("http://localhost:5076/admin/reset", { method: "POST" })
       .then(res => res.json())
       .then(() => setTotal(0))
       .catch(console.error);
   };
 
   const banIp = () => {
-    authFetch("http://localhost:5000/admin/ban-ip", {
+    authFetch("http://localhost:5076/admin/ban-ip", {
       method: "POST",
       body: JSON.stringify({ ipAddress: ip })
     })
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   };
 
   const unbanIp = (ipToUnban) => {
-    authFetch("http://localhost:5000/admin/unban-ip", {
+    authFetch("http://localhost:5076/admin/unban-ip", {
       method: "POST",
       body: JSON.stringify({ ipAddress: ipToUnban })
     })

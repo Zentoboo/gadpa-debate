@@ -7,7 +7,7 @@ export default function AdminRegister() {
 
   const handleRegister = (e) => {
     e.preventDefault();
-    fetch("http://localhost:5000/admin/register", {
+    fetch("http://localhost:5076/admin/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })

@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  const { token, logout } = useAuth(true);
   const [total, setTotal] = useState(0);
   const [bannedIps, setBannedIps] = useState([]);
   const [ip, setIp] = useState("");
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    navigate("/admin/login");
-  }
 
   const authFetch = (url, options = {}) =>
     fetch(url, {
@@ -67,6 +62,7 @@ export default function AdminDashboard() {
   return (
     <div style={{ padding: "1rem" }}>
       <h1>Admin Dashboard</h1>
+      <button onClick={logout} style={{ marginBottom: "1rem" }}>Logout</button>
       <p>Total Fires: {total}</p>
       <button onClick={resetHeatmap}>Reset Heatmap</button>
 

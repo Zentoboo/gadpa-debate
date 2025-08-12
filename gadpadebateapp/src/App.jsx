@@ -3,6 +3,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminRegister from "./pages/AdminRegister.jsx";
 
 export default function App() {
   return (
@@ -10,12 +11,14 @@ export default function App() {
       <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
         <Link to="/" style={{ marginRight: "1rem" }}>Home</Link>
         <Link to="/admin/login" style={{ marginRight: "1rem" }}>Admin Login</Link>
+        <Link to="/admin/register" style={{ marginRight: "1rem" }}>Admin Register</Link>
         <Link to="/admin/dashboard">Admin Dashboard</Link>
       </nav>
 
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </div>

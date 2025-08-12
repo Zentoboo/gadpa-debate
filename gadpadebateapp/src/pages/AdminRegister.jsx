@@ -1,37 +1,35 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import useAuth from "../hooks/useAuth";
 
-export default function AdminLogin() {
+export default function AdminRegister() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const { login } = useAuth();
+  const [message, setMessage] = useState("");
 
-  const handleLogin = (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
-    fetch("http://localhost:5000/admin/login", {
+    fetch("http://localhost:5000/admin/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error("Login failed");
-        return res.json();
+        const data = await res.json();
+        if (res.ok) {
+          setMessage("✅ Registration successful");
+          setUsername("");
+          setPassword("");
+        } else {
+          setMessage(`❌ ${data.message || "Failed to register"}`);
+        }
       })
-      .then((data) => {
-        login(data.token);
-        navigate("/admin/dashboard");
-      })
-      .catch(err => setError(err.message));
+      .catch(() => setMessage("❌ Failed to register"));
   };
 
   return (
     <div style={{ padding: "1rem" }}>
-      <h1>Admin Login</h1>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleLogin}>
+      <h1>Admin Register</h1>
+      {message && <p>{message}</p>}
+      <form onSubmit={handleRegister}>
         <input
           type="text"
           placeholder="Username"
@@ -46,7 +44,7 @@ export default function AdminLogin() {
           onChange={(e) => setPassword(e.target.value)}
           required
         /><br/>
-        <button type="submit">Login</button>
+        <button type="submit">Register</button>
       </form>
     </div>
   );

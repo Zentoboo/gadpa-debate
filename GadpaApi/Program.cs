@@ -4,23 +4,24 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using GadpaDebateApi.Data;
 using GadpaDebateApi.Services;
-using BCrypt.Net;
+using GadpaDebateApi.Middleware;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GadpaDebateApi;
 
 // ---- DTOs ----
 public record AdminCredentials(string Username, string Password);
-
+public record BanIpRequest(string IpAddress);
+public record UnbanIpRequest(string IpAddress);
+public record RateLimitEntry(int Count, DateTime WindowStart);
 public class Program
 {
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // --- Add required services ---
-
-        // EF Core + SQLite
+        // EF Core + SQLite (expects "DefaultConnection" in appsettings)
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -46,40 +47,25 @@ public class Program
                 ClockSkew = TimeSpan.Zero,
                 RequireExpirationTime = true
             };
-
-            // Add debugging (remove in production)
-            options.Events = new JwtBearerEvents
-            {
-                OnAuthenticationFailed = context =>
-                {
-                    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
-                    return Task.CompletedTask;
-                },
-                OnTokenValidated = context =>
-                {
-                    Console.WriteLine($"Token validated for: {context.Principal?.Identity?.Name}");
-                    return Task.CompletedTask;
-                }
-            };
         });
 
         builder.Services.AddAuthorization();
 
-        // Add CORS for frontend
+        // CORS (React dev server default)
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("ReactApp", builder =>
+            options.AddPolicy("ReactApp", b =>
             {
-                builder
-                    .WithOrigins("http://localhost:5173") // React dev server URLs
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
+                b.WithOrigins("http://localhost:5173")
+                 .AllowAnyMethod()
+                 .AllowAnyHeader()
+                 .AllowCredentials();
             });
         });
 
-        // TokenService (singleton to generate JWTs)
+        // Token service and memory cache
         builder.Services.AddSingleton<TokenService>();
+        builder.Services.AddMemoryCache();
 
         // Swagger/OpenAPI (NSwag)
         builder.Services.AddEndpointsApiExplorer();
@@ -88,17 +74,6 @@ public class Program
             config.DocumentName = "GadpaApi";
             config.Title = "GadpaApi v1";
             config.Version = "v1";
-            
-            // Add JWT Bearer authentication to Swagger
-            config.AddSecurity("JWT", Enumerable.Empty<string>(), new NSwag.OpenApiSecurityScheme
-            {
-                Type = NSwag.OpenApiSecuritySchemeType.ApiKey,
-                Name = "Authorization",
-                In = NSwag.OpenApiSecurityApiKeyLocation.Header,
-                Description = "Type into the textbox: Bearer {your JWT token}."
-            });
-
-            config.OperationProcessors.Add(new NSwag.Generation.Processors.Security.AspNetCoreOperationSecurityScopeProcessor("JWT"));
         });
 
         var app = builder.Build();
@@ -106,63 +81,111 @@ public class Program
         if (app.Environment.IsDevelopment())
         {
             app.UseOpenApi();
-            app.UseSwaggerUi(settings =>
-            {
-                settings.DocumentPath = "/swagger/{documentName}/swagger.json";
-                settings.Path = "/swagger";
-                settings.DocExpansion = "list";
-            });
+            app.UseSwaggerUi();
         }
 
         app.UseAuthentication();
         app.UseAuthorization();
-
-        // Enable CORS
+        app.UseAuthRateLimit();
         app.UseCors("ReactApp");
 
         // ===========================
         // ===== PUBLIC ROUTES ======
         // ===========================
 
-        // Guest: POST fire emoji (no auth)
-        app.MapPost("/debate/fire", async (HttpContext context, AppDbContext db) =>
-        {
-            var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        // Configurable limits for fire events
+        const int LIMIT_PER_WINDOW = 5;
+        var WINDOW = TimeSpan.FromMinutes(1);
 
-            // banned check
-            var isBanned = await db.BannedIps.AnyAsync(b => b.IpAddress == ip);
-            if (isBanned)
+        // Guest: POST fire emoji with "5-per-minute" soft cooldown
+        app.MapPost("/debate/fire", async (
+            HttpContext context,
+            AppDbContext db,
+            IMemoryCache cache) =>
+        {
+            // Prefer X-Forwarded-For when behind proxy/load balancer
+            string GetClientIp()
+            {
+                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+                {
+                    // X-Forwarded-For may contain comma separated list
+                    var first = xff.ToString().Split(',').First().Trim();
+                    if (!string.IsNullOrWhiteSpace(first)) return first;
+                }
+
+                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+
+            var ip = GetClientIp();
+
+            // Optional: check manual ban list
+            if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
                 return Results.Forbid();
 
-            // rate limit: check last timestamp for this IP
-            var existing = await db.FireEvents.FirstOrDefaultAsync(f => f.IpAddress == ip);
+            var key = $"fire:rl:{ip}";
 
-            if (existing is not null)
+            // Try get existing entry
+            var now = DateTime.UtcNow;
+            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
             {
-                if ((DateTime.UtcNow - existing.Timestamp).TotalSeconds < 10)
-                    return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+                // No entry -> create new with 1 click
+                entry = new RateLimitEntry(1, now);
+                // Set cache to expire when window ends to auto-reset
+                cache.Set(key, entry, entry.WindowStart.Add(WINDOW) - now);
+            }
+            else
+            {
+                // Check if current window has expired
+                if (now - entry.WindowStart >= WINDOW)
+                {
+                    // Reset window: start now with count = 1
+                    entry = new RateLimitEntry(1, now);
+                    cache.Set(key, entry, WINDOW);
+                }
+                else
+                {
+                    // Same window: check limit
+                    if (entry.Count >= LIMIT_PER_WINDOW)
+                    {
+                        var retryAfter = (int)Math.Ceiling((entry.WindowStart.Add(WINDOW) - now).TotalSeconds);
+                        // Return 429 with retry info
+                        context.Response.Headers["Retry-After"] = retryAfter.ToString();
+                        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                        return Results.Json(new
+                        {
+                            message = "Rate limit exceeded. Try again later.",
+                            retryAfterSeconds = retryAfter
+                        });
+                    }
 
-                // increment
+                    // Increment count and update cache with remaining TTL
+                    var newCount = entry.Count + 1;
+                    entry = new RateLimitEntry(newCount, entry.WindowStart);
+                    cache.Set(key, entry, entry.WindowStart.Add(WINDOW) - now);
+                }
+            }
+
+            // Allowed: update DB aggregates
+            var existing = await db.FireEvents.FirstOrDefaultAsync(f => f.IpAddress == ip);
+            if (existing != null)
+            {
                 existing.FireCount += 1;
                 existing.Timestamp = DateTime.UtcNow;
                 db.FireEvents.Update(existing);
             }
             else
             {
-                existing = new FireEvent
+                db.FireEvents.Add(new FireEvent
                 {
                     IpAddress = ip,
-                    Timestamp = DateTime.UtcNow,
-                    FireCount = 1
-                };
-                db.FireEvents.Add(existing);
+                    FireCount = 1,
+                    Timestamp = DateTime.UtcNow
+                });
             }
 
             await db.SaveChangesAsync();
 
-            // total fires overall (sum of FireCount)
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
-
             return Results.Ok(new { message = "🔥 added", total });
         });
 
@@ -177,32 +200,9 @@ public class Program
         // ===== ADMIN ROUTES =======
         // ===========================
 
-        // Admin register - create admin in DB (with registration toggle control)
+        // Admin register - now with rate limiting via middleware
         app.MapPost("/admin/register", async (AppDbContext db, AdminCredentials creds) =>
         {
-            // Check if registration is enabled (database-based)
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "RegistrationEnabled");
-            var registrationEnabled = setting?.Value == "True";
-            
-            // If no setting exists, allow registration (for first admin setup)
-            if (setting == null)
-            {
-                var adminCount = await db.Users.CountAsync(u => u.Role == "Admin");
-                if (adminCount > 0)
-                {
-                    // If admins exist but no setting, default to disabled for security
-                    registrationEnabled = false;
-                }
-                else
-                {
-                    // First admin setup - allow registration
-                    registrationEnabled = true;
-                }
-            }
-            
-            if (!registrationEnabled)
-                return Results.BadRequest(new { message = "Registration is currently disabled." });
-
             if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
                 return Results.BadRequest(new { message = "Username and password required." });
 
@@ -216,36 +216,30 @@ public class Program
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(creds.Password),
                 Role = "Admin"
             };
-
             db.Users.Add(user);
             await db.SaveChangesAsync();
 
             return Results.Created($"/admin/{user.Id}", new { user.Id, user.Username });
         });
 
-        // Admin login -> returns JWT
+        // Admin login -> JWT - now with rate limiting via middleware
         app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
-            if (user == null)
-                return Results.Unauthorized();
-
-            var isValid = BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash);
-            if (!isValid)
+            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
                 return Results.Unauthorized();
 
             var token = tokenService.CreateToken(user.Username, user.Role);
             return Results.Ok(new { token });
         });
 
-        // Admin: view heatmap (protected)
+        // Admin-protected endpoints (NO rate limiting - admins need unrestricted access)
         app.MapGet("/admin/heatmap", async (AppDbContext db) =>
         {
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
             return Results.Ok(new { total });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Admin: reset all fire data
         app.MapPost("/admin/reset", async (AppDbContext db) =>
         {
             db.FireEvents.RemoveRange(db.FireEvents);
@@ -253,84 +247,35 @@ public class Program
             return Results.Ok(new { message = "Heatmap reset." });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Admin: ban ip
-        app.MapPost("/admin/ban-ip", async (AppDbContext db, string ip) =>
+        // Fixed: Use request body instead of query parameter for security
+        app.MapPost("/admin/ban-ip", async (AppDbContext db, BanIpRequest request) =>
         {
-            if (string.IsNullOrWhiteSpace(ip))
-                return Results.BadRequest(new { message = "ip query required, e.g. /admin/ban-ip?ip=1.2.3.4" });
+            if (string.IsNullOrWhiteSpace(request.IpAddress))
+                return Results.BadRequest(new { message = "IP required." });
 
-            if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
+            if (await db.BannedIps.AnyAsync(b => b.IpAddress == request.IpAddress))
                 return Results.BadRequest(new { message = "IP already banned" });
 
-            db.BannedIps.Add(new BannedIp { IpAddress = ip });
+            db.BannedIps.Add(new BannedIp { IpAddress = request.IpAddress });
             await db.SaveChangesAsync();
-            return Results.Ok(new { message = $"Banned {ip}" });
+            return Results.Ok(new { message = $"Banned {request.IpAddress}" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Admin: unban ip
-        app.MapPost("/admin/unban-ip", async (AppDbContext db, string ip) =>
+        app.MapPost("/admin/unban-ip", async (AppDbContext db, UnbanIpRequest request) =>
         {
-            var banned = await db.BannedIps.FirstOrDefaultAsync(b => b.IpAddress == ip);
+            var banned = await db.BannedIps.FirstOrDefaultAsync(b => b.IpAddress == request.IpAddress);
             if (banned == null)
                 return Results.NotFound(new { message = "IP not found" });
 
             db.BannedIps.Remove(banned);
             await db.SaveChangesAsync();
-            return Results.Ok(new { message = $"Unbanned {ip}" });
+            return Results.Ok(new { message = $"Unbanned {request.IpAddress}" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Admin: list banned ips
         app.MapGet("/admin/banned-ips", async (AppDbContext db) =>
         {
             var list = await db.BannedIps.Select(b => b.IpAddress).ToListAsync();
             return Results.Ok(list);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Admin: Enable/Disable Registration
-        app.MapPost("/admin/toggle-registration", async (AppDbContext db, bool enabled) =>
-        {
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "RegistrationEnabled");
-            
-            if (setting == null)
-            {
-                setting = new AppSetting 
-                { 
-                    Key = "RegistrationEnabled", 
-                    Value = enabled.ToString(),
-                    UpdatedAt = DateTime.UtcNow
-                };
-                db.AppSettings.Add(setting);
-            }
-            else
-            {
-                setting.Value = enabled.ToString();
-                setting.UpdatedAt = DateTime.UtcNow;
-                db.AppSettings.Update(setting);
-            }
-            
-            await db.SaveChangesAsync();
-            
-            return Results.Ok(new { message = $"Registration {(enabled ? "enabled" : "disabled")}", enabled });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Admin: Check registration status
-        app.MapGet("/admin/registration-status", async (AppDbContext db) =>
-        {
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "RegistrationEnabled");
-            var enabled = setting?.Value == "True";
-            
-            // If no setting exists, check if this is first-time setup
-            if (setting == null)
-            {
-                var adminCount = await db.Users.CountAsync(u => u.Role == "Admin");
-                enabled = adminCount == 0; // Allow registration only if no admins exist
-            }
-            
-            return Results.Ok(new { 
-                enabled, 
-                lastUpdated = setting?.UpdatedAt,
-                isFirstSetup = setting == null && enabled
-            });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         app.Run();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import HeatmapChart from "../components/HeatmapChart";
 
 export default function Home() {
   const [total, setTotal] = useState(0);
@@ -35,6 +36,9 @@ export default function Home() {
       <p>Total fires: {total}</p>
       <button onClick={sendFire}>Send Fire</button>
       {message && <p>{message}</p>}
+      <div style={{ padding: "1rem" }}>
+        <HeatmapChart fetchUrl="http://localhost:5076/debate/heatmap" pollInterval={10000} />
+      </div>
     </div>
   );
 }

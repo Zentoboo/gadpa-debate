@@ -1,12 +1,23 @@
-import { useState } from 'react'
+import React from "react";
+import { Routes, Route, Link } from "react-router-dom";
+import Home from "./pages/Home.jsx";
+import AdminLogin from "./pages/AdminLogin.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 
-function App() {
+export default function App() {
   return (
     <div>
-      <h1>Gadpa-Debate-App</h1>
-      <p>Basic router structure ready</p>
-    </div>
-  )
-}
+      <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
+        <Link to="/" style={{ marginRight: "1rem" }}>Home</Link>
+        <Link to="/admin/login" style={{ marginRight: "1rem" }}>Admin Login</Link>
+        <Link to="/admin/dashboard">Admin Dashboard</Link>
+      </nav>
 
-export default App
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      </Routes>
+    </div>
+  );
+}

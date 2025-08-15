@@ -1,62 +1,93 @@
 import React, { useState, useEffect } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  ComposedChart,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from "recharts";
 
-export default function HeatmapChart({ fetchUrl, pollInterval = 10000 }) {
+export default function HeatmapChart({
+  fetchUrl,
+  intervalSeconds = 10,
+  onDataUpdate
+}) {
   const [data, setData] = useState([]);
   const [startTime] = useState(Date.now());
 
   useEffect(() => {
-    const fetchData = () => {
-      fetch(fetchUrl)
+    let timer;
+
+    const fetchBucketData = () => {
+      fetch(`${fetchUrl}?intervalSeconds=${intervalSeconds}`)
         .then(res => res.json())
         .then(json => {
           const now = Date.now();
-          const elapsedMs = now - startTime;
+          const elapsedSec = Math.floor((now - startTime) / 1000);
 
-          if (data.length === 0 || json.total !== data[data.length - 1].total) {
-            setData(prev => [
+          // Completed bucket start
+          const bucketStart = elapsedSec - intervalSeconds;
+          const bucketLabel = `${bucketStart}-${bucketStart + intervalSeconds}s`;
+
+          // Skip if negative (before first bucket is done)
+          if (bucketStart < 0) return;
+
+          setData(prev => {
+            if (prev.some(item => item.bucketLabel === bucketLabel)) {
+              return prev;
+            }
+            return [
               ...prev,
-              { elapsedMs: elapsedMs, total: json.total }
-            ]);
-          }
+              {
+                bucketLabel,
+                total: json.total,
+                interval: json.intervalTotal
+              }
+            ];
+          });
+
+          if (onDataUpdate) onDataUpdate(json);
         })
         .catch(console.error);
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, pollInterval);
-    return () => clearInterval(interval);
-  }, [fetchUrl, pollInterval, startTime, data]);
+    const scheduleNextFetch = () => {
+      const now = Date.now();
+      const elapsedSec = Math.floor((now - startTime) / 1000);
+      const secsToNextBucket = intervalSeconds - (elapsedSec % intervalSeconds);
+      timer = setTimeout(() => {
+        fetchBucketData();
+        scheduleNextFetch();
+      }, secsToNextBucket * 1000);
+    };
 
-  // Custom tick formatter to display milliseconds as seconds, rounded to the nearest whole number
-  const formatTimeTick = (tick) => {
-    return `${Math.round(tick / 1000)}s`;
-  };
+    scheduleNextFetch();
+
+    return () => clearTimeout(timer);
+  }, [fetchUrl, intervalSeconds, startTime, onDataUpdate]);
 
   return (
     <div style={{ width: "100%", height: 400 }}>
-      <h2>🔥 Heatmap Trend</h2>
+      <h2>🔥 Heatmap Trend (per {intervalSeconds}s)</h2>
       <ResponsiveContainer>
-        <LineChart data={data}>
+        <ComposedChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey="elapsedMs"
-            label={{ value: "Time", position: "insideBottomRight", offset: -5 }}
-            tickFormatter={formatTimeTick}
-            type="number"
-            domain={['dataMin', 'dataMax']}
+            dataKey="bucketLabel"
+            label={{ value: "Time Interval", position: "insideBottomRight", offset: -5 }}
           />
-          <YAxis label={{ value: "Total Fires", angle: -90, position: "insideLeft" }} />
-          <Tooltip
-            formatter={(value) => [`Total Fires: ${value}`]}
-            // Label formatter for the tooltip, also rounded to the nearest second
-            labelFormatter={(label) => `Time: ${Math.round(label / 1000)}s`}
-          />
+          <YAxis label={{ value: "Count", angle: -90, position: "insideLeft" }} />
+          <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="total" stroke="#af191bff" activeDot={{ r: 8 }} />
-        </LineChart>
+          {/* Interval as bar */}
+          <Bar dataKey="interval" fill="#0077ff" name={`Fires per ${intervalSeconds}s`} />
+          {/* Total as line */}
+          <Line type="monotone" dataKey="total" stroke="#af191bff" activeDot={{ r: 8 }} name="Total Fires" />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

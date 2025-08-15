@@ -1,30 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import HeatmapChart from "../components/HeatmapChart";
 
 export default function Home() {
   const [total, setTotal] = useState(0);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    fetch("http://localhost:5076/debate/heatmap")
-      .then(res => res.json())
-      .then(data => setTotal(data.total))
-      .catch(console.error);
-  }, []);
-
   const sendFire = () => {
-    fetch("http://localhost:5076/debate/fire", {
-      method: "POST"
-    })
+    fetch("http://localhost:5076/debate/fire", { method: "POST" })
       .then(async res => {
         if (res.status === 429) {
           const data = await res.json();
           setMessage(`${data.message} Retry after ${data.retryAfterSeconds}s`);
         } else if (res.ok) {
-          return res.json().then(data => {
-            setMessage(data.message);
-            setTotal(data.total);
-          });
+          const data = await res.json();
+          setMessage(data.message);
+          setTotal(data.total);
         }
       })
       .catch(console.error);
@@ -37,7 +27,12 @@ export default function Home() {
       <button onClick={sendFire}>Send Fire</button>
       {message && <p>{message}</p>}
       <div style={{ padding: "1rem" }}>
-        <HeatmapChart fetchUrl="http://localhost:5076/debate/heatmap" pollInterval={10000} />
+        <HeatmapChart
+          fetchUrl="http://localhost:5076/debate/heatmap-data"
+          pollInterval={10000}
+          intervalSeconds={10}
+          onDataUpdate={(json) => setTotal(json.total)}
+        />
       </div>
     </div>
   );

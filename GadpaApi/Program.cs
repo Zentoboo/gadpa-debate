@@ -148,32 +148,34 @@ public class Program
                 }
             }
 
-            var existing = await db.FireEvents.FirstOrDefaultAsync(f => f.IpAddress == ip);
-            if (existing != null)
+            db.FireEvents.Add(new FireEvent
             {
-                existing.FireCount += 1;
-                existing.Timestamp = DateTime.UtcNow;
-                db.FireEvents.Update(existing);
-            }
-            else
-            {
-                db.FireEvents.Add(new FireEvent
-                {
-                    IpAddress = ip,
-                    FireCount = 1,
-                    Timestamp = DateTime.UtcNow
-                });
-            }
+                IpAddress = ip,
+                FireCount = 1,
+                Timestamp = DateTime.UtcNow
+            });
 
             await db.SaveChangesAsync();
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        app.MapGet("/debate/heatmap", async (AppDbContext db) =>
+        // app.MapGet("/debate/heatmap", async (AppDbContext db) =>
+        // {
+        //     var total = await db.FireEvents.SumAsync(f => f.FireCount);
+        //     return Results.Ok(new { total });
+        // });
+
+        app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds) =>
         {
+            if (intervalSeconds <= 0) intervalSeconds = 10;
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            return Results.Ok(new { total });
+            var since = DateTime.UtcNow.AddSeconds(-intervalSeconds);
+            var intervalTotal = await db.FireEvents
+                .Where(f => f.Timestamp >= since)
+                .SumAsync(f => f.FireCount);
+
+            return Results.Ok(new { total, intervalTotal, intervalSeconds });
         });
 
         // ===========================

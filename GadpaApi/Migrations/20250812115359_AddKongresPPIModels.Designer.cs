@@ -3,6 +3,7 @@ using System;
 using GadpaDebateApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GadpaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250812115359_AddKongresPPIModels")]
+    partial class AddKongresPPIModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
@@ -195,81 +198,6 @@ namespace GadpaApi.Migrations
                     b.ToTable("Candidates");
                 });
 
-            modelBuilder.Entity("GadpaDebateApi.Data.DebateQuestion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("DebateSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("DurationMinutes")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Question")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("QuestionType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TargetCandidate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DebateSessionId");
-
-                    b.ToTable("DebateQuestions");
-                });
-
-            modelBuilder.Entity("GadpaDebateApi.Data.DebateSession", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CreatedByAdminId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ScheduledAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SessionType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("TotalDurationMinutes")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DebateSessions");
-                });
-
             modelBuilder.Entity("GadpaDebateApi.Data.FireEvent", b =>
                 {
                     b.Property<int>("Id")
@@ -289,49 +217,6 @@ namespace GadpaApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("FireEvents");
-                });
-
-            modelBuilder.Entity("GadpaDebateApi.Data.LiveSession", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AdminControllerUsername")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CurrentQuestionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("CurrentQuestionStartedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("DebateSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("EndedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsLive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("TimeRemainingSeconds")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CurrentQuestionId");
-
-                    b.HasIndex("DebateSessionId");
-
-                    b.ToTable("LiveSessions");
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.ShiftRecord", b =>
@@ -472,32 +357,6 @@ namespace GadpaApi.Migrations
                     b.Navigation("BpuMember");
                 });
 
-            modelBuilder.Entity("GadpaDebateApi.Data.DebateQuestion", b =>
-                {
-                    b.HasOne("GadpaDebateApi.Data.DebateSession", "DebateSession")
-                        .WithMany("Questions")
-                        .HasForeignKey("DebateSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DebateSession");
-                });
-
-            modelBuilder.Entity("GadpaDebateApi.Data.LiveSession", b =>
-                {
-                    b.HasOne("GadpaDebateApi.Data.DebateQuestion", "CurrentQuestion")
-                        .WithMany()
-                        .HasForeignKey("CurrentQuestionId");
-
-                    b.HasOne("GadpaDebateApi.Data.DebateSession", "DebateSession")
-                        .WithMany()
-                        .HasForeignKey("DebateSessionId");
-
-                    b.Navigation("CurrentQuestion");
-
-                    b.Navigation("DebateSession");
-                });
-
             modelBuilder.Entity("GadpaDebateApi.Data.ShiftRecord", b =>
                 {
                     b.HasOne("GadpaDebateApi.Data.BpuMember", "BpuMember")
@@ -526,11 +385,6 @@ namespace GadpaApi.Migrations
                     b.Navigation("Candidate");
 
                     b.Navigation("Voter");
-                });
-
-            modelBuilder.Entity("GadpaDebateApi.Data.DebateSession", b =>
-                {
-                    b.Navigation("Questions");
                 });
 #pragma warning restore 612, 618
         }

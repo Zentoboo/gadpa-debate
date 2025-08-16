@@ -7,6 +7,10 @@ import AdminRegister from "./pages/AdminRegister.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import Header from "./components/Header.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
+import BpuDashboard from "./pages/BpuDashboard.jsx";
+import VotingPage from "./pages/VotingPage.jsx";
+import VoteResults from "./pages/VoteResults.jsx";
+import DebateControlCenter from "./pages/DebateControlSimple.jsx";
 
 export default function App() {
   const [registerEnabled, setRegisterEnabled] = useState(null); // Start with null to show loading state
@@ -52,8 +56,11 @@ export default function App() {
       <Header registerEnabled={registerEnabled} />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/vote" element={<VotingPage />} />
+        <Route path="/results" element={<VoteResults />} />
+        <Route path="/bpu" element={<BpuDashboard />} />
+        <Route path="/debate-control" element={<DebateControlCenter />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        {/* Always render the register route - let the component handle the logic */}
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="*" element={<NotFound />} />

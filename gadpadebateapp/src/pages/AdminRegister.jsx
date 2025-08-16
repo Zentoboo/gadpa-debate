@@ -171,77 +171,144 @@ export default function AdminRegister() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Register</h1>
-        <p style={{ color: "#ccc", textAlign: "center", fontSize: "0.9rem", marginBottom: "1rem" }}>
-          Registration is currently <strong style={{ color: "#16a34a" }}>enabled</strong>
-        </p>
-
+    <div className="register-container">
+      <div className="register-card">
+        <h1 className="register-title">Admin Register</h1>
         {message && (
-          <p className={`login-error ${isSuccess ? 'success' : ''}`}>
+          <p className={`register-message ${message.includes('✅') ? 'success' : 'error'}`}>
             {message}
           </p>
         )}
-
-        <form onSubmit={handleRegister} className="login-form">
+        <form onSubmit={handleRegister} className="register-form">
           <input
             type="text"
-            placeholder="Username (min 3 characters)"
+            placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="login-input"
-            disabled={isLoading}
-            maxLength={50}
+            className="register-input"
           />
           <input
             type="password"
-            placeholder="Password (min 6 characters)"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="login-input"
-            disabled={isLoading}
-            minLength={6}
+            className="register-input"
           />
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="login-input"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? "Registering..." : "Register"}
+          <button type="submit" className="register-button">
+            Register
           </button>
         </form>
-
-        <div style={{ marginTop: "1rem", textAlign: "center" }}>
-          <p style={{ color: "#ccc", fontSize: "0.9rem" }}>
-            Already have an account?{" "}
-            <button
-              onClick={() => navigate("/admin/login")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#ff6666",
-                cursor: "pointer",
-                textDecoration: "underline",
-                fontSize: "0.9rem"
-              }}
-            >
-              Login here
-            </button>
-          </p>
-        </div>
       </div>
+
+      <style jsx>{`
+        .register-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: calc(100vh - 200px);
+          padding: 2rem;
+          background: #1a1a1a;
+        }
+
+        .register-card {
+          background: #1e1e1e;
+          border: 4px solid #000;
+          border-radius: 20px;
+          padding: 2rem;
+          max-width: 400px;
+          width: 100%;
+          box-shadow: 6px 6px 0px #000;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .register-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 8px 8px 0px #000;
+        }
+
+        .register-title {
+          text-align: center;
+          margin-bottom: 1.5rem;
+          font-size: 1.5rem;
+          color: #fff;
+        }
+
+        .register-message {
+          padding: 12px;
+          border-radius: 10px;
+          margin-bottom: 1rem;
+          text-align: center;
+          font-weight: bold;
+        }
+
+        .register-message.success {
+          color: #4ade80;
+          background: rgba(74, 222, 128, 0.1);
+          border: 2px solid #4ade80;
+        }
+
+        .register-message.error {
+          color: #ff6b6b;
+          background: rgba(255, 107, 107, 0.1);
+          border: 2px solid #ff6b6b;
+        }
+
+        .register-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .register-input {
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #333;
+          border-radius: 10px;
+          font-size: 16px;
+          background: #2a2a2a;
+          color: white;
+          box-sizing: border-box;
+          transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .register-input:focus {
+          border-color: #ff3030;
+          outline: none;
+          background: #333;
+        }
+
+        .register-input::placeholder {
+          color: #888;
+        }
+
+        .register-button {
+          width: 100%;
+          padding: 12px 30px;
+          background: #ff3030;
+          color: white;
+          border: 3px solid #000;
+          border-radius: 15px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 0.5rem;
+          box-shadow: 4px 4px 0px #000;
+          transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.3s ease;
+        }
+
+        .register-button:hover {
+          background: #ff5050;
+          transform: translateY(-2px);
+          box-shadow: 6px 6px 0px #000;
+        }
+
+        .register-button:active {
+          transform: translateY(0px);
+          box-shadow: 2px 2px 0px #000;
+        }
+      `}</style>
     </div>
   );
 }

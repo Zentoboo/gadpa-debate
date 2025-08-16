@@ -48,6 +48,22 @@ export default function Header({ registerEnabled, isAdmin }) {
                         </li>
                         <li>
                             <Link
+                                to="/vote"
+                                className={location.pathname === "/vote" ? "active" : ""}
+                            >
+                                Vote
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                to="/results"
+                                className={location.pathname === "/results" ? "active" : ""}
+                            >
+                                Results
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
                                 to="/admin/login"
                                 className={location.pathname === "/admin/login" ? "active" : ""}
                             >

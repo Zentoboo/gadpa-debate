@@ -24,21 +24,30 @@ p {
     color: #ccc;
 }
 
+body {
+    margin: 0;
+    padding-top: 100px;
+}
+
 /* === Header / Navbar (your version, untouched) === */
 .header-container {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 1800px;
     background: rgba(30, 32, 37, 0.6);
-    /* translucent dark gray */
     backdrop-filter: blur(8px);
-    /* frosted effect */
     border: 1px solid rgba(190, 48, 48, 0.4);
-    /* red accent border */
     padding: 0.75rem 1rem;
     border-radius: 9999px;
-    margin: 1rem;
     color: #fff;
     font-family: "Inter", sans-serif;
     transition: background 0.3s, border 0.3s;
 }
+
 
 .header-container:hover {
     background: rgba(30, 32, 37, 0.75);

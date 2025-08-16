@@ -15,6 +15,7 @@ public record AdminCredentials(string Username, string Password);
 public record BanIpRequest(string IpAddress);
 public record UnbanIpRequest(string IpAddress);
 public record RateLimitEntry(int Count, DateTime WindowStart);
+
 public class Program
 {
     public static void Main(string[] args)
@@ -160,12 +161,6 @@ public class Program
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        // app.MapGet("/debate/heatmap", async (AppDbContext db) =>
-        // {
-        //     var total = await db.FireEvents.SumAsync(f => f.FireCount);
-        //     return Results.Ok(new { total });
-        // });
-
         app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds) =>
         {
             if (intervalSeconds <= 0) intervalSeconds = 10;
@@ -182,6 +177,13 @@ public class Program
         // ===== ADMIN ROUTES ========
         // ===========================
 
+        // Get register status - PUBLIC ENDPOINT (NO AUTH REQUIRED)
+        app.MapGet("/admin/register-status", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
+            return Results.Ok(new { enabled = setting?.Value != "false" });
+        });
+
         // Admin register with enable/disable check
         app.MapPost("/admin/register", async (AppDbContext db, AdminCredentials creds) =>
         {
@@ -191,6 +193,12 @@ public class Program
 
             if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
                 return Results.BadRequest(new { message = "Username and password required." });
+
+            if (creds.Username.Length < 3)
+                return Results.BadRequest(new { message = "Username must be at least 3 characters long." });
+
+            if (creds.Password.Length < 6)
+                return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
 
             var exists = await db.Users.AnyAsync(u => u.Username == creds.Username);
             if (exists)
@@ -208,7 +216,21 @@ public class Program
             return Results.Created($"/admin/{user.Id}", new { user.Id, user.Username });
         });
 
-        // Toggle admin register
+        // Admin login
+        app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
+        {
+            if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
+                return Results.BadRequest(new { message = "Username and password required." });
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
+            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
+                return Results.Unauthorized();
+
+            var token = tokenService.CreateToken(user.Username, user.Role);
+            return Results.Ok(new { token });
+        });
+
+        // Toggle admin register - REQUIRES ADMIN AUTH
         app.MapPost("/admin/toggle-register", async (AppDbContext db) =>
         {
             var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
@@ -228,23 +250,6 @@ public class Program
 
             return Results.Ok(new { enabled = setting.Value == "true" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-        // Get register status
-        app.MapGet("/admin/register-status", async (AppDbContext db) =>
-        {
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
-            return Results.Ok(new { enabled = setting?.Value != "false" });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Admin login
-        app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
-        {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
-            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
-                return Results.Unauthorized();
-
-            var token = tokenService.CreateToken(user.Username, user.Role);
-            return Results.Ok(new { token });
-        });
 
         // Admin-protected endpoints
         app.MapGet("/admin/heatmap", async (AppDbContext db) =>

@@ -1,59 +1,81 @@
-/* Live banner for debate status */
+/* === General Reset and Body Styling === */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #1e1e1e;
+    /* A deep, dark gray */
+    color: #e0e0e0;
+    /* Light gray for text */
+}
+
+.home-container {
+    max-width: 900px;
+    /* Wider container for the chart */
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    overflow-x: hidden;
+}
+
+/* === Live Banner (Minimalist) === */
 .live-banner {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    color: white;
+    background: #2a2a2a;
+    /* Darker, solid background */
+    color: #e0e0e0;
     padding: 1rem 2rem;
     margin-bottom: 2rem;
-    border-radius: 10px;
+    border-radius: 8px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-    animation: pulse 2s infinite;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .live-banner h2 {
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     font-size: 1.5rem;
+    font-weight: 600;
+    color: #3498db;
+    /* A professional blue accent */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .live-banner p {
     margin: 0.25rem 0;
-    opacity: 0.95;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-}
-
-.offline-card {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.status-box {
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-    backdrop-filter: blur(5px);
+    opacity: 0.8;
 }
 
 .viewer-info {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    gap: 15px;
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid rgba(255,255,255,0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.connection-status {
     font-size: 0.9rem;
 }
 
 .connection-status.connected {
-    color: #90EE90;
+    color: #2ecc71;
+    /* A professional green */
 }
 
 .connection-status.disconnected {
-    color: #FFB6C1;
+    color: #e74c3c;
+    /* A professional red */
 }
 
 .viewer-count {
@@ -63,110 +85,24 @@
 .keyboard-shortcuts {
     text-align: center;
     margin-top: 0.5rem;
-    opacity: 0.8;
-    font-style: italic;
-}
-
-.countdown-container {
-    margin: 2rem 0;
-    text-align: center;
-}
-
-.countdown-display {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 1rem 0;
-    font-family: 'Courier New', monospace;
-}
-
-.countdown-unit {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(76, 175, 80, 0.1);
-    border-radius: 10px;
-    padding: 1rem 0.8rem;
-    min-width: 60px;
-}
-
-.countdown-number {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #4CAF50;
-    line-height: 1;
-}
-
-.countdown-label {
+    opacity: 0.6;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin-top: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.countdown-separator {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #4CAF50;
-    animation: blink 1s infinite;
-}
 
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0.3; }
-}
-
-.external-fire-emoji {
-    position: absolute;
-    font-size: 1.2rem;
-    animation: externalFireFloat 3s ease-out forwards;
-    pointer-events: none;
-    z-index: 100;
-}
-
-@keyframes externalFireFloat {
-    0% {
-        opacity: 0.8;
-        transform: scale(0.5) translateY(0px);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.2) translateY(-30px);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.8) translateY(-60px);
-    }
-}
-
-.home-container {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    overflow-x: hidden;
-    /* prevent horizontal scrolling */
-}
-
-/* === Fire Card (cartoony) === */
+/* === Heat Card and Buttons (Unchanged) === */
 .fire-card {
     background: #1e1e1e;
     border: 4px solid #000;
     border-radius: 20px;
     padding: 1.5rem;
     margin: 0 auto;
-    /* center horizontally */
     box-shadow: 6px 6px 0px #000;
     width: 500px;
-    /* fixed width instead of max-width */
     min-height: 200px;
-    /* minimum height to prevent jumping */
     text-align: center;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-sizing: border-box;
-    /* include padding and border in width */
 }
 
 .fire-card:hover {
@@ -174,7 +110,6 @@
     box-shadow: 8px 8px 0px #000;
 }
 
-/* Shake animation for the card when rate limited */
 .fire-card.shake {
     animation: cardShake 0.6s ease-in-out;
 }
@@ -219,17 +154,12 @@
     color: #ffbaba;
     font-weight: bold;
     word-wrap: break-word;
-    /* prevent text from overflowing */
     overflow-wrap: break-word;
-    /* modern browsers */
     hyphens: auto;
-    /* add hyphens for long words */
 }
 
-/* === Fire Button (cartoony) === */
 .fire-btn-wrapper {
     position: relative;
-    /* needed for floating emojis */
     display: flex;
     justify-content: center;
     margin: 2rem 0;
@@ -260,13 +190,25 @@
     box-shadow: 2px 2px 0px #000;
 }
 
-/* === Chart Card (wide) === */
+/* === Chart Card (Wider) === */
 .chart-card {
     background: #1e1e1e;
     border: 2px solid #2a2a2a;
     border-radius: 12px;
     padding: 1.5rem;
     box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    /* Make the chart fill its container */
+    max-width: 900px;
+    /* ensure it doesn't get too wide on large screens */
+    box-sizing: border-box;
+}
+
+.chart-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #e0e0e0;
 }
 
 /* === Fire / Burst Animations === */
@@ -280,7 +222,6 @@
     overflow: visible;
 }
 
-/* Fire emoji (wavy float) */
 .fire-emoji {
     position: absolute;
     font-size: 2rem;
@@ -314,7 +255,6 @@
     }
 }
 
-/* 💢 burst animation - positioned at top-right of card */
 .burst-emoji {
     position: absolute;
     right: -10px;
@@ -340,39 +280,27 @@
     }
 }
 
-/* === Police Strip Animation === */
-.police-strip-container {
-    width: 100%;
-    overflow: hidden;
-    /* hide the overflowing parts */
-    margin: 1rem 0;
+.external-fire-emoji {
+    position: absolute;
+    font-size: 1.2rem;
+    animation: externalFireFloat 3s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
 }
 
-.police-strip {
-    height: 20px;
-    width: 200vw;
-    /* double viewport width */
-    margin-left: -50vw;
-    /* center it so it extends equally on both sides */
-    background: repeating-linear-gradient(90deg,
-            #ffcc00 0px,
-            #ffcc00 20px,
-            #000 20px,
-            #000 40px);
-    animation: policeMove 2s linear infinite;
-    border: 2px solid #333;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    will-change: transform;
-    /* optimize for animation */
-}
-
-@keyframes policeMove {
+@keyframes externalFireFloat {
     0% {
-        transform: translateX(0);
+        opacity: 0.8;
+        transform: scale(0.5) translateY(0px);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2) translateY(-30px);
     }
 
     100% {
-        transform: translateX(40px);
+        opacity: 0;
+        transform: scale(0.8) translateY(-60px);
     }
 }

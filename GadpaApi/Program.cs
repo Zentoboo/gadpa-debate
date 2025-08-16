@@ -77,7 +77,7 @@ public class Program
         // Token service and memory cache
         builder.Services.AddSingleton<TokenService>();
         builder.Services.AddMemoryCache();
-        
+
         // SignalR for real-time features
         builder.Services.AddSignalR();
 
@@ -172,27 +172,83 @@ public class Program
 
             await db.SaveChangesAsync();
             var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            
+
             // Broadcast fire event to all connected clients
-            await hubContext.Clients.All.SendAsync("FireAdded", new { 
-                total, 
+            await hubContext.Clients.All.SendAsync("FireAdded", new
+            {
+                total,
                 ip = ip.Substring(0, Math.Min(ip.Length, 10)) + "...", // Partial IP for privacy
-                timestamp = DateTime.UtcNow 
+                timestamp = DateTime.UtcNow
             });
-            
+
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds) =>
-        {
-            if (intervalSeconds <= 0) intervalSeconds = 10;
-            var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            var since = DateTime.UtcNow.AddSeconds(-intervalSeconds);
-            var intervalTotal = await db.FireEvents
-                .Where(f => f.Timestamp >= since)
-                .SumAsync(f => f.FireCount);
+        // Replace the existing /debate/heatmap-data endpoint in Program.cs with this:
 
-            return Results.Ok(new { total, intervalTotal, intervalSeconds });
+        app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds = 10) =>
+        {
+            // Sanitize interval
+            if (intervalSeconds <= 0) intervalSeconds = 10;
+            if (intervalSeconds > 300) intervalSeconds = 300; // prevent huge queries (5 mins cap)
+
+            var now = DateTimeOffset.UtcNow;
+            var unixSeconds = now.ToUnixTimeSeconds();
+
+            // Calculate the current bucket end timestamp (aligned to interval)
+            var currentBucketEndTimestamp = (unixSeconds / intervalSeconds) * intervalSeconds;
+            var currentBucketEndTime = DateTimeOffset.FromUnixTimeSeconds(currentBucketEndTimestamp);
+
+            // Get data for the last 18 intervals (3 minutes)
+            var buckets = new List<object>();
+
+            for (int i = 17; i >= 0; i--) // Start from 17 intervals ago to current
+            {
+                var bucketEndTime = currentBucketEndTime.AddSeconds(-i * intervalSeconds);
+                var bucketStartTime = bucketEndTime.AddSeconds(-intervalSeconds);
+
+                // Count fires in this specific bucket
+                var bucketFireCount = await db.FireEvents
+                    .Where(f => f.Timestamp >= bucketStartTime.UtcDateTime && f.Timestamp < bucketEndTime.UtcDateTime)
+                    .SumAsync(f => f.FireCount);
+
+                // Get total fires up to this bucket's end time (running total)
+                var runningTotal = await db.FireEvents
+                    .Where(f => f.Timestamp <= bucketEndTime.UtcDateTime)
+                    .SumAsync(f => f.FireCount);
+
+                // Labels for frontend readability
+                var bucketStartLabel = bucketStartTime.ToString("HH:mm:ss");
+                var bucketEndLabel = bucketEndTime.ToString("HH:mm:ss");
+                var bucketLabel = $"{bucketStartLabel}-{bucketEndLabel}";
+
+                buckets.Add(new
+                {
+                    bucketEndTimestamp = bucketEndTime.ToUnixTimeSeconds(),
+                    bucketLabel,
+                    bucketStartTime = bucketStartTime.UtcDateTime,
+                    bucketEndTime = bucketEndTime.UtcDateTime,
+                    intervalFireCount = bucketFireCount,
+                    runningTotal = runningTotal
+                });
+            }
+
+            // Total clicks all-time
+            var totalFires = await db.FireEvents.SumAsync(f => f.FireCount);
+
+            // Total clicks in the last 3 minutes
+            var last3MinutesTotalFires = buckets.Sum(b => (int)((dynamic)b).intervalFireCount);
+
+            return Results.Ok(new
+            {
+                buckets,
+                total = totalFires, // Keep both for backward compatibility
+                totalFires,
+                last3MinutesTotalFires,
+                intervalSeconds,
+                bucketsCount = buckets.Count,
+                generatedAt = now.UtcDateTime
+            });
         });
 
         // ===========================
@@ -354,11 +410,11 @@ public class Program
         {
             var task = await db.BpuTasks.FindAsync(id);
             if (task == null) return Results.NotFound();
-            
+
             task.Status = status;
             if (status == "Completed")
                 task.CompletedAt = DateTime.UtcNow;
-            
+
             await db.SaveChangesAsync();
             return Results.Ok(task);
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
@@ -458,12 +514,12 @@ public class Program
         {
             var shift = await db.ShiftRecords.FindAsync(id);
             if (shift == null) return Results.NotFound();
-            
+
             shift.EndTime = DateTime.UtcNow;
             shift.IsActive = false;
             if (!string.IsNullOrEmpty(notes))
                 shift.Notes = notes;
-            
+
             await db.SaveChangesAsync();
             return Results.Ok(shift);
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
@@ -478,7 +534,8 @@ public class Program
             // Get vote counts by candidate
             var voteResults = await db.Votes
                 .GroupBy(v => v.CandidateId)
-                .Select(g => new {
+                .Select(g => new
+                {
                     CandidateId = g.Key,
                     VoteCount = g.Count()
                 })
@@ -488,7 +545,8 @@ public class Program
             var allCandidates = await db.Candidates.ToListAsync();
 
             // Build result list with vote counts
-            var candidateResults = allCandidates.Select(c => new {
+            var candidateResults = allCandidates.Select(c => new
+            {
                 c.Id,
                 c.Name,
                 c.Position,
@@ -504,18 +562,21 @@ public class Program
 
             // Determine winner (simple majority)
             var winner = candidateResults.FirstOrDefault();
-            var isWinnerDetermined = totalVotes > 0 && winner != null && 
+            var isWinnerDetermined = totalVotes > 0 && winner != null &&
                                    (candidateResults.Count == 1 || winner.VoteCount > (candidateResults.Skip(1).FirstOrDefault()?.VoteCount ?? 0));
 
-            return Results.Ok(new {
+            return Results.Ok(new
+            {
                 results = candidateResults,
-                summary = new {
+                summary = new
+                {
                     totalVotes,
                     totalEligibleVoters,
                     turnoutPercentage = Math.Round(turnoutPercentage, 2),
                     isWinnerDetermined,
-                    winner = isWinnerDetermined ? new { 
-                        name = winner.Name, 
+                    winner = isWinnerDetermined ? new
+                    {
+                        name = winner.Name,
                         position = winner.Position,
                         ticketNumber = winner.TicketNumber,
                         voteCount = winner.VoteCount,
@@ -532,7 +593,8 @@ public class Program
             var auditData = await db.Votes
                 .Include(v => v.Voter)
                 .Include(v => v.Candidate)
-                .Select(v => new {
+                .Select(v => new
+                {
                     id = v.Id,
                     voterStudentId = v.Voter!.StudentId,
                     candidateName = v.Candidate!.Name,
@@ -544,14 +606,16 @@ public class Program
 
             var votingPattern = await db.Votes
                 .GroupBy(v => v.VotedAt.Date)
-                .Select(g => new {
+                .Select(g => new
+                {
                     date = g.Key,
                     count = g.Count()
                 })
                 .OrderBy(g => g.date)
                 .ToListAsync();
 
-            return Results.Ok(new {
+            return Results.Ok(new
+            {
                 auditTrail = auditData,
                 votingPattern,
                 totalRecords = auditData.Count
@@ -565,7 +629,8 @@ public class Program
                 .Include(v => v.Candidate)
                 .Include(v => v.Voter)
                 .GroupBy(v => v.CandidateId)
-                .Select(g => new {
+                .Select(g => new
+                {
                     CandidateName = g.First().Candidate!.Name,
                     Position = g.First().Candidate!.Position,
                     TicketNumber = g.First().Candidate!.TicketNumber,
@@ -575,7 +640,8 @@ public class Program
                 .ToListAsync();
 
             var totalVotes = results.Sum(r => r.VoteCount);
-            var exportData = results.Select(r => new {
+            var exportData = results.Select(r => new
+            {
                 r.CandidateName,
                 r.Position,
                 r.TicketNumber,
@@ -583,11 +649,13 @@ public class Program
                 Percentage = totalVotes > 0 ? Math.Round((double)r.VoteCount / totalVotes * 100, 2) : 0
             }).OrderByDescending(r => r.VoteCount);
 
-            var reportData = new {
+            var reportData = new
+            {
                 electionTitle = "Kongres PPI XMUM 2025/2026 - Presidential Election",
                 generatedAt = DateTime.UtcNow,
                 results = exportData,
-                summary = new {
+                summary = new
+                {
                     totalVotes,
                     totalCandidates = results.Count,
                     winner = exportData.FirstOrDefault()
@@ -609,8 +677,9 @@ public class Program
             {
                 return Results.Ok(new { isLive = false, status = "Offline" });
             }
-            
-            return Results.Ok(new { 
+
+            return Results.Ok(new
+            {
                 isLive = liveSession.IsLive,
                 status = liveSession.Status,
                 debateSession = liveSession.DebateSession?.Title,
@@ -632,7 +701,7 @@ public class Program
                 TotalDurationMinutes = request.TotalDurationMinutes,
                 CreatedByAdminId = context.User.Identity?.Name
             };
-            
+
             db.DebateSessions.Add(session);
             await db.SaveChangesAsync();
             return Results.Created($"/api/debate-sessions/{session.Id}", session);
@@ -650,7 +719,7 @@ public class Program
         {
             var session = await db.DebateSessions.FindAsync(sessionId);
             if (session == null) return Results.NotFound();
-            
+
             var question = new DebateQuestion
             {
                 DebateSessionId = sessionId,
@@ -660,7 +729,7 @@ public class Program
                 QuestionType = request.QuestionType,
                 TargetCandidate = request.TargetCandidate
             };
-            
+
             db.DebateQuestions.Add(question);
             await db.SaveChangesAsync();
             return Results.Created($"/api/debate-sessions/{sessionId}/questions/{question.Id}", question);
@@ -697,7 +766,7 @@ public class Program
             };
 
             session.Status = "Live";
-            
+
             db.LiveSessions.Add(liveSession);
             db.DebateSessions.Update(session);
             await db.SaveChangesAsync();
@@ -724,7 +793,7 @@ public class Program
                         liveSession.TimeRemainingSeconds = nextQuestion.DurationMinutes * 60;
                     }
                     break;
-                    
+
                 case "prev":
                     var allQuestions = liveSession.DebateSession!.Questions.OrderBy(q => q.OrderIndex).ToList();
                     var currentIdx = allQuestions.FindIndex(q => q.Id == liveSession.CurrentQuestionId);
@@ -736,19 +805,19 @@ public class Program
                         liveSession.TimeRemainingSeconds = prevQuestion.DurationMinutes * 60;
                     }
                     break;
-                    
+
                 case "pause":
                     liveSession.Status = "Paused";
                     break;
-                    
+
                 case "resume":
                     liveSession.Status = "Live";
                     break;
-                    
+
                 case "extend":
                     liveSession.TimeRemainingSeconds += request.ExtendTimeSeconds ?? 60;
                     break;
-                    
+
                 case "end":
                     liveSession.IsLive = false;
                     liveSession.Status = "Ended";

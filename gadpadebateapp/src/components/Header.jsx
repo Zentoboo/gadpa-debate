@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/gadpa-logo.png";
 import { useAuth } from "../hooks/AuthContext";
+import "./Header.css"; 
 
 export default function Header({ registerEnabled }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const location = useLocation();
-    const { isAdmin, logout } = useAuth(); // Now isAdmin exists
+    const { isAdmin, logout } = useAuth();
 
     useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -27,7 +28,7 @@ export default function Header({ registerEnabled }) {
                     <ul>
                         <li>
                             <Link to="/" className={location.pathname === "/" ? "active" : ""}>
-                                Home
+                                home
                             </Link>
                         </li>
                         {!isAdmin && (
@@ -36,7 +37,7 @@ export default function Header({ registerEnabled }) {
                                     to="/admin/login"
                                     className={location.pathname === "/admin/login" ? "active" : ""}
                                 >
-                                    Login
+                                    login
                                 </Link>
                             </li>
                         )}
@@ -46,7 +47,7 @@ export default function Header({ registerEnabled }) {
                                     to="/admin/register"
                                     className={location.pathname === "/admin/register" ? "active" : ""}
                                 >
-                                    Register
+                                    register
                                 </Link>
                             </li>
                         )}
@@ -57,11 +58,11 @@ export default function Header({ registerEnabled }) {
                                         to="/admin/dashboard"
                                         className={location.pathname === "/admin/dashboard" ? "active" : ""}
                                     >
-                                        Dashboard
+                                        dashboard
                                     </Link>
                                 </li>
                                 <li>
-                                    <button onClick={logout} className="login-button">Logout</button>
+                                    <button onClick={logout} className="nav-link-button">logout</button>
                                 </li>
                             </>
                         )}

@@ -72,21 +72,62 @@ export default function HeatmapChart({
 
   return (
     <div style={{ width: "100%", height: 400 }}>
-      <h2>🔥 Heatmap Trend (per {intervalSeconds}s)</h2>
       <ResponsiveContainer>
         <ComposedChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid stroke="#333" strokeDasharray="3 3" />
           <XAxis
+            stroke="#aaa"
             dataKey="bucketLabel"
-            label={{ value: "Time Interval", position: "insideBottomRight", offset: -5 }}
+            label={{
+              value: "Time Interval",
+              position: "insideBottomRight",
+              offset: -5,
+              fill: "#ccc", // axis label color
+            }}
           />
-          <YAxis label={{ value: "Count", angle: -90, position: "insideLeft" }} />
-          <Tooltip />
-          <Legend />
+
+          <YAxis
+            stroke="#aaa"
+            label={{
+              value: "Count",
+              angle: -90,
+              position: "insideLeft",
+              fill: "#ccc", // axis label color
+            }}
+          />
+
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "#1e1e1e",
+              border: "1px solid #2a2a2a",
+              color: "#fff",
+            }}
+            labelStyle={{ color: "#fff" }}
+            itemStyle={{ color: "#ccc" }}
+          />
+
+          <Legend
+            wrapperStyle={{
+              color: "#ccc",
+            }}
+          />
+
           {/* Interval as bar */}
-          <Bar dataKey="interval" fill="#0077ff" name={`Fires per ${intervalSeconds}s`} />
+          <Bar
+            dataKey="interval"
+            fill="#3b82f6" // theme blue
+            name={`Fires per ${intervalSeconds}s`}
+          />
+
           {/* Total as line */}
-          <Line type="monotone" dataKey="total" stroke="#af191bff" activeDot={{ r: 8 }} name="Total Fires" />
+          <Line
+            type="monotone"
+            dataKey="total"
+            stroke="#dc2626" // theme red
+            activeDot={{ r: 6, fill: "#fff", stroke: "#dc2626" }}
+            name="Total Fires"
+          />
+
         </ComposedChart>
       </ResponsiveContainer>
     </div>

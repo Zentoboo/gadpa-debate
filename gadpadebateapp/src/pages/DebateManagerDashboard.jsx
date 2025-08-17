@@ -321,6 +321,21 @@ export default function DebateManagerDashboard() {
                             >
                                 Refresh
                             </button>
+
+                            {/* 🚀 New button to LiveDebatePage */}
+                            <button
+                                onClick={() => navigate("/debate-manager/live")}
+                                style={{
+                                    padding: "0.5rem 1rem",
+                                    background: "#f59e0b",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Open Live Control →
+                            </button>
                         </div>
                     </div>
                 ) : (
@@ -522,19 +537,17 @@ export default function DebateManagerDashboard() {
                                         cursor: liveStatus?.isLive ? "not-allowed" : "pointer"
                                     }}
                                 >
-                                    {liveStatus?.isLive ? "Already Live" : "Go Live"}
+                                    Go Live
                                 </button>
-
                                 <button
                                     onClick={() => deleteDebate(debate.id)}
-                                    disabled={liveStatus?.isLive && liveStatus?.debate?.id === debate.id}
                                     style={{
                                         padding: "0.5rem 1rem",
-                                        background: (liveStatus?.isLive && liveStatus?.debate?.id === debate.id) ? "#6b7280" : "#dc2626",
+                                        background: "#dc2626",
                                         color: "#fff",
                                         border: "none",
                                         borderRadius: "4px",
-                                        cursor: (liveStatus?.isLive && liveStatus?.debate?.id === debate.id) ? "not-allowed" : "pointer"
+                                        cursor: "pointer"
                                     }}
                                 >
                                     Delete

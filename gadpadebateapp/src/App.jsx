@@ -9,6 +9,7 @@ import DebateManagerRegister from "./pages/DebateManagerRegister.jsx";
 import DebateManagerDashboard from "./pages/DebateManagerDashboard.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import Header from "./components/Header.jsx";
+import LiveDebatePage from "./pages/LiveDebatePage.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
 
 export default function App() {
@@ -85,7 +86,7 @@ export default function App() {
         <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
         <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
         <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
-
+        <Route path="/debate-manager/live" element={<LiveDebatePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>

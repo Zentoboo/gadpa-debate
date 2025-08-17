@@ -307,7 +307,7 @@ public class Program
             if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
                 return Results.Unauthorized();
 
-            var token = tokenService.CreateToken(user.Username, user.Role);
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role); // <-- updated
             return Results.Ok(new { token });
         });
 
@@ -415,7 +415,7 @@ public class Program
             if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
                 return Results.Unauthorized();
 
-            var token = tokenService.CreateToken(user.Username, user.Role);
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role); // <-- updated
             return Results.Ok(new { token });
         });
 

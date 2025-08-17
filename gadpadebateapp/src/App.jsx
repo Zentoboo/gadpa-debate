@@ -4,35 +4,55 @@ import Home from "./pages/Home.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminRegister from "./pages/AdminRegister.jsx";
+import DebateManagerLogin from "./pages/DebateManagerLogin.jsx";
+import DebateManagerRegister from "./pages/DebateManagerRegister.jsx";
+import DebateManagerDashboard from "./pages/DebateManagerDashboard.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import Header from "./components/Header.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
 
 export default function App() {
-  const [registerEnabled, setRegisterEnabled] = useState(null); // Start with null to show loading state
+  const [adminRegisterEnabled, setAdminRegisterEnabled] = useState(null);
+  const [debateManagerRegisterEnabled, setDebateManagerRegisterEnabled] = useState(null);
 
   useEffect(() => {
-    // Fetch register status without requiring authentication
+    // Fetch admin register status
     fetch("http://localhost:5076/admin/register-status")
       .then((res) => {
         if (!res.ok) {
-          throw new Error('Failed to fetch register status');
+          throw new Error('Failed to fetch admin register status');
         }
         return res.json();
       })
       .then((data) => {
-        console.log('Register status:', data); // Debug log
-        setRegisterEnabled(data.enabled);
+        console.log('Admin register status:', data);
+        setAdminRegisterEnabled(data.enabled);
       })
       .catch((error) => {
-        console.error('Error fetching register status:', error);
-        // Default to true if we can't fetch the status
-        setRegisterEnabled(true);
+        console.error('Error fetching admin register status:', error);
+        setAdminRegisterEnabled(true);
+      });
+
+    // Fetch debate manager register status
+    fetch("http://localhost:5076/debate-manager/register-status")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch debate manager register status');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log('Debate manager register status:', data);
+        setDebateManagerRegisterEnabled(data.enabled);
+      })
+      .catch((error) => {
+        console.error('Error fetching debate manager register status:', error);
+        setDebateManagerRegisterEnabled(true);
       });
   }, []);
 
-  // Show loading while we determine register status
-  if (registerEnabled === null) {
+  // Show loading while we determine register statuses
+  if (adminRegisterEnabled === null || debateManagerRegisterEnabled === null) {
     return (
       <div style={{
         display: 'flex',
@@ -49,13 +69,23 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <Header registerEnabled={registerEnabled} />
+      <Header
+        adminRegisterEnabled={adminRegisterEnabled}
+        debateManagerRegisterEnabled={debateManagerRegisterEnabled}
+      />
       <Routes>
         <Route path="/" element={<Home />} />
+
+        {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        {/* Always render the register route - let the component handle the logic */}
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+        {/* Debate Manager Routes */}
+        <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
+        <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
+        <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>

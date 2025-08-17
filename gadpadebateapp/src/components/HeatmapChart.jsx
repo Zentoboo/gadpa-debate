@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import {
   ComposedChart,
   Line,
@@ -11,64 +11,40 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-export default function HeatmapChart({
+function HeatmapChart({
   fetchUrl,
   intervalSeconds = 10,
+  lastMinutes = 3,
   onDataUpdate
 }) {
   const [data, setData] = useState([]);
-  const [startTime] = useState(Date.now());
 
   useEffect(() => {
-    let timer;
+    const fetchHeatmapData = async () => {
+      try {
+        const response = await fetch(`${fetchUrl}?intervalSeconds=${intervalSeconds}&lastMinutes=${lastMinutes}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const json = await response.json();
 
-    const fetchBucketData = () => {
-      fetch(`${fetchUrl}?intervalSeconds=${intervalSeconds}`)
-        .then(res => res.json())
-        .then(json => {
-          const now = Date.now();
-          const elapsedSec = Math.floor((now - startTime) / 1000);
-
-          // Completed bucket start
-          const bucketStart = elapsedSec - intervalSeconds;
-          const bucketLabel = `${bucketStart}-${bucketStart + intervalSeconds}s`;
-
-          // Skip if negative (before first bucket is done)
-          if (bucketStart < 0) return;
-
-          setData(prev => {
-            if (prev.some(item => item.bucketLabel === bucketLabel)) {
-              return prev;
-            }
-            return [
-              ...prev,
-              {
-                bucketLabel,
-                total: json.total,
-                interval: json.intervalTotal
-              }
-            ];
-          });
-
-          if (onDataUpdate) onDataUpdate(json);
-        })
-        .catch(console.error);
+        if (json.buckets) {
+          setData(json.buckets);
+          if (onDataUpdate) onDataUpdate(json); // Pass the entire JSON object
+        } else {
+          console.error("No 'buckets' property found in the response:", json);
+        }
+      } catch (error) {
+        console.error("Failed to fetch heatmap data:", error);
+      }
     };
 
-    const scheduleNextFetch = () => {
-      const now = Date.now();
-      const elapsedSec = Math.floor((now - startTime) / 1000);
-      const secsToNextBucket = intervalSeconds - (elapsedSec % intervalSeconds);
-      timer = setTimeout(() => {
-        fetchBucketData();
-        scheduleNextFetch();
-      }, secsToNextBucket * 1000);
-    };
+    fetchHeatmapData();
 
-    scheduleNextFetch();
+    const intervalId = setInterval(fetchHeatmapData, intervalSeconds * 1000);
 
-    return () => clearTimeout(timer);
-  }, [fetchUrl, intervalSeconds, startTime, onDataUpdate]);
+    return () => clearInterval(intervalId);
+  }, [fetchUrl, intervalSeconds, lastMinutes, onDataUpdate]);
 
   return (
     <div style={{ width: "100%", height: 400 }}>
@@ -82,20 +58,18 @@ export default function HeatmapChart({
               value: "Time Interval",
               position: "insideBottomRight",
               offset: -5,
-              fill: "#ccc", // axis label color
+              fill: "#ccc",
             }}
           />
-
           <YAxis
             stroke="#aaa"
             label={{
               value: "Count",
               angle: -90,
               position: "insideLeft",
-              fill: "#ccc", // axis label color
+              fill: "#ccc",
             }}
           />
-
           <Tooltip
             contentStyle={{
               backgroundColor: "#1e1e1e",
@@ -105,31 +79,28 @@ export default function HeatmapChart({
             labelStyle={{ color: "#fff" }}
             itemStyle={{ color: "#ccc" }}
           />
-
           <Legend
             wrapperStyle={{
               color: "#ccc",
             }}
           />
-
-          {/* Interval as bar */}
           <Bar
-            dataKey="interval"
-            fill="#3b82f6" // theme blue
+            dataKey="intervalTotal"
+            fill="#3b82f6"
             name={`Fires per ${intervalSeconds}s`}
           />
-
-          {/* Total as line */}
           <Line
             type="monotone"
-            dataKey="total"
-            stroke="#dc2626" // theme red
+            dataKey="total" // Reverted to 'total' to show cumulative sum
+            stroke="#dc2626"
             activeDot={{ r: 6, fill: "#fff", stroke: "#dc2626" }}
-            name="Total Fires"
+            dot={{ r: 3 }}
+            name="Cumulative Total" // Updated name for clarity
           />
-
         </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
 }
+
+export default memo(HeatmapChart);

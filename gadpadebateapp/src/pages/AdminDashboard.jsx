@@ -6,10 +6,11 @@ export default function AdminDashboard() {
   const { token, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [total, setTotal] = useState(0);
   const [bannedIps, setBannedIps] = useState([]);
   const [ip, setIp] = useState("");
   const [registerEnabled, setRegisterEnabled] = useState(true);
+  const [debateManagerRegisterEnabled, setDebateManagerRegisterEnabled] = useState(true);
+  const [currentLiveDebate, setCurrentLiveDebate] = useState(null);
 
   // Helper fetch with auth header
   const authFetch = (url, options = {}) =>
@@ -33,16 +34,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!token || !isAuthenticated) return;
 
-    authFetch("http://localhost:5076/admin/heatmap")
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch');
-        return res.json();
-      })
-      .then((data) => setTotal(data.total))
-      .catch(console.error);
-
     refreshBannedIps();
     refreshRegisterStatus();
+    refreshDebateManagerRegisterStatus();
+    refreshCurrentDebate();
   }, [token, isAuthenticated]);
 
   const refreshBannedIps = () => {
@@ -65,13 +60,25 @@ export default function AdminDashboard() {
       .catch(console.error);
   };
 
-  const resetHeatmap = () => {
-    authFetch("http://localhost:5076/admin/reset", { method: "POST" })
+  const refreshDebateManagerRegisterStatus = () => {
+    fetch("http://localhost:5076/debate-manager/register-status")
       .then((res) => {
-        if (!res.ok) throw new Error('Failed to reset');
-        return res;
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
       })
-      .then(() => setTotal(0))
+      .then((data) => setDebateManagerRegisterEnabled(data.enabled))
+      .catch(console.error);
+  };
+
+  const refreshCurrentDebate = () => {
+    fetch("http://localhost:5076/debate/current")
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data) => {
+        setCurrentLiveDebate(data.isLive ? data.debate : null);
+      })
       .catch(console.error);
   };
 
@@ -115,6 +122,16 @@ export default function AdminDashboard() {
       .catch(console.error);
   };
 
+  const toggleDebateManagerRegister = () => {
+    authFetch("http://localhost:5076/admin/toggle-debate-manager-register", { method: "POST" })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to toggle debate manager register');
+        return res.json();
+      })
+      .then((data) => setDebateManagerRegisterEnabled(data.enabled))
+      .catch(console.error);
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/admin/login");
@@ -132,36 +149,86 @@ export default function AdminDashboard() {
         Logout
       </button>
 
-      <h2>🔥 Heatmap</h2>
-      <p>Total Fires: {total}</p>
-      <button onClick={resetHeatmap}>Reset Heatmap</button>
+      <h2>📊 Current Live Debate Status</h2>
+      {currentLiveDebate ? (
+        <div style={{ padding: "1rem", background: "#2a2a2a", borderRadius: "8px", marginBottom: "1rem" }}>
+          <h3 style={{ color: "#4ade80", margin: "0 0 0.5rem 0" }}>🔴 LIVE</h3>
+          <p><strong>Title:</strong> {currentLiveDebate.title}</p>
+          <p><strong>Description:</strong> {currentLiveDebate.description || "No description"}</p>
+          <p><strong>Current Round:</strong> {currentLiveDebate.currentRound} of {currentLiveDebate.totalRounds}</p>
+          <p><strong>Current Question:</strong> {currentLiveDebate.currentQuestion}</p>
+          <button onClick={refreshCurrentDebate} style={{ marginTop: "0.5rem" }}>
+            Refresh Status
+          </button>
+        </div>
+      ) : (
+        <div style={{ padding: "1rem", background: "#333", borderRadius: "8px", marginBottom: "1rem" }}>
+          <p style={{ color: "#888" }}>No debate is currently live</p>
+          <button onClick={refreshCurrentDebate}>
+            Refresh Status
+          </button>
+        </div>
+      )}
 
       <h2>🚫 Banned IPs</h2>
-      <ul>
-        {bannedIps.length === 0 && <li>No banned IPs</li>}
-        {bannedIps.map((ip) => (
-          <li key={ip}>
-            {ip} <button onClick={() => unbanIp(ip)}>Unban</button>
+      <div style={{ marginBottom: "1rem" }}>
+        <input
+          type="text"
+          placeholder="IP Address to ban"
+          value={ip}
+          onChange={(e) => setIp(e.target.value)}
+          style={{ marginRight: "0.5rem", padding: "0.5rem" }}
+        />
+        <button onClick={banIp}>Ban IP</button>
+      </div>
+
+      <ul style={{ listStyle: "none", padding: 0 }}>
+        {bannedIps.length === 0 && (
+          <li style={{ color: "#888", fontStyle: "italic" }}>No banned IPs</li>
+        )}
+        {bannedIps.map((bannedIp) => (
+          <li key={bannedIp} style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.5rem",
+            margin: "0.25rem 0",
+            background: "#2a2a2a",
+            borderRadius: "4px"
+          }}>
+            <span>{bannedIp}</span>
+            <button onClick={() => unbanIp(bannedIp)} style={{ marginLeft: "1rem" }}>
+              Unban
+            </button>
           </li>
         ))}
       </ul>
 
-      <input
-        type="text"
-        placeholder="IP Address to ban"
-        value={ip}
-        onChange={(e) => setIp(e.target.value)}
-      />
-      <button onClick={banIp}>Ban IP</button>
-
       <h2>⚙️ Admin Registration</h2>
-      <p>
-        Current Status:{" "}
-        <strong>{registerEnabled ? "Enabled" : "Disabled"}</strong>
-      </p>
-      <button onClick={toggleRegister}>
-        {registerEnabled ? "Disable Registration" : "Enable Registration"}
-      </button>
+      <div style={{ marginBottom: "1rem", padding: "1rem", background: "#2a2a2a", borderRadius: "8px" }}>
+        <p>
+          Current Status:{" "}
+          <strong style={{ color: registerEnabled ? "#4ade80" : "#ff6b6b" }}>
+            {registerEnabled ? "Enabled" : "Disabled"}
+          </strong>
+        </p>
+        <button onClick={toggleRegister}>
+          {registerEnabled ? "Disable Registration" : "Enable Registration"}
+        </button>
+      </div>
+
+      <h2>👨‍⚖️ Debate Manager Registration</h2>
+      <div style={{ padding: "1rem", background: "#2a2a2a", borderRadius: "8px" }}>
+        <p>
+          Current Status:{" "}
+          <strong style={{ color: debateManagerRegisterEnabled ? "#4ade80" : "#ff6b6b" }}>
+            {debateManagerRegisterEnabled ? "Enabled" : "Disabled"}
+          </strong>
+        </p>
+        <button onClick={toggleDebateManagerRegister}>
+          {debateManagerRegisterEnabled ? "Disable Debate Manager Registration" : "Enable Debate Manager Registration"}
+        </button>
+      </div>
     </div>
   );
 }

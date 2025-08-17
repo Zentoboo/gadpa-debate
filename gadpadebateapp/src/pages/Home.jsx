@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import HeatmapChart from "../components/HeatmapChart";
 import "./Home.css";
 
@@ -11,8 +11,8 @@ export default function Home() {
 
   const sendFire = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left; // click X inside button
-    const y = e.clientY - rect.top;  // click Y inside button
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     fetch("http://localhost:5076/debate/fire", { method: "POST" })
       .then(async (res) => {
@@ -20,11 +20,9 @@ export default function Home() {
           const data = await res.json();
           setMessage(`${data.message} Retry after ${data.retryAfterSeconds}s`);
 
-          // Trigger card shake
           setIsShaking(true);
           setTimeout(() => setIsShaking(false), 600);
 
-          // Spawn a 💢 burst at top-right of card
           const id = Date.now();
           setBursts((prev) => [...prev, { id }]);
           setTimeout(() => {
@@ -33,9 +31,8 @@ export default function Home() {
         } else if (res.ok) {
           const data = await res.json();
           setMessage(data.message);
-          setTotal(data.total);
+          setTotal(data.total); // This sets the global total from the POST request.
 
-          // Spawn a fire at click position
           const id = Date.now();
           setFires((prev) => [...prev, { id, x, y }]);
           setTimeout(() => {
@@ -46,9 +43,14 @@ export default function Home() {
       .catch(console.error);
   };
 
+  const handleDataUpdate = useCallback((json) => {
+    if (json && typeof json.total !== 'undefined') {
+      setTotal(json.total); // This sets the global total from the heatmap GET request.
+    }
+  }, []);
+
   return (
     <div className="home-container">
-      {/* Fire button card */}
       <div className={`fire-card ${isShaking ? 'shake' : ''}`}>
         <h1 className="home-title">🔥 Heat 🔥</h1>
         <p className="home-total">Total fires: {total}</p>
@@ -58,7 +60,6 @@ export default function Home() {
             DETONATE
           </button>
 
-          {/* Fires - positioned relative to button */}
           <div className="fire-animations">
             {fires.map((fire) => (
               <span
@@ -66,7 +67,7 @@ export default function Home() {
                 className="fire-emoji"
                 style={{
                   left: `${fire.x}px`,
-                  top: `${fire.y}px`
+                  top: `${fire.y}px`,
                 }}
               >
                 🔥
@@ -75,7 +76,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bursts - positioned relative to card */}
         {bursts.map((burst) => (
           <span key={burst.id} className="burst-emoji">
             💢
@@ -85,17 +85,16 @@ export default function Home() {
         {message && <p className="home-message">{message}</p>}
       </div>
 
-      {/* Police Strip */}
-      <div className="police-strip"></div>
+      <div className="police-strip-container">
+        <div className="police-strip"></div>
+      </div>
 
-      {/* Chart card */}
       <div className="section-card chart-card">
         <h2 className="chart-title">🔥 Heatmap Chart</h2>
         <HeatmapChart
           fetchUrl="http://localhost:5076/debate/heatmap-data"
-          pollInterval={10000}
           intervalSeconds={10}
-          onDataUpdate={(json) => setTotal(json.total)}
+          onDataUpdate={handleDataUpdate}
         />
       </div>
     </div>

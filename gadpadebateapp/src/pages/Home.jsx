@@ -11,13 +11,13 @@ export default function Home() {
   useEffect(() => {
     const fetchLiveDebates = async () => {
       try {
-        const response = await fetch("http://localhost:5076/debate/current"); // Use the public endpoint
+        const response = await fetch("http://localhost:5076/debate/live-debates");
         if (!response.ok) {
           throw new Error("Failed to fetch live debates.");
         }
         const data = await response.json();
         if (data.isLive) {
-          setLiveDebates([data.debate]); // Store the single debate in an array
+          setLiveDebates(data.debates);
         } else {
           setLiveDebates([]);
         }

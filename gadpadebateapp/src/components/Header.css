@@ -1,3 +1,6 @@
+/* === Modern Fonts Import === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+
 /* === Header / Navbar === */
 .header-container {
     position: fixed;
@@ -13,7 +16,9 @@
     padding: 0.75rem 1rem;
     border-radius: 9999px;
     color: #fff;
-    font-family: "Helvetica", sans-serif;
+    font-family: "Inter", sans-serif;
+    /* Modern clean font */
+    font-weight: 400;
     transition: background 0.3s, border 0.3s;
 }
 
@@ -31,9 +36,11 @@
 .logo {
     display: flex;
     align-items: center;
-    font-weight: bold;
-    font-size: 1.25rem;
-    font-family: "Monument", sans-serif;
+    font-family: "Poppins", sans-serif;
+    /* Bold modern logo font */
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
     gap: 0.75rem;
     text-decoration: none;
     color: #fff;
@@ -95,10 +102,11 @@
 
 .main-nav a {
     text-decoration: none;
-    font-weight: normal;
-    font-size: 0.875rem;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
     text-transform: lowercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: #fff;
     transition: color 0.2s;
 }
@@ -112,10 +120,11 @@
     background: none;
     border: none;
     padding: 0;
-    font-weight: normal;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
     color: #fff;
     cursor: pointer;
     transition: color 0.2s;
@@ -124,6 +133,15 @@
 .nav-link-button:hover {
     color: #be3030;
     background: none;
+}
+
+/* Role labels (admin / debate-manager) */
+.main-nav span {
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    text-transform: uppercase;
 }
 
 /* Desktop nav styles */
@@ -151,7 +169,6 @@
 
     .main-nav a,
     .nav-link-button {
-        /* Apply consistent styles to both links and the button */
         text-decoration: none;
         color: #fff;
     }

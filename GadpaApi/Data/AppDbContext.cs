@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GadpaDebateApi.Data;
 
@@ -25,7 +26,7 @@ public class AppDbContext : DbContext
 
         // LiveDebate -> Debate relationship
         modelBuilder.Entity<LiveDebate>()
-            .HasOne<Debate>()
+            .HasOne<Debate>(ld => ld.Debate)
             .WithMany()
             .HasForeignKey(ld => ld.DebateId)
             .OnDelete(DeleteBehavior.Cascade);
@@ -39,7 +40,7 @@ public class AppDbContext : DbContext
 
         // FireEvent -> LiveDebate relationship
         modelBuilder.Entity<FireEvent>()
-            .HasOne<LiveDebate>()
+            .HasOne<LiveDebate>(fe => fe.LiveDebate)
             .WithMany()
             .HasForeignKey(fe => fe.LiveDebateId)
             .OnDelete(DeleteBehavior.Cascade);
@@ -60,7 +61,11 @@ public class FireEvent
     public string IpAddress { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public int FireCount { get; set; } = 0;
-    public int LiveDebateId { get; set; } // Required - tied to specific live debate
+    public int LiveDebateId { get; set; }
+
+    // Add the navigation property
+    [ForeignKey("LiveDebateId")]
+    public required LiveDebate LiveDebate { get; set; }
 }
 
 public class User
@@ -68,7 +73,7 @@ public class User
     public int Id { get; set; }
     public string Username { get; set; } = "";
     public string PasswordHash { get; set; } = "";
-    public string Role { get; set; } = "Admin"; // "Admin" or "DebateManager"
+    public string Role { get; set; } = "Admin";
 }
 
 public class AppSetting
@@ -95,7 +100,7 @@ public class DebateQuestion
 {
     public int Id { get; set; }
     public int DebateId { get; set; }
-    public int RoundNumber { get; set; } // 1, 2, 3, etc.
+    public int RoundNumber { get; set; }
     public string Question { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -108,4 +113,8 @@ public class LiveDebate
     public int CurrentRound { get; set; } = 1;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
+
+    // Add the navigation property
+    [ForeignKey("DebateId")]
+    public required Debate Debate { get; set; }
 }

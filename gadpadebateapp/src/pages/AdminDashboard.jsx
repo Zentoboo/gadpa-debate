@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   const [ip, setIp] = useState("");
   const [registerEnabled, setRegisterEnabled] = useState(true);
   const [debateManagerRegisterEnabled, setDebateManagerRegisterEnabled] = useState(true);
-  const [currentLiveDebate, setCurrentLiveDebate] = useState(null);
+  const [liveDebates, setLiveDebates] = useState([]); // Changed to an array
 
   const authFetch = (url, options = {}) =>
     fetch(url, {
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
     refreshBannedIps();
     refreshRegisterStatus();
     refreshDebateManagerRegisterStatus();
-    refreshCurrentDebate();
+    refreshLiveDebates(); // Call new function to get all live debates
   }, [token, isAuthenticated]);
 
   const refreshBannedIps = () => {
@@ -71,20 +71,22 @@ export default function AdminDashboard() {
       .catch((error) => console.error('Error fetching debate manager register status:', error));
   };
 
-  const refreshCurrentDebate = () => {
-    authFetch("http://localhost:5076/admin/live/status")
+  const refreshLiveDebates = () => {
+    authFetch("http://localhost:5076/admin/live/all-status") // Use the new admin endpoint
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch live status');
         return res.json();
       })
-      .then(data => setCurrentLiveDebate(data.isLive ? data.debate : null))
+      .then(data => {
+        setLiveDebates(data); // Set the array of debates
+      })
       .catch(console.error);
   };
 
   const toggleRegister = () => {
     authFetch("http://localhost:5076/admin/toggle-register", {
       method: "POST",
-      body: JSON.stringify({ enable: !registerEnabled })
+      body: JSON.stringify({})
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to toggle registration');
@@ -100,7 +102,7 @@ export default function AdminDashboard() {
   const toggleDebateManagerRegister = () => {
     authFetch("http://localhost:5076/admin/toggle-debate-manager-register", {
       method: "POST",
-      body: JSON.stringify({ enable: !debateManagerRegisterEnabled })
+      body: JSON.stringify({})
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to toggle debate manager registration');
@@ -117,7 +119,7 @@ export default function AdminDashboard() {
     if (!ip.trim()) return;
     authFetch("http://localhost:5076/admin/ban-ip", {
       method: "POST",
-      body: JSON.stringify({ ip })
+      body: JSON.stringify({ ipAddress: ip })
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to ban IP');
@@ -131,22 +133,17 @@ export default function AdminDashboard() {
   };
 
   const unbanIp = (ipToUnban) => {
-    authFetch(`http://localhost:5076/admin/unban-ip/${ipToUnban}`, {
-      method: "DELETE"
+    authFetch("http://localhost:5076/admin/unban-ip", {
+        method: "POST",
+        body: JSON.stringify({ ipAddress: ipToUnban })
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to unban IP');
-        return res.json();
-      })
-      .then(() => refreshBannedIps())
-      .catch(console.error);
-  };
-
-  // Logout functionality removed as per request.
-  // const handleLogout = () => {
-  //   logout();
-  //   navigate("/admin/login");
-  // };
+        .then((res) => {
+            if (!res.ok) throw new Error('Failed to unban IP');
+            return res.json();
+        })
+        .then(() => refreshBannedIps())
+        .catch(console.error);
+};
 
   if (!isAuthenticated || !token) {
     return null;
@@ -156,17 +153,36 @@ export default function AdminDashboard() {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <h1 className="dashboard-title">Admin Dashboard</h1>
-        {/* Logout button removed */}
       </div>
 
-      <h2 className="section-title">Live Debate Status</h2>
+      <h2 className="section-title">Live Debates</h2>
       <div className="live-status">
-        <p>
-          Current Live Debate:
-          <strong className={currentLiveDebate ? "text-success" : "text-error"}>
-            {currentLiveDebate ? ` ${currentLiveDebate.title}` : " None"}
-          </strong>
-        </p>
+        {liveDebates.length === 0 ? (
+          <p>
+            <strong className="text-error">No live debates currently.</strong>
+          </p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Current Round</th>
+                <th>Total Rounds</th>
+                <th>Debate Manager ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liveDebates.map(debateItem => (
+                <tr key={debateItem.debate.id}>
+                  <td>{debateItem.debate.title}</td>
+                  <td>{debateItem.debate.currentRound}</td>
+                  <td>{debateItem.debate.totalRounds}</td>
+                  <td>{debateItem.debate.debateManagerId}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <h2 className="section-title">IP Management</h2>

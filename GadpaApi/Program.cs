@@ -100,21 +100,51 @@ public class Program
         const int LIMIT_PER_WINDOW = 5;
         var WINDOW = TimeSpan.FromMinutes(1);
 
-        // Get current live debate info (PUBLIC)
+        // Get a list of all currently live debates for the public home page.
+        app.MapGet("/debate/live-debates", async (AppDbContext db) =>
+        {
+            var liveDebates = await db.LiveDebates
+                .Where(ld => ld.IsActive)
+                .Include(ld => ld.Debate)
+                .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .ToListAsync();
+
+            if (!liveDebates.Any())
+            {
+                return Results.Ok(new { isLive = false, debates = new List<object>() });
+            }
+
+            var debateList = liveDebates.Select(ld => new
+            {
+                id = ld.Debate.Id,
+                title = ld.Debate.Title,
+                description = ld.Debate.Description,
+                currentRound = ld.CurrentRound,
+                totalRounds = ld.Debate.Questions.Count
+            }).ToList();
+
+            return Results.Ok(new { isLive = true, debates = debateList });
+        });
+
         app.MapGet("/debate/current", async (AppDbContext db) =>
         {
+            // Find the single active live debate.
             var liveDebate = await db.LiveDebates
-                .Where(ld => ld.IsActive)
-                .Include(ld => db.Debates.Where(d => d.Id == ld.DebateId).First())
-                .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ld => ld.IsActive);
 
+            // If no live debate is found, return `isLive = false` immediately.
             if (liveDebate == null)
+            {
                 return Results.Ok(new { isLive = false });
-
+            }
             var debate = await db.Debates
                 .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
-                .FirstAsync(d => d.Id == liveDebate.DebateId);
+                .FirstOrDefaultAsync(d => d.Id == liveDebate.DebateId);
+
+            if (debate == null)
+            {
+                return Results.Ok(new { isLive = false });
+            }
 
             var currentQuestion = debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
 
@@ -123,6 +153,7 @@ public class Program
                 isLive = true,
                 debate = new
                 {
+                    id = debate.Id, // <-- Add this line to include the debate ID
                     title = debate.Title,
                     description = debate.Description,
                     currentRound = liveDebate.CurrentRound,
@@ -133,15 +164,45 @@ public class Program
             });
         });
 
-        app.MapPost("/debate/fire", async (
+        app.MapGet("/debate/{debateId}", async (AppDbContext db, int debateId) =>
+        {
+            var debate = await db.Debates
+                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .FirstOrDefaultAsync(d => d.Id == debateId);
+
+            if (debate == null)
+            {
+                return Results.NotFound(new { message = "Debate not found." });
+            }
+
+            var liveDebateStatus = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debate.Id && ld.IsActive);
+            bool isLive = liveDebateStatus != null;
+
+            // Now return the debate details regardless of live status
+            return Results.Ok(new
+            {
+                isLive = isLive,
+                id = debate.Id,
+                title = debate.Title,
+                description = debate.Description,
+                currentRound = isLive ? liveDebateStatus.CurrentRound : 0, // Only show round if live
+                totalRounds = debate.Questions.Count,
+                currentQuestion = isLive ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
+                questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question })
+            });
+        });
+
+        // Post a fire event for a specific debate
+        app.MapPost("/debate/{debateId}/fire", async (
             HttpContext context,
             AppDbContext db,
-            IMemoryCache cache) =>
+            IMemoryCache cache,
+            int debateId) =>
         {
-            // Check if there's an active live debate
-            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.IsActive);
+            // First, find the specific live debate
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
             if (liveDebate == null)
-                return Results.BadRequest(new { message = "No live debate is currently active." });
+                return Results.BadRequest(new { message = "The specified debate is not currently live." });
 
             string GetClientIp()
             {
@@ -196,7 +257,8 @@ public class Program
                 IpAddress = ip,
                 FireCount = 1,
                 Timestamp = DateTime.UtcNow,
-                LiveDebateId = liveDebate.Id
+                LiveDebateId = liveDebate.Id,
+                LiveDebate = liveDebate
             });
 
             await db.SaveChangesAsync();
@@ -204,11 +266,12 @@ public class Program
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds, int lastMinutes) =>
+        // Get heatmap data for a specific debate
+        app.MapGet("/debate/{debateId}/heatmap-data", async (AppDbContext db, int debateId, int intervalSeconds = 10, int lastMinutes = 3) =>
         {
-            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.IsActive);
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
             if (liveDebate == null)
-                return Results.BadRequest(new { message = "No live debate is currently active." });
+                return Results.BadRequest(new { message = "Debate not found or is not live." });
 
             if (intervalSeconds <= 0) intervalSeconds = 10;
             if (lastMinutes <= 0) lastMinutes = 3;
@@ -307,7 +370,7 @@ public class Program
             if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
                 return Results.Unauthorized();
 
-            var token = tokenService.CreateToken(user.Id, user.Username, user.Role); // <-- updated
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role);
             return Results.Ok(new { token });
         });
 
@@ -329,6 +392,49 @@ public class Program
 
             await db.SaveChangesAsync();
             return Results.Ok(new { enabled = setting.Value == "true" });
+        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+        // Get a list of all live debates for the admin dashboard
+        app.MapGet("/admin/live/all-status", async (AppDbContext db) =>
+        {
+            var liveDebates = await db.LiveDebates
+                .Where(ld => ld.IsActive)
+                .Select(ld => new
+                {
+                    liveDebate = ld,
+                    debate = db.Debates
+                        .Where(d => d.Id == ld.DebateId)
+                        .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            if (liveDebates == null || !liveDebates.Any())
+            {
+                return Results.Ok(new List<object>()); // Return an empty list if no debates are live
+            }
+
+            var result = liveDebates.Select(item =>
+            {
+                var currentQuestion = item.debate.Questions.FirstOrDefault(q => q.RoundNumber == item.liveDebate.CurrentRound);
+
+                return new
+                {
+                    isLive = true,
+                    debate = new
+                    {
+                        id = item.debate.Id,
+                        title = item.debate.Title,
+                        description = item.debate.Description,
+                        currentRound = item.liveDebate.CurrentRound,
+                        totalRounds = item.debate.Questions.Count,
+                        currentQuestion = currentQuestion?.Question,
+                        debateManagerId = item.liveDebate.DebateManagerId
+                    }
+                };
+            }).ToList();
+
+            return Results.Ok(result);
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         // Admin-only endpoints
@@ -360,6 +466,26 @@ public class Program
         {
             var list = await db.BannedIps.Select(b => b.IpAddress).ToListAsync();
             return Results.Ok(list);
+        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+        // Toggle debate manager register (Admin only)
+        app.MapPost("/admin/toggle-debate-manager-register", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "DebateManagerRegisterEnabled");
+
+            if (setting == null)
+            {
+                setting = new AppSetting { Key = "DebateManagerRegisterEnabled", Value = "true" };
+                db.AppSettings.Add(setting);
+            }
+            else
+            {
+                setting.Value = (setting.Value?.ToLower() == "true") ? "false" : "true";
+                db.AppSettings.Update(setting);
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { enabled = setting.Value == "true" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         // =======================================
@@ -415,7 +541,7 @@ public class Program
             if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
                 return Results.Unauthorized();
 
-            var token = tokenService.CreateToken(user.Id, user.Username, user.Role); // <-- updated
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role);
             return Results.Ok(new { token });
         });
 
@@ -596,7 +722,8 @@ public class Program
                 DebateManagerId = userId,
                 CurrentRound = 1,
                 StartedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                Debate = debate
             };
 
             db.LiveDebates.Add(liveDebate);
@@ -742,26 +869,6 @@ public class Program
             var totalFires = await db.FireEvents.Where(e => e.LiveDebateId == liveDebate.Id).SumAsync(e => e.FireCount);
             return Results.Ok(new { buckets, total = totalFires });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-
-        // Toggle debate manager register (Admin only)
-        app.MapPost("/admin/toggle-debate-manager-register", async (AppDbContext db) =>
-        {
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "DebateManagerRegisterEnabled");
-
-            if (setting == null)
-            {
-                setting = new AppSetting { Key = "DebateManagerRegisterEnabled", Value = "true" };
-                db.AppSettings.Add(setting);
-            }
-            else
-            {
-                setting.Value = (setting.Value?.ToLower() == "true") ? "false" : "true";
-                db.AppSettings.Update(setting);
-            }
-
-            await db.SaveChangesAsync();
-            return Results.Ok(new { enabled = setting.Value == "true" });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         app.Run();
     }

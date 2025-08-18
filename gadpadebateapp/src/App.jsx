@@ -10,6 +10,7 @@ import DebateManagerDashboard from "./pages/DebateManagerDashboard.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import Header from "./components/Header.jsx";
 import LiveDebatePage from "./pages/LiveDebatePage.jsx";
+import DebatePage from "./pages/DebatePage.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
 
 export default function App() {
@@ -76,6 +77,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/debate/:debateId" element={<DebatePage />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

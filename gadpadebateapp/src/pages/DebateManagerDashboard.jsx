@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./Dashboard.css";
+import "../css/Dashboard.css";
 
 export default function DebateManagerDashboard() {
     const { token, isAuthenticated, isDebateManager } = useAuth();

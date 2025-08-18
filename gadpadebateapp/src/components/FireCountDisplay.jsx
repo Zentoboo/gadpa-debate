@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../pages/LiveDebatePage.css";
+import "../css/LiveDebatePage.css";
 
 export default function FireCountDisplay({ token }) {
     const [totalFires, setTotalFires] = useState(0);

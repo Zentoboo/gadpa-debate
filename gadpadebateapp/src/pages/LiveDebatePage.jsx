@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./LiveDebatePage.css";
+import "../css/LiveDebatePage.css";
 import FireCountDisplay from "../components/FireCountDisplay";
 import Timer from "../components/Timer"; // Import the updated Timer component
 

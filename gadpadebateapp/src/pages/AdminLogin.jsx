@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./AuthForms.css";
+import "../css/AuthForms.css";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");

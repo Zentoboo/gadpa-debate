@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import HeatmapChart from "../components/HeatmapChart";
-import "./DebatePage.css"; // You might need to create this CSS file
+import "../css/DebatePage.css";
 
 export default function DebatePage() {
     const { debateId } = useParams(); // Get the debate ID from the URL

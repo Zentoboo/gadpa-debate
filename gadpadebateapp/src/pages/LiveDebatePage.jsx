@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./LiveDebatePage.css"; // Import the new CSS file
+import "./LiveDebatePage.css";
+import FireCountDisplay from "../components/FireCountDisplay";
+import Timer from "../components/Timer"; // Import the updated Timer component
 
 export default function LiveDebatePage() {
-    const { token, isAuthenticated, isDebateManager, logout } = useAuth();
+    const { token, isAuthenticated, isDebateManager } = useAuth();
     const navigate = useNavigate();
 
     const [liveStatus, setLiveStatus] = useState(null);
@@ -28,7 +30,7 @@ export default function LiveDebatePage() {
         }
     }, [isAuthenticated, isDebateManager, navigate]);
 
-    // Fetch live debate status on component mount and token change
+    // Fetch live debate status
     const refreshLiveStatus = () => {
         setLoading(true);
         authFetch("http://localhost:5076/debate-manager/live/status")
@@ -37,7 +39,7 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(data => setLiveStatus(data))
-            .catch(err => console.error(err)) // Log error, but don't block UI with alert
+            .catch(err => console.error(err))
             .finally(() => setLoading(false));
     };
 
@@ -46,7 +48,7 @@ export default function LiveDebatePage() {
         refreshLiveStatus();
     }, [token, isAuthenticated, isDebateManager]);
 
-    // Function to change the current round of the live debate
+    // Change the round
     const changeRound = (roundNumber) => {
         authFetch("http://localhost:5076/debate-manager/live/change-round", {
             method: "POST",
@@ -57,12 +59,11 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(() => refreshLiveStatus())
-            .catch(err => console.error(err)); // Log error, avoid alert
+            .catch(err => console.error(err));
     };
 
-    // Function to end the live debate
+    // End debate
     const endLive = () => {
-        // Using window.confirm for simplicity, consider a custom modal in a full application
         if (!window.confirm("Are you sure you want to end the live debate? This action cannot be undone.")) return;
 
         authFetch("http://localhost:5076/debate-manager/live/end", {
@@ -73,13 +74,13 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(() => {
-                alert("Live debate ended successfully!"); // Simple alert for confirmation
-                navigate("/debate-manager/dashboard"); // Redirect to dashboard after ending
+                alert("Live debate ended successfully!");
+                navigate("/debate-manager/dashboard");
             })
-            .catch(err => console.error(err)); // Log error, avoid alert
+            .catch(err => console.error(err));
     };
 
-    // Render loading state
+    // Loading state
     if (loading) {
         return (
             <div className="status-message-container">
@@ -88,7 +89,7 @@ export default function LiveDebatePage() {
         );
     }
 
-    // Render message if no debate is currently live
+    // No live debate
     if (!liveStatus?.isLive) {
         return (
             <div className="status-message-container">
@@ -103,36 +104,45 @@ export default function LiveDebatePage() {
         );
     }
 
-    // Render live debate controls and information
+    // Main render
     return (
         <div className="live-debate-container">
-            {/* Header Section */}
+            {/* Header */}
             <div className="live-debate-header">
                 <h2 className="live-debate-title">
-                    Live Debate: {liveStatus.debate.title}
+                    {liveStatus.debate.title}
                 </h2>
-                {/* Logout button removed */}
-            </div>
-
-            {/* Main Content: Current Question & Round */}
-            <div className="live-debate-main-content">
-                <p className="live-debate-round">Round {liveStatus.currentRound} of {liveStatus.totalRounds}</p>
-                <h1 className="live-debate-question">
-                    {liveStatus.currentQuestion || "No question set for this round"}
-                </h1>
-                <div className="live-debate-stats">
-                    <span>Total Fires: {liveStatus.totalFires}</span>
+                <div className="live-debate-header-right">
+                    <span className="live-debate-subtitle">
+                        Round {liveStatus.currentRound} of {liveStatus.totalRounds}
+                    </span>
+                    <FireCountDisplay token={token} />
                 </div>
             </div>
 
-            {/* Controls Section */}
+            {/* Main Content - Question and Timer in separate cards */}
+            <div className="live-debate-main-content">
+                {/* Question Card */}
+                <div className="question-card">
+                    <h1 className="live-debate-question">
+                        {liveStatus.currentQuestion || "No question set for this round"}
+                    </h1>
+                </div>
+
+                {/* Timer Card */}
+                <div className="timer-card">
+                    <Timer key={liveStatus.currentRound} initialDuration={180} />
+                </div>
+            </div>
+
+            {/* Controls */}
             <div className="live-debate-controls">
                 <button
                     onClick={() => changeRound(liveStatus.currentRound - 1)}
                     disabled={liveStatus.currentRound <= 1}
                     className="control-button secondary"
                 >
-                    &larr; Previous Round
+                    ← Prev
                 </button>
 
                 <button
@@ -140,14 +150,14 @@ export default function LiveDebatePage() {
                     disabled={liveStatus.currentRound >= liveStatus.totalRounds}
                     className="control-button primary"
                 >
-                    Next Round &rarr;
+                    Next →
                 </button>
 
                 <button
                     onClick={endLive}
                     className="control-button danger"
                 >
-                    End Debate
+                    End
                 </button>
             </div>
         </div>

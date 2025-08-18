@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./Dashboard.css"; // Ensure this path is correct
+import "./Dashboard.css";
 
 export default function DebateManagerDashboard() {
-    const { token, logout, isAuthenticated, isDebateManager } = useAuth();
+    const { token, isAuthenticated, isDebateManager } = useAuth();
     const navigate = useNavigate();
 
     const [debates, setDebates] = useState([]);
@@ -84,14 +84,12 @@ export default function DebateManagerDashboard() {
 
     const createDebate = () => {
         if (!newDebate.title.trim()) {
-            // Using a simple alert for now, consider a custom modal in a real app
             alert("Title is required");
             return;
         }
 
         const validQuestions = newDebate.questions.filter(q => q.trim());
         if (validQuestions.length === 0) {
-            // Using a simple alert for now, consider a custom modal in a real app
             alert("At least one question is required");
             return;
         }
@@ -113,7 +111,7 @@ export default function DebateManagerDashboard() {
                 setIsCreating(false);
                 refreshDebates();
             })
-            .catch((err) => alert(err.message)); // Using alert, consider custom modal
+            .catch((err) => alert(err.message));
     };
 
     const goLive = (debateId) => {
@@ -131,13 +129,11 @@ export default function DebateManagerDashboard() {
             .then(() => {
                 refreshLiveStatus();
                 refreshHeatmap();
-                // Removed: navigate("/debate-manager/live"); - No longer redirects automatically
             })
-            .catch((err) => alert(err.message)); // Using alert, consider custom modal
+            .catch((err) => alert(err.message));
     };
 
     const endLive = () => {
-        // Confirm before ending live debate (using window.confirm for simplicity, consider custom modal)
         if (!window.confirm("Are you sure you want to end the current live debate?")) {
             return;
         }
@@ -153,11 +149,10 @@ export default function DebateManagerDashboard() {
                 refreshLiveStatus();
                 setHeatmapData(null);
             })
-            .catch((err) => alert(err.message)); // Using alert, consider custom modal
+            .catch((err) => alert(err.message));
     };
 
     const deleteDebate = (debateId) => {
-        // Confirm before deleting debate (using window.confirm for simplicity, consider custom modal)
         if (!window.confirm("Are you sure you want to delete this debate?")) {
             return;
         }
@@ -174,7 +169,7 @@ export default function DebateManagerDashboard() {
                 return res.json();
             })
             .then(() => refreshDebates())
-            .catch((err) => alert(err.message)); // Using alert, consider custom modal
+            .catch((err) => alert(err.message));
     };
 
     const addQuestion = () => {
@@ -198,12 +193,6 @@ export default function DebateManagerDashboard() {
         }));
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate("/debate-manager/login");
-    };
-
-    // Don't render if not authenticated
     if (!isAuthenticated || !token || !isDebateManager) {
         return null;
     }
@@ -212,9 +201,7 @@ export default function DebateManagerDashboard() {
         <div className="dashboard-container">
             <div className="dashboard-header">
                 <h1 className="dashboard-title">Debate Manager Dashboard</h1>
-                <button onClick={handleLogout} className="table-button danger">
-                    Logout
-                </button>
+                {/* Logout button removed */}
             </div>
 
             {/* Live Status Section */}
@@ -252,7 +239,7 @@ export default function DebateManagerDashboard() {
 
             {/* Heatmap Data */}
             {heatmapData && (
-                <div className="live-status"> {/* Reusing live-status class for consistent styling */}
+                <div className="live-status">
                     <h3 className="section-title">Live Heatmap Data</h3>
                     <p style={{ color: "#fff" }}>
                         <strong>Total Fires in Current Session:</strong> {heatmapData.total}
@@ -282,7 +269,7 @@ export default function DebateManagerDashboard() {
                         placeholder="Debate Title"
                         value={newDebate.title}
                         onChange={(e) => setNewDebate(prev => ({ ...prev, title: e.target.value }))}
-                        className="auth-input" // Reusing auth-input for consistent styling
+                        className="auth-input"
                         style={{ marginBottom: "1rem" }}
                     />
 
@@ -290,7 +277,7 @@ export default function DebateManagerDashboard() {
                         placeholder="Description (optional)"
                         value={newDebate.description}
                         onChange={(e) => setNewDebate(prev => ({ ...prev, description: e.target.value }))}
-                        className="auth-input" // Reusing auth-input
+                        className="auth-input"
                         style={{ marginBottom: "1rem", minHeight: "80px", resize: "vertical" }}
                     />
 
@@ -305,7 +292,7 @@ export default function DebateManagerDashboard() {
                                 placeholder={`Question for round ${index + 1}`}
                                 value={question}
                                 onChange={(e) => updateQuestion(index, e.target.value)}
-                                className="auth-input" // Reusing auth-input
+                                className="auth-input"
                                 style={{ flex: 1 }}
                             />
                             {newDebate.questions.length > 1 && (

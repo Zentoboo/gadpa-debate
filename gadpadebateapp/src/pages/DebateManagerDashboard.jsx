@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
+import "./Dashboard.css"; // Ensure this path is correct
 
 export default function DebateManagerDashboard() {
     const { token, logout, isAuthenticated, isDebateManager } = useAuth();
@@ -10,8 +11,6 @@ export default function DebateManagerDashboard() {
     const [liveStatus, setLiveStatus] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [heatmapData, setHeatmapData] = useState(null);
-
-    // Create debate form
     const [newDebate, setNewDebate] = useState({
         title: "",
         description: "",
@@ -39,7 +38,6 @@ export default function DebateManagerDashboard() {
     // Initial data fetch
     useEffect(() => {
         if (!token || !isAuthenticated || !isDebateManager) return;
-
         refreshDebates();
         refreshLiveStatus();
     }, [token, isAuthenticated, isDebateManager]);
@@ -47,12 +45,10 @@ export default function DebateManagerDashboard() {
     // Auto-refresh live status and heatmap every 5 seconds when live
     useEffect(() => {
         if (!liveStatus?.isLive) return;
-
         const interval = setInterval(() => {
             refreshLiveStatus();
             refreshHeatmap();
         }, 5000);
-
         return () => clearInterval(interval);
     }, [liveStatus?.isLive]);
 
@@ -88,12 +84,14 @@ export default function DebateManagerDashboard() {
 
     const createDebate = () => {
         if (!newDebate.title.trim()) {
+            // Using a simple alert for now, consider a custom modal in a real app
             alert("Title is required");
             return;
         }
 
         const validQuestions = newDebate.questions.filter(q => q.trim());
         if (validQuestions.length === 0) {
+            // Using a simple alert for now, consider a custom modal in a real app
             alert("At least one question is required");
             return;
         }
@@ -115,7 +113,7 @@ export default function DebateManagerDashboard() {
                 setIsCreating(false);
                 refreshDebates();
             })
-            .catch((err) => alert(err.message));
+            .catch((err) => alert(err.message)); // Using alert, consider custom modal
     };
 
     const goLive = (debateId) => {
@@ -133,11 +131,17 @@ export default function DebateManagerDashboard() {
             .then(() => {
                 refreshLiveStatus();
                 refreshHeatmap();
+                // Removed: navigate("/debate-manager/live"); - No longer redirects automatically
             })
-            .catch((err) => alert(err.message));
+            .catch((err) => alert(err.message)); // Using alert, consider custom modal
     };
 
     const endLive = () => {
+        // Confirm before ending live debate (using window.confirm for simplicity, consider custom modal)
+        if (!window.confirm("Are you sure you want to end the current live debate?")) {
+            return;
+        }
+
         authFetch("http://localhost:5076/debate-manager/live/end", {
             method: "POST"
         })
@@ -149,24 +153,14 @@ export default function DebateManagerDashboard() {
                 refreshLiveStatus();
                 setHeatmapData(null);
             })
-            .catch((err) => alert(err.message));
-    };
-
-    const changeRound = (roundNumber) => {
-        authFetch("http://localhost:5076/debate-manager/live/change-round", {
-            method: "POST",
-            body: JSON.stringify({ roundNumber })
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error('Failed to change round');
-                return res.json();
-            })
-            .then(() => refreshLiveStatus())
-            .catch((err) => alert(err.message));
+            .catch((err) => alert(err.message)); // Using alert, consider custom modal
     };
 
     const deleteDebate = (debateId) => {
-        if (!confirm("Are you sure you want to delete this debate?")) return;
+        // Confirm before deleting debate (using window.confirm for simplicity, consider custom modal)
+        if (!window.confirm("Are you sure you want to delete this debate?")) {
+            return;
+        }
 
         authFetch(`http://localhost:5076/debate-manager/debates/${debateId}`, {
             method: "DELETE"
@@ -180,7 +174,7 @@ export default function DebateManagerDashboard() {
                 return res.json();
             })
             .then(() => refreshDebates())
-            .catch((err) => alert(err.message));
+            .catch((err) => alert(err.message)); // Using alert, consider custom modal
     };
 
     const addQuestion = () => {
@@ -215,143 +209,51 @@ export default function DebateManagerDashboard() {
     }
 
     return (
-        <div style={{ padding: "1rem", maxWidth: "1200px", margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-                <h1 style={{ color: "#fff" }}>Debate Manager Dashboard</h1>
-                <button onClick={handleLogout} style={{
-                    padding: "0.5rem 1rem",
-                    background: "#dc2626",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer"
-                }}>
+        <div className="dashboard-container">
+            <div className="dashboard-header">
+                <h1 className="dashboard-title">Debate Manager Dashboard</h1>
+                <button onClick={handleLogout} className="table-button danger">
                     Logout
                 </button>
             </div>
 
             {/* Live Status Section */}
-            <div style={{
-                background: liveStatus?.isLive ? "#1f2937" : "#374151",
-                padding: "1.5rem",
-                borderRadius: "8px",
-                marginBottom: "2rem",
-                border: liveStatus?.isLive ? "2px solid #10b981" : "1px solid #4b5563"
-            }}>
-                <h2 style={{
-                    color: liveStatus?.isLive ? "#10b981" : "#9ca3af",
-                    margin: "0 0 1rem 0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem"
-                }}>
-                    {liveStatus?.isLive ? "🔴 LIVE" : "⚫ OFFLINE"}
-                </h2>
+            <h2 className="section-title">Live Debate Status</h2>
+            <div className={`live-status ${liveStatus?.isLive ? 'active' : ''}`}>
+                <h3 className="section-title" style={{ marginTop: 0 }}>
+                    {liveStatus?.isLive ? "LIVE" : "OFFLINE"}
+                </h3>
 
                 {liveStatus?.isLive ? (
                     <div>
-                        <p style={{ color: "#fff", margin: "0.5rem 0" }}>
-                            <strong>Debate:</strong> {liveStatus.debate.title}
-                        </p>
-                        <p style={{ color: "#fff", margin: "0.5rem 0" }}>
-                            <strong>Round:</strong> {liveStatus.currentRound} of {liveStatus.totalRounds}
-                        </p>
-                        <p style={{ color: "#fff", margin: "0.5rem 0" }}>
-                            <strong>Question:</strong> {liveStatus.currentQuestion || "No question"}
-                        </p>
-                        <p style={{ color: "#fff", margin: "0.5rem 0" }}>
-                            <strong>Total Fires:</strong> {liveStatus.totalFires}
-                        </p>
+                        <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
+                        <p><strong>Total Rounds:</strong> {liveStatus.totalRounds}</p>
+                        <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
 
-                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem", flexWrap: "wrap" }}>
-                            <button
-                                onClick={() => changeRound(liveStatus.currentRound - 1)}
-                                disabled={liveStatus.currentRound <= 1}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: liveStatus.currentRound > 1 ? "#3b82f6" : "#6b7280",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: liveStatus.currentRound > 1 ? "pointer" : "not-allowed"
-                                }}
-                            >
-                                ← Previous Round
-                            </button>
-
-                            <button
-                                onClick={() => changeRound(liveStatus.currentRound + 1)}
-                                disabled={liveStatus.currentRound >= liveStatus.totalRounds}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: liveStatus.currentRound < liveStatus.totalRounds ? "#3b82f6" : "#6b7280",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: liveStatus.currentRound < liveStatus.totalRounds ? "pointer" : "not-allowed"
-                                }}
-                            >
-                                Next Round →
-                            </button>
-
-                            <button
-                                onClick={endLive}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: "#dc2626",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer"
-                                }}
-                            >
-                                End Live
-                            </button>
-
-                            <button
-                                onClick={() => { refreshLiveStatus(); refreshHeatmap(); }}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer"
-                                }}
-                            >
-                                Refresh
-                            </button>
-
-                            {/* 🚀 New button to LiveDebatePage */}
+                        <div className="table-actions" style={{ marginTop: "1rem" }}>
                             <button
                                 onClick={() => navigate("/debate-manager/live")}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: "#f59e0b",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer"
-                                }}
+                                className="table-button primary"
                             >
-                                Open Live Control →
+                                Open Live Control &rarr;
+                            </button>
+                            <button
+                                onClick={endLive}
+                                className="table-button danger"
+                            >
+                                End Live Debate
                             </button>
                         </div>
                     </div>
                 ) : (
-                    <p style={{ color: "#9ca3af" }}>No debate is currently live</p>
+                    <p style={{ color: "#9ca3af" }}>No debate is currently live. Select one from the list below to go live.</p>
                 )}
             </div>
 
             {/* Heatmap Data */}
             {heatmapData && (
-                <div style={{
-                    background: "#1f2937",
-                    padding: "1.5rem",
-                    borderRadius: "8px",
-                    marginBottom: "2rem"
-                }}>
-                    <h3 style={{ color: "#fff", margin: "0 0 1rem 0" }}>📊 Live Heatmap Data</h3>
+                <div className="live-status"> {/* Reusing live-status class for consistent styling */}
+                    <h3 className="section-title">Live Heatmap Data</h3>
                     <p style={{ color: "#fff" }}>
                         <strong>Total Fires in Current Session:</strong> {heatmapData.total}
                     </p>
@@ -362,201 +264,124 @@ export default function DebateManagerDashboard() {
             )}
 
             {/* Create New Debate */}
-            <div style={{ marginBottom: "2rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                    <h2 style={{ color: "#fff", margin: 0 }}>My Debates</h2>
-                    <button
-                        onClick={() => setIsCreating(!isCreating)}
-                        style={{
-                            padding: "0.5rem 1rem",
-                            background: "#16a34a",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: "pointer"
-                        }}
-                    >
-                        {isCreating ? "Cancel" : "+ New Debate"}
-                    </button>
-                </div>
+            <h2 className="section-title">My Debates</h2>
+            <button
+                onClick={() => setIsCreating(!isCreating)}
+                className="table-button primary"
+                style={{ marginBottom: "1rem" }}
+            >
+                {isCreating ? "Cancel" : "+ New Debate"}
+            </button>
 
-                {isCreating && (
-                    <div style={{
-                        background: "#1f2937",
-                        padding: "1.5rem",
-                        borderRadius: "8px",
-                        marginBottom: "1rem"
-                    }}>
-                        <h3 style={{ color: "#fff", marginTop: 0 }}>Create New Debate</h3>
+            {isCreating && (
+                <div style={{ marginBottom: "2rem", padding: "1.5rem", borderRadius: "8px", background: "#1f2937", border: "1px solid #374151" }}>
+                    <h3 style={{ color: "#fff", marginTop: 0 }}>Create New Debate</h3>
 
-                        <input
-                            type="text"
-                            placeholder="Debate Title"
-                            value={newDebate.title}
-                            onChange={(e) => setNewDebate(prev => ({ ...prev, title: e.target.value }))}
-                            style={{
-                                width: "100%",
-                                padding: "0.75rem",
-                                marginBottom: "1rem",
-                                background: "#374151",
-                                border: "1px solid #4b5563",
-                                borderRadius: "4px",
-                                color: "#fff"
-                            }}
-                        />
+                    <input
+                        type="text"
+                        placeholder="Debate Title"
+                        value={newDebate.title}
+                        onChange={(e) => setNewDebate(prev => ({ ...prev, title: e.target.value }))}
+                        className="auth-input" // Reusing auth-input for consistent styling
+                        style={{ marginBottom: "1rem" }}
+                    />
 
-                        <textarea
-                            placeholder="Description (optional)"
-                            value={newDebate.description}
-                            onChange={(e) => setNewDebate(prev => ({ ...prev, description: e.target.value }))}
-                            style={{
-                                width: "100%",
-                                padding: "0.75rem",
-                                marginBottom: "1rem",
-                                background: "#374151",
-                                border: "1px solid #4b5563",
-                                borderRadius: "4px",
-                                color: "#fff",
-                                minHeight: "80px",
-                                resize: "vertical"
-                            }}
-                        />
+                    <textarea
+                        placeholder="Description (optional)"
+                        value={newDebate.description}
+                        onChange={(e) => setNewDebate(prev => ({ ...prev, description: e.target.value }))}
+                        className="auth-input" // Reusing auth-input
+                        style={{ marginBottom: "1rem", minHeight: "80px", resize: "vertical" }}
+                    />
 
-                        <h4 style={{ color: "#fff" }}>Questions:</h4>
-                        {newDebate.questions.map((question, index) => (
-                            <div key={index} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                <span style={{ color: "#9ca3af", minWidth: "60px", paddingTop: "0.75rem" }}>
-                                    Round {index + 1}:
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder={`Question for round ${index + 1}`}
-                                    value={question}
-                                    onChange={(e) => updateQuestion(index, e.target.value)}
-                                    style={{
-                                        flex: 1,
-                                        padding: "0.75rem",
-                                        background: "#374151",
-                                        border: "1px solid #4b5563",
-                                        borderRadius: "4px",
-                                        color: "#fff"
-                                    }}
-                                />
-                                {newDebate.questions.length > 1 && (
-                                    <button
-                                        onClick={() => removeQuestion(index)}
-                                        style={{
-                                            padding: "0.75rem",
-                                            background: "#dc2626",
-                                            color: "#fff",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            cursor: "pointer"
-                                        }}
-                                    >
-                                        ×
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-
-                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                            <button
-                                onClick={addQuestion}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: "#3b82f6",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer"
-                                }}
-                            >
-                                + Add Question
-                            </button>
-
-                            <button
-                                onClick={createDebate}
-                                style={{
-                                    padding: "0.5rem 1rem",
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: "pointer"
-                                }}
-                            >
-                                Create Debate
-                            </button>
+                    <h4 style={{ color: "#fff", marginBottom: "0.5rem" }}>Questions:</h4>
+                    {newDebate.questions.map((question, index) => (
+                        <div key={index} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                            <span style={{ color: "#9ca3af", minWidth: "60px", paddingTop: "0.75rem" }}>
+                                Round {index + 1}:
+                            </span>
+                            <input
+                                type="text"
+                                placeholder={`Question for round ${index + 1}`}
+                                value={question}
+                                onChange={(e) => updateQuestion(index, e.target.value)}
+                                className="auth-input" // Reusing auth-input
+                                style={{ flex: 1 }}
+                            />
+                            {newDebate.questions.length > 1 && (
+                                <button
+                                    onClick={() => removeQuestion(index)}
+                                    className="table-button danger"
+                                >
+                                    &times;
+                                </button>
+                            )}
                         </div>
+                    ))}
+
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                        <button
+                            onClick={addQuestion}
+                            className="table-button secondary"
+                        >
+                            + Add Question
+                        </button>
+
+                        <button
+                            onClick={createDebate}
+                            className="table-button primary"
+                        >
+                            Create Debate
+                        </button>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Debates List */}
-            <div style={{
-                display: "grid",
-                gap: "1rem",
-                gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))"
-            }}>
-                {debates.length === 0 ? (
-                    <p style={{ color: "#9ca3af", gridColumn: "1 / -1" }}>
-                        No debates created yet. Click "New Debate" to get started.
-                    </p>
-                ) : (
-                    debates.map((debate) => (
-                        <div
-                            key={debate.id}
-                            style={{
-                                background: "#1f2937",
-                                padding: "1.5rem",
-                                borderRadius: "8px",
-                                border: "1px solid #374151"
-                            }}
-                        >
-                            <h3 style={{ color: "#fff", margin: "0 0 0.5rem 0" }}>{debate.title}</h3>
-                            {debate.description && (
-                                <p style={{ color: "#9ca3af", fontSize: "0.9rem", margin: "0 0 1rem 0" }}>
-                                    {debate.description}
-                                </p>
-                            )}
-                            <p style={{ color: "#9ca3af", fontSize: "0.8rem", margin: "0 0 1rem 0" }}>
-                                {debate.questionCount} questions • Created {new Date(debate.createdAt).toLocaleDateString()}
-                            </p>
-
-                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <button
-                                    onClick={() => goLive(debate.id)}
-                                    disabled={liveStatus?.isLive}
-                                    style={{
-                                        padding: "0.5rem 1rem",
-                                        background: liveStatus?.isLive ? "#6b7280" : "#10b981",
-                                        color: "#fff",
-                                        border: "none",
-                                        borderRadius: "4px",
-                                        cursor: liveStatus?.isLive ? "not-allowed" : "pointer"
-                                    }}
-                                >
-                                    Go Live
-                                </button>
-                                <button
-                                    onClick={() => deleteDebate(debate.id)}
-                                    style={{
-                                        padding: "0.5rem 1rem",
-                                        background: "#dc2626",
-                                        color: "#fff",
-                                        border: "none",
-                                        borderRadius: "4px",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+            <table className="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Questions</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {debates.length === 0 ? (
+                        <tr>
+                            <td colSpan="5" style={{ textAlign: "center" }}>No debates created yet. Click "New Debate" to get started.</td>
+                        </tr>
+                    ) : (
+                        debates.map((debate) => (
+                            <tr key={debate.id}>
+                                <td>{debate.title}</td>
+                                <td>{debate.description}</td>
+                                <td>{debate.questionCount}</td>
+                                <td>{new Date(debate.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    <div className="table-actions">
+                                        <button
+                                            onClick={() => goLive(debate.id)}
+                                            disabled={liveStatus?.isLive}
+                                            className={`table-button ${liveStatus?.isLive ? 'secondary' : 'primary'}`}
+                                        >
+                                            Go Live
+                                        </button>
+                                        <button
+                                            onClick={() => deleteDebate(debate.id)}
+                                            className="table-button danger"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
         </div>
     );
 }

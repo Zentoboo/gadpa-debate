@@ -13,7 +13,7 @@
     padding: 0.75rem 1rem;
     border-radius: 9999px;
     color: #fff;
-    font-family: "Inter", sans-serif;
+    font-family: "Helvetica", sans-serif;
     transition: background 0.3s, border 0.3s;
 }
 
@@ -97,7 +97,7 @@
     text-decoration: none;
     font-weight: normal;
     font-size: 0.875rem;
-    text-transform: uppercase;
+    text-transform: lowercase;
     letter-spacing: 0.05em;
     color: #fff;
     transition: color 0.2s;

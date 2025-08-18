@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
+import "./LiveDebatePage.css"; // Import the new CSS file
 
 export default function LiveDebatePage() {
     const { token, isAuthenticated, isDebateManager, logout } = useAuth();
@@ -9,7 +10,7 @@ export default function LiveDebatePage() {
     const [liveStatus, setLiveStatus] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Helper fetch
+    // Helper fetch with authentication header
     const authFetch = (url, options = {}) =>
         fetch(url, {
             ...options,
@@ -20,14 +21,14 @@ export default function LiveDebatePage() {
             },
         });
 
-    // Redirect if not manager
+    // Redirect if user is not authenticated or not a debate manager
     useEffect(() => {
         if (!isAuthenticated || !isDebateManager) {
             navigate("/debate-manager/login");
         }
     }, [isAuthenticated, isDebateManager, navigate]);
 
-    // Fetch live debate
+    // Fetch live debate status on component mount and token change
     const refreshLiveStatus = () => {
         setLoading(true);
         authFetch("http://localhost:5076/debate-manager/live/status")
@@ -36,7 +37,7 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(data => setLiveStatus(data))
-            .catch(err => console.error(err))
+            .catch(err => console.error(err)) // Log error, but don't block UI with alert
             .finally(() => setLoading(false));
     };
 
@@ -45,6 +46,7 @@ export default function LiveDebatePage() {
         refreshLiveStatus();
     }, [token, isAuthenticated, isDebateManager]);
 
+    // Function to change the current round of the live debate
     const changeRound = (roundNumber) => {
         authFetch("http://localhost:5076/debate-manager/live/change-round", {
             method: "POST",
@@ -55,11 +57,13 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(() => refreshLiveStatus())
-            .catch(err => alert(err.message));
+            .catch(err => console.error(err)); // Log error, avoid alert
     };
 
+    // Function to end the live debate
     const endLive = () => {
-        if (!window.confirm("Are you sure you want to end the live debate?")) return;
+        // Using window.confirm for simplicity, consider a custom modal in a full application
+        if (!window.confirm("Are you sure you want to end the live debate? This action cannot be undone.")) return;
 
         authFetch("http://localhost:5076/debate-manager/live/end", {
             method: "POST",
@@ -69,32 +73,29 @@ export default function LiveDebatePage() {
                 return res.json();
             })
             .then(() => {
-                alert("Live debate ended.");
-                navigate("/debate-manager/dashboard");
+                alert("Live debate ended successfully!"); // Simple alert for confirmation
+                navigate("/debate-manager/dashboard"); // Redirect to dashboard after ending
             })
-            .catch(err => alert(err.message));
+            .catch(err => console.error(err)); // Log error, avoid alert
     };
 
+    // Render loading state
     if (loading) {
-        return <div style={{ color: "#fff", textAlign: "center", padding: "2rem" }}>Loading...</div>;
+        return (
+            <div className="status-message-container">
+                <h1>Loading Live Debate Status...</h1>
+            </div>
+        );
     }
 
+    // Render message if no debate is currently live
     if (!liveStatus?.isLive) {
         return (
-            <div style={{ color: "#fff", textAlign: "center", padding: "2rem" }}>
+            <div className="status-message-container">
                 <h1>No live debate is currently active</h1>
                 <button
                     onClick={() => navigate("/debate-manager/dashboard")}
-                    style={{
-                        marginTop: "1rem",
-                        padding: "0.75rem 1.5rem",
-                        background: "#3b82f6",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontSize: "1rem",
-                    }}
+                    className="control-button primary"
                 >
                     Back to Dashboard
                 </button>
@@ -102,96 +103,49 @@ export default function LiveDebatePage() {
         );
     }
 
+    // Render live debate controls and information
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100vh",
-                background: "#111827",
-                color: "#fff",
-                justifyContent: "space-between",
-                padding: "2rem",
-            }}
-        >
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ margin: 0 }}>🎤 {liveStatus.debate.title}</h2>
-                <button
-                    onClick={logout}
-                    style={{
-                        padding: "0.5rem 1rem",
-                        background: "#dc2626",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                    }}
-                >
-                    Logout
-                </button>
+        <div className="live-debate-container">
+            {/* Header Section */}
+            <div className="live-debate-header">
+                <h2 className="live-debate-title">
+                    Live Debate: {liveStatus.debate.title}
+                </h2>
+                {/* Logout button removed */}
             </div>
 
-            {/* Main Question Display */}
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <h1 style={{ fontSize: "3rem", textAlign: "center", lineHeight: 1.3 }}>
-                    Round {liveStatus.currentRound}:<br />
-                    {liveStatus.currentQuestion || "No question"}
+            {/* Main Content: Current Question & Round */}
+            <div className="live-debate-main-content">
+                <p className="live-debate-round">Round {liveStatus.currentRound} of {liveStatus.totalRounds}</p>
+                <h1 className="live-debate-question">
+                    {liveStatus.currentQuestion || "No question set for this round"}
                 </h1>
+                <div className="live-debate-stats">
+                    <span>Total Fires: {liveStatus.totalFires}</span>
+                </div>
             </div>
 
-            {/* Controls */}
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "1.5rem",
-                    paddingBottom: "2rem",
-                }}
-            >
+            {/* Controls Section */}
+            <div className="live-debate-controls">
                 <button
                     onClick={() => changeRound(liveStatus.currentRound - 1)}
                     disabled={liveStatus.currentRound <= 1}
-                    style={{
-                        padding: "1rem 2rem",
-                        fontSize: "1.25rem",
-                        background: liveStatus.currentRound > 1 ? "#3b82f6" : "#6b7280",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "10px",
-                        cursor: liveStatus.currentRound > 1 ? "pointer" : "not-allowed",
-                    }}
+                    className="control-button secondary"
                 >
-                    ← Previous
+                    &larr; Previous Round
                 </button>
 
                 <button
                     onClick={() => changeRound(liveStatus.currentRound + 1)}
                     disabled={liveStatus.currentRound >= liveStatus.totalRounds}
-                    style={{
-                        padding: "1rem 2rem",
-                        fontSize: "1.25rem",
-                        background: liveStatus.currentRound < liveStatus.totalRounds ? "#3b82f6" : "#6b7280",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "10px",
-                        cursor: liveStatus.currentRound < liveStatus.totalRounds ? "pointer" : "not-allowed",
-                    }}
+                    className="control-button primary"
                 >
-                    Next →
+                    Next Round &rarr;
                 </button>
 
                 <button
                     onClick={endLive}
-                    style={{
-                        padding: "1rem 2rem",
-                        fontSize: "1.25rem",
-                        background: "#dc2626",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "10px",
-                        cursor: "pointer",
-                    }}
+                    className="control-button danger"
                 >
                     End Debate
                 </button>

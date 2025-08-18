@@ -1,0 +1,126 @@
+/* ==================================== */
+/* === Dashboard Layouts and Tables === */
+/* ==================================== */
+
+.dashboard-container {
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #374151;
+    padding-bottom: 1rem;
+}
+
+.dashboard-title {
+    color: #fff;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.section-title {
+    color: #9ca3af;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 0.5rem;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    background: #1f2937;
+    border: 1px solid #374151;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #374151;
+    color: #ccc;
+    word-break: break-word;
+}
+
+.dashboard-table th {
+    background-color: #374151;
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.dashboard-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dashboard-table tbody tr:hover {
+    background-color: #253140;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.table-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.table-button.primary {
+    background-color: #3b82f6;
+}
+
+.table-button.primary:hover {
+    background-color: #2563eb;
+}
+
+.table-button.secondary {
+    background-color: #6b7280;
+}
+
+.table-button.secondary:hover {
+    background-color: #4b5563;
+}
+
+.table-button.danger {
+    background-color: #dc2626;
+}
+
+.table-button.danger:hover {
+    background-color: #b91c1c;
+}
+
+.text-success {
+    color: #10b981;
+}
+
+.text-error {
+    color: #dc2626;
+}
+
+.live-status {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    border: 1px solid #4b5563;
+    background: #1f2937;
+}
+
+.live-status.active {
+    border: 2px solid #10b981;
+    background: #0f172a;
+}

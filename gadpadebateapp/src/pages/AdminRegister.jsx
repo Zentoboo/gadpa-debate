@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./AdminLogin.css";
+import "./AuthForms.css";
 
 export default function AdminRegister() {
   const [username, setUsername] = useState("");
@@ -10,12 +10,11 @@ export default function AdminRegister() {
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [registerEnabled, setRegisterEnabled] = useState(null); // null = loading
+  const [registerEnabled, setRegisterEnabled] = useState(null);
   const [statusError, setStatusError] = useState(false);
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
-  // Check if registration is enabled
   useEffect(() => {
     fetch("http://localhost:5076/admin/register-status")
       .then((res) => {
@@ -25,32 +24,28 @@ export default function AdminRegister() {
         return res.json();
       })
       .then((data) => {
-        console.log('Register status in component:', data); // Debug log
         setRegisterEnabled(data.enabled);
         setStatusError(false);
       })
-      .catch((error) => {
-        console.error('Error fetching register status:', error);
+      .catch(() => {
         setStatusError(true);
-        // Default to allowing registration if we can't check status
         setRegisterEnabled(true);
       });
   }, []);
 
-  // If there was an error checking status, show a warning but allow registration
   if (statusError) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">⚠️ Connection Issue</h1>
-          <p style={{ color: "#ffbaba", textAlign: "center", marginBottom: "1.5rem" }}>
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">⚠️ Connection Issue</h1>
+          <p className="auth-message error" style={{ marginBottom: "1.5rem" }}>
             Could not verify registration status. The server might be down.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button onClick={() => window.location.reload()} className="login-button">
+            <button onClick={() => window.location.reload()} className="auth-button">
               Try Again
             </button>
-            <button onClick={() => navigate("/admin/login")} className="login-button">
+            <button onClick={() => navigate("/admin/login")} className="auth-button">
               Go to Login
             </button>
           </div>
@@ -59,30 +54,26 @@ export default function AdminRegister() {
     );
   }
 
-  // If still checking registration status
   if (registerEnabled === null) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">Loading...</h1>
-          <p style={{ color: "#ccc", textAlign: "center" }}>
-            Checking registration status...
-          </p>
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">Loading...</h1>
+          <p className="small-text">Checking registration status...</p>
         </div>
       </div>
     );
   }
 
-  // If registration is disabled, show message and redirect
   if (registerEnabled === false) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">Registration Disabled 🚫</h1>
-          <p style={{ color: "#ccc", textAlign: "center", marginBottom: "1.5rem" }}>
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">Registration Disabled 🚫</h1>
+          <p className="small-text" style={{ marginBottom: "1.5rem" }}>
             Registration is currently disabled.
           </p>
-          <button onClick={() => navigate("/admin/login")} className="login-button">
+          <button onClick={() => navigate("/admin/login")} className="auth-button">
             Go to Login
           </button>
         </div>
@@ -90,13 +81,12 @@ export default function AdminRegister() {
     );
   }
 
-  // If already logged in as admin, redirect to dashboard
   if (isAdmin) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">You are already signed in ✅</h1>
-          <button onClick={() => navigate("/admin/dashboard")} className="login-button">
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">You are already signed in ✅</h1>
+          <button onClick={() => navigate("/admin/dashboard")} className="auth-button">
             Go to Dashboard
           </button>
         </div>
@@ -109,29 +99,21 @@ export default function AdminRegister() {
     setMessage("");
     setIsSuccess(false);
 
-    // Client-side validation
     if (!username.trim()) {
       setMessage("Username is required");
-      return;
-    }
-
-    if (username.length < 3) {
-      setMessage("Username must be at least 3 characters long");
-      return;
-    }
-
-    if (!password) {
-      setMessage("Password is required");
+      setIsSuccess(false);
       return;
     }
 
     if (password.length < 6) {
       setMessage("Password must be at least 6 characters long");
+      setIsSuccess(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setMessage("Passwords do not match");
+      setIsSuccess(false);
       return;
     }
 
@@ -140,60 +122,44 @@ export default function AdminRegister() {
     fetch("http://localhost:5076/admin/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim(), password })
+      body: JSON.stringify({ username: username.trim(), password }),
     })
       .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setMessage("✅ Registration successful! You can now login.");
-          setIsSuccess(true);
-          setUsername("");
-          setPassword("");
-          setConfirmPassword("");
-
-          // Auto redirect to login after 2 seconds
-          setTimeout(() => {
-            navigate("/admin/login");
-          }, 2000);
-        } else {
-          setMessage(`❌ ${data.message || "Failed to register"}`);
-          setIsSuccess(false);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Registration failed");
         }
+        return data;
       })
-      .catch((error) => {
-        console.error('Registration error:', error);
-        setMessage("❌ Network error. Please try again.");
+      .then(() => {
+        setMessage("Registration successful!");
+        setIsSuccess(true);
+        setUsername("");
+        setPassword("");
+        setConfirmPassword("");
+        setTimeout(() => navigate("/admin/login"), 2000);
+      })
+      .catch((err) => {
+        setMessage(err.message);
         setIsSuccess(false);
       })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .finally(() => setIsLoading(false));
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Register</h1>
-        <p style={{ color: "#ccc", textAlign: "center", fontSize: "0.9rem", marginBottom: "1rem" }}>
-          Registration is currently <strong style={{ color: "#16a34a" }}>enabled</strong>
-        </p>
-
-        {message && (
-          <p className={`login-error ${isSuccess ? 'success' : ''}`}>
-            {message}
-          </p>
-        )}
-
-        <form onSubmit={handleRegister} className="login-form">
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1 className="auth-title">Admin Register</h1>
+        {message && <div className={`auth-message ${isSuccess ? "success" : "error"}`}>{message}</div>}
+        <form onSubmit={handleRegister} className="auth-form">
           <input
             type="text"
-            placeholder="Username (min 3 characters)"
+            placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="login-input"
+            className="auth-input"
             disabled={isLoading}
-            maxLength={50}
           />
           <input
             type="password"
@@ -201,7 +167,7 @@ export default function AdminRegister() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="login-input"
+            className="auth-input"
             disabled={isLoading}
             minLength={6}
           />
@@ -211,36 +177,24 @@ export default function AdminRegister() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="login-input"
+            className="auth-input"
             disabled={isLoading}
           />
           <button
             type="submit"
-            className="login-button"
+            className="auth-button"
             disabled={isLoading}
           >
             {isLoading ? "Registering..." : "Register"}
           </button>
         </form>
 
-        <div style={{ marginTop: "1rem", textAlign: "center" }}>
-          <p style={{ color: "#ccc", fontSize: "0.9rem" }}>
-            Already have an account?{" "}
-            <button
-              onClick={() => navigate("/admin/login")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#ff6666",
-                cursor: "pointer",
-                textDecoration: "underline",
-                fontSize: "0.9rem"
-              }}
-            >
-              Login here
-            </button>
-          </p>
-        </div>
+        <p className="small-text">
+          Already have an account?
+          <button onClick={() => navigate("/admin/login")} className="link-button">
+            Login here
+          </button>
+        </p>
       </div>
     </div>
   );

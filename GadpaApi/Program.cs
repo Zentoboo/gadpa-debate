@@ -426,7 +426,6 @@ public class Program
 
             var debates = await db.Debates
                 .Where(d => d.CreatedByUserId == userId)
-                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
                 .OrderByDescending(d => d.UpdatedAt)
                 .Select(d => new
                 {
@@ -435,12 +434,22 @@ public class Program
                     d.Description,
                     d.CreatedAt,
                     d.UpdatedAt,
-                    questionCount = d.Questions.Count
+                    questionCount = d.Questions.Count,
+                    Questions = d.Questions
+                        .OrderBy(q => q.RoundNumber)
+                        .Select(q => new
+                        {
+                            q.Id,
+                            q.Question,
+                            q.RoundNumber
+                        })
+                        .ToList()
                 })
                 .ToListAsync();
 
             return Results.Ok(debates);
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
 
         // Create new debate
         app.MapPost("/debate-manager/debates", async (HttpContext context, AppDbContext db, CreateDebateRequest request) =>

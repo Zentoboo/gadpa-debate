@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
-import "./AdminLogin.css";
+import "./AuthForms.css";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [registerEnabled, setRegisterEnabled] = useState(null); // null = loading
+  const [registerEnabled, setRegisterEnabled] = useState(null);
   const navigate = useNavigate();
   const { login, isAdmin } = useAuth();
 
-  // Check if registration is enabled
   useEffect(() => {
     fetch("http://localhost:5076/admin/register-status")
       .then((res) => {
@@ -22,22 +21,19 @@ export default function AdminLogin() {
         return res.json();
       })
       .then((data) => {
-        console.log('Register status in login:', data); // Debug log
         setRegisterEnabled(data.enabled);
       })
-      .catch((error) => {
-        console.error('Error fetching register status:', error);
-        // Default to false if we can't check status
+      .catch(() => {
         setRegisterEnabled(false);
       });
   }, []);
 
   if (isAdmin) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">You are already signed in ✅</h1>
-          <button onClick={() => navigate("/admin/dashboard")} className="login-button">
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">You are already signed in ✅</h1>
+          <button onClick={() => navigate("/admin/dashboard")} className="auth-button">
             Go to Dashboard
           </button>
         </div>
@@ -49,19 +45,16 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
 
-    // Client-side validation
     if (!username.trim()) {
       setError("Username is required");
       return;
     }
-
     if (!password) {
       setError("Password is required");
       return;
     }
 
     setIsLoading(true);
-
     fetch("http://localhost:5076/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -81,28 +74,23 @@ export default function AdminLogin() {
       .catch((err) => {
         setError(err.message);
       })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .finally(() => setIsLoading(false));
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="login-title">Login</h1>
-
-        {error && <p className="login-error">{error}</p>}
-
-        <form onSubmit={handleLogin} className="login-form">
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1 className="auth-title">Admin Login</h1>
+        {error && <div className="auth-message error">{error}</div>}
+        <form onSubmit={handleLogin} className="auth-form">
           <input
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="login-input"
+            className="auth-input"
             disabled={isLoading}
-            maxLength={50}
           />
           <input
             type="password"
@@ -110,52 +98,34 @@ export default function AdminLogin() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="login-input"
+            className="auth-input"
             disabled={isLoading}
           />
           <button
             type="submit"
-            className="login-button"
+            className="auth-button"
             disabled={isLoading}
           >
             {isLoading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        {/* Only show registration link if registration is enabled */}
         {registerEnabled === true && (
-          <div style={{ marginTop: "1rem", textAlign: "center" }}>
-            <p style={{ color: "#ccc", fontSize: "0.9rem" }}>
-              Don't have an account?{" "}
-              <button
-                onClick={() => navigate("/admin/register")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#ff6666",
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  fontSize: "0.9rem"
-                }}
-              >
-                Register here
-              </button>
-            </p>
-          </div>
+          <p className="small-text">
+            Don't have an account?
+            <button onClick={() => navigate("/admin/register")} className="link-button">
+              Register here
+            </button>
+          </p>
         )}
         {registerEnabled === false && (
-          <div style={{ marginTop: "1rem", textAlign: "center" }}>
-            <p style={{ color: "#666", fontSize: "0.8rem" }}>
-              Registration is disabled
-            </p>
-          </div>
+          <p className="small-text" style={{ color: "#666", fontSize: "0.8rem" }}>
+            Registration is disabled
+          </p>
         )}
         {registerEnabled === null && (
-          <div style={{ marginTop: "1rem", textAlign: "center" }}>
-            <p style={{ color: "#666", fontSize: "0.8rem" }}>
-              Loading...
-            </p>
-          </div>
+          <p className="small-text" style={{ color: "#666", fontSize: "0.8rem" }}>
+            Loading...
+          </p>
         )}
       </div>
     </div>

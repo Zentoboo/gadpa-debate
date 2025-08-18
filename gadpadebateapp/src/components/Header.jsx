@@ -43,7 +43,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/admin/login"
                                         className={location.pathname === "/admin/login" ? "active" : ""}
                                     >
-                                        admin login
+                                        admin-login
                                     </Link>
                                 </li>
                                 {adminRegisterEnabled && (
@@ -52,7 +52,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                             to="/admin/register"
                                             className={location.pathname === "/admin/register" ? "active" : ""}
                                         >
-                                            admin register
+                                            admin-register
                                         </Link>
                                     </li>
                                 )}
@@ -63,7 +63,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/debate-manager/login"
                                         className={location.pathname === "/debate-manager/login" ? "active" : ""}
                                     >
-                                        debate manager
+                                        dm-login
                                     </Link>
                                 </li>
                                 {debateManagerRegisterEnabled && (
@@ -72,7 +72,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                             to="/debate-manager/register"
                                             className={location.pathname === "/debate-manager/register" ? "active" : ""}
                                         >
-                                            dm register
+                                            dm-register
                                         </Link>
                                     </li>
                                 )}
@@ -84,7 +84,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                             <>
                                 <li>
                                     <span style={{ color: "#4ade80", fontSize: "0.8rem", textTransform: "uppercase" }}>
-                                        Admin
+                                        admin
                                     </span>
                                 </li>
                                 <li>
@@ -106,7 +106,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                             <>
                                 <li>
                                     <span style={{ color: "#fbbf24", fontSize: "0.8rem", textTransform: "uppercase" }}>
-                                        Debate Manager
+                                        debate-manager
                                     </span>
                                 </li>
                                 <li>

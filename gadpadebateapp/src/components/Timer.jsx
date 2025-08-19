@@ -134,17 +134,17 @@ export default function Timer({ initialDuration = 120 }) {
             <div className="timer-controls">
                 {!isRunning && currentTime > 0 && (
                     <button onClick={startTimer} className="control-button primary" disabled={isEditing}>
-                        Play ▶️
+                        Play
                     </button>
                 )}
                 {isRunning && (
                     <button onClick={pauseTimer} className="control-button secondary" disabled={isEditing}>
-                        Pause ⏸️
+                        Pause
                     </button>
                 )}
                 {currentTime !== duration && (
                     <button onClick={stopTimer} className="control-button danger" disabled={isEditing || isRunning}>
-                        Stop ⏹️
+                        Stop
                     </button>
                 )}
             </div>

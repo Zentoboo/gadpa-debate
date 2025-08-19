@@ -10,8 +10,14 @@ export default function DebateManagerDashboard() {
     const [debates, setDebates] = useState([]);
     const [liveStatus, setLiveStatus] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [editingDebateId, setEditingDebateId] = useState(null);
     const [heatmapData, setHeatmapData] = useState(null);
     const [newDebate, setNewDebate] = useState({
+        title: "",
+        description: "",
+        questions: [""]
+    });
+    const [editDebate, setEditDebate] = useState({
         title: "",
         description: "",
         questions: [""]
@@ -114,6 +120,76 @@ export default function DebateManagerDashboard() {
             .catch((err) => alert(err.message));
     };
 
+    const startEditDebate = (debate) => {
+        // First fetch the full debate details including questions
+        authFetch(`http://localhost:5076/debate-manager/debates/${debate.id}`)
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to fetch debate details');
+                return res.json();
+            })
+            .then((fullDebate) => {
+                // Handle questions whether they come as objects or strings
+                let processedQuestions = [""];
+
+                if (fullDebate.questions && fullDebate.questions.length > 0) {
+                    processedQuestions = fullDebate.questions.map(question => {
+                        // If question is an object, extract the text property
+                        if (typeof question === 'object' && question !== null) {
+                            return question.text || question.question || question.content || "";
+                        }
+                        // If question is already a string, use it directly
+                        return question || "";
+                    });
+                }
+
+                setEditDebate({
+                    title: fullDebate.title,
+                    description: fullDebate.description || "",
+                    questions: processedQuestions
+                });
+                setEditingDebateId(debate.id);
+                setIsCreating(false); // Close create form if open
+            })
+            .catch((err) => alert(err.message));
+    };
+
+    const saveEditDebate = () => {
+        if (!editDebate.title.trim()) {
+            alert("Title is required");
+            return;
+        }
+
+        const validQuestions = editDebate.questions.filter(q => q.trim());
+        if (validQuestions.length === 0) {
+            alert("At least one question is required");
+            return;
+        }
+
+        authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                title: editDebate.title.trim(),
+                description: editDebate.description.trim(),
+                questions: validQuestions.map(q => q.trim())
+            })
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to update debate');
+                return res.json();
+            })
+            .then(() => {
+                setEditDebate({ title: "", description: "", questions: [""] });
+                setEditingDebateId(null);
+                refreshDebates();
+            })
+            .catch((err) => alert(err.message));
+    };
+
+    const cancelEdit = () => {
+        setEditingDebateId(null);
+        setEditDebate({ title: "", description: "", questions: [""] });
+    };
+
     const goLive = (debateId) => {
         authFetch(`http://localhost:5076/debate-manager/debates/${debateId}/go-live`, {
             method: "POST"
@@ -172,6 +248,7 @@ export default function DebateManagerDashboard() {
             .catch((err) => alert(err.message));
     };
 
+    // Helper functions for create form
     const addQuestion = () => {
         setNewDebate(prev => ({
             ...prev,
@@ -193,6 +270,28 @@ export default function DebateManagerDashboard() {
         }));
     };
 
+    // Helper functions for edit form
+    const addEditQuestion = () => {
+        setEditDebate(prev => ({
+            ...prev,
+            questions: [...prev.questions, ""]
+        }));
+    };
+
+    const removeEditQuestion = (index) => {
+        setEditDebate(prev => ({
+            ...prev,
+            questions: prev.questions.filter((_, i) => i !== index)
+        }));
+    };
+
+    const updateEditQuestion = (index, value) => {
+        setEditDebate(prev => ({
+            ...prev,
+            questions: prev.questions.map((q, i) => i === index ? value : q)
+        }));
+    };
+
     if (!isAuthenticated || !token || !isDebateManager) {
         return null;
     }
@@ -201,7 +300,6 @@ export default function DebateManagerDashboard() {
         <div className="dashboard-container">
             <div className="dashboard-header">
                 <h1 className="dashboard-title">Debate Manager Dashboard</h1>
-                {/* Logout button removed */}
             </div>
 
             {/* Live Status Section */}
@@ -253,7 +351,12 @@ export default function DebateManagerDashboard() {
             {/* Create New Debate */}
             <h2 className="section-title">My Debates</h2>
             <button
-                onClick={() => setIsCreating(!isCreating)}
+                onClick={() => {
+                    setIsCreating(!isCreating);
+                    if (editingDebateId) {
+                        cancelEdit();
+                    }
+                }}
                 className="table-button primary"
                 style={{ marginBottom: "1rem" }}
             >
@@ -324,6 +427,78 @@ export default function DebateManagerDashboard() {
                 </div>
             )}
 
+            {/* Edit Debate Form */}
+            {editingDebateId && (
+                <div style={{ marginBottom: "2rem", padding: "1.5rem", borderRadius: "8px", background: "#1f2937", border: "1px solid #4f46e5" }}>
+                    <h3 style={{ color: "#fff", marginTop: 0 }}>Edit Debate</h3>
+
+                    <input
+                        type="text"
+                        placeholder="Debate Title"
+                        value={editDebate.title}
+                        onChange={(e) => setEditDebate(prev => ({ ...prev, title: e.target.value }))}
+                        className="auth-input"
+                        style={{ marginBottom: "1rem" }}
+                    />
+
+                    <textarea
+                        placeholder="Description (optional)"
+                        value={editDebate.description}
+                        onChange={(e) => setEditDebate(prev => ({ ...prev, description: e.target.value }))}
+                        className="auth-input"
+                        style={{ marginBottom: "1rem", minHeight: "80px", resize: "vertical" }}
+                    />
+
+                    <h4 style={{ color: "#fff", marginBottom: "0.5rem" }}>Questions:</h4>
+                    {editDebate.questions.map((question, index) => (
+                        <div key={index} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                            <span style={{ color: "#9ca3af", minWidth: "60px", paddingTop: "0.75rem" }}>
+                                Round {index + 1}:
+                            </span>
+                            <input
+                                type="text"
+                                placeholder={`Question for round ${index + 1}`}
+                                value={question}
+                                onChange={(e) => updateEditQuestion(index, e.target.value)}
+                                className="auth-input"
+                                style={{ flex: 1 }}
+                            />
+                            {editDebate.questions.length > 1 && (
+                                <button
+                                    onClick={() => removeEditQuestion(index)}
+                                    className="table-button danger"
+                                >
+                                    &times;
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+                        <button
+                            onClick={addEditQuestion}
+                            className="table-button secondary"
+                        >
+                            + Add Question
+                        </button>
+
+                        <button
+                            onClick={saveEditDebate}
+                            className="table-button primary"
+                        >
+                            Save Changes
+                        </button>
+
+                        <button
+                            onClick={cancelEdit}
+                            className="table-button secondary"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Debates List */}
             <table className="dashboard-table">
                 <thead>
@@ -355,6 +530,12 @@ export default function DebateManagerDashboard() {
                                             className={`table-button ${liveStatus?.isLive ? 'secondary' : 'primary'}`}
                                         >
                                             Go Live
+                                        </button>
+                                        <button
+                                            onClick={() => startEditDebate(debate)}
+                                            className="table-button secondary"
+                                        >
+                                            Edit
                                         </button>
                                         <button
                                             onClick={() => deleteDebate(debate.id)}

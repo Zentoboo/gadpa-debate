@@ -10,7 +10,9 @@ export default function LiveDebatePage() {
     const navigate = useNavigate();
 
     const [liveStatus, setLiveStatus] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [loadingAction, setLoadingAction] = useState(""); // Track which action is loading
 
     // Helper fetch with authentication header
     const authFetch = (url, options = {}) =>
@@ -31,8 +33,11 @@ export default function LiveDebatePage() {
     }, [isAuthenticated, isDebateManager, navigate]);
 
     // Fetch live debate status
-    const refreshLiveStatus = () => {
-        setLoading(true);
+    const refreshLiveStatus = (isInitial = false) => {
+        if (isInitial) {
+            setInitialLoading(true);
+        }
+
         authFetch("http://localhost:5076/debate-manager/live/status")
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch live status");
@@ -40,16 +45,25 @@ export default function LiveDebatePage() {
             })
             .then(data => setLiveStatus(data))
             .catch(err => console.error(err))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (isInitial) {
+                    setInitialLoading(false);
+                }
+            });
     };
 
     useEffect(() => {
         if (!token || !isAuthenticated || !isDebateManager) return;
-        refreshLiveStatus();
+        refreshLiveStatus(true);
     }, [token, isAuthenticated, isDebateManager]);
 
-    // Change the round
+    // Change the round with subtle loading
     const changeRound = (roundNumber) => {
+        if (actionLoading) return; // Prevent multiple clicks
+
+        setActionLoading(true);
+        setLoadingAction(roundNumber > liveStatus.currentRound ? "next" : "prev");
+
         authFetch("http://localhost:5076/debate-manager/live/change-round", {
             method: "POST",
             body: JSON.stringify({ roundNumber }),
@@ -58,13 +72,28 @@ export default function LiveDebatePage() {
                 if (!res.ok) throw new Error("Failed to change round");
                 return res.json();
             })
-            .then(() => refreshLiveStatus())
-            .catch(err => console.error(err));
+            .then(() => {
+                // Small delay to show the loading state briefly
+                setTimeout(() => {
+                    refreshLiveStatus();
+                    setActionLoading(false);
+                    setLoadingAction("");
+                }, 300);
+            })
+            .catch(err => {
+                console.error(err);
+                setActionLoading(false);
+                setLoadingAction("");
+                alert("Failed to change round. Please try again.");
+            });
     };
 
-    // End debate
+    // End debate with loading state
     const endLive = () => {
         if (!window.confirm("Are you sure you want to end the live debate? This action cannot be undone.")) return;
+
+        setActionLoading(true);
+        setLoadingAction("end");
 
         authFetch("http://localhost:5076/debate-manager/live/end", {
             method: "POST",
@@ -77,11 +106,16 @@ export default function LiveDebatePage() {
                 alert("Live debate ended successfully!");
                 navigate("/debate-manager/dashboard");
             })
-            .catch(err => console.error(err));
+            .catch(err => {
+                console.error(err);
+                setActionLoading(false);
+                setLoadingAction("");
+                alert("Failed to end debate. Please try again.");
+            });
     };
 
-    // Loading state
-    if (loading) {
+    // Initial loading state - only show this for the first load
+    if (initialLoading) {
         return (
             <div className="status-message-container">
                 <h1>Loading Live Debate Status...</h1>
@@ -139,26 +173,57 @@ export default function LiveDebatePage() {
             <div className="live-debate-controls">
                 <button
                     onClick={() => changeRound(liveStatus.currentRound - 1)}
-                    disabled={liveStatus.currentRound <= 1}
-                    className="control-button secondary"
+                    disabled={liveStatus.currentRound <= 1 || actionLoading}
+                    className={`control-button secondary ${loadingAction === "prev" ? "loading" : ""
+                        }`}
                 >
-                    ← Prev
+                    {loadingAction === "prev" ? (
+                        <>
+                            <span className="button-spinner"></span>
+                            ← Prev
+                        </>
+                    ) : (
+                        "← Prev"
+                    )}
                 </button>
 
                 <button
                     onClick={() => changeRound(liveStatus.currentRound + 1)}
-                    disabled={liveStatus.currentRound >= liveStatus.totalRounds}
-                    className="control-button primary"
+                    disabled={liveStatus.currentRound >= liveStatus.totalRounds || actionLoading}
+                    className={`control-button primary ${loadingAction === "next" ? "loading" : ""
+                        }`}
                 >
-                    Next →
+                    {loadingAction === "next" ? (
+                        <>
+                            Next →
+                            <span className="button-spinner"></span>
+                        </>
+                    ) : (
+                        "Next →"
+                    )}
                 </button>
 
                 <button
                     onClick={endLive}
-                    className="control-button danger"
+                    disabled={actionLoading}
+                    className={`control-button danger ${loadingAction === "end" ? "loading" : ""
+                        }`}
                 >
-                    End
+                    {loadingAction === "end" ? (
+                        <>
+                            <span className="button-spinner"></span>
+                            Ending...
+                        </>
+                    ) : (
+                        "End"
+                    )}
                 </button>
+                {/* Loading Status */}
+                {actionLoading && (
+                    <div className="loading-status">
+                        Loading...
+                    </div>
+                )}
             </div>
         </div>
     );

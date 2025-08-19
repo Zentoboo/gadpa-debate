@@ -38,7 +38,17 @@
     white-space: nowrap;
 }
 
-/* Main Content - Table-like Layout */
+.live-debate-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 1rem;
+    color: #ccc;
+}
+
+
+
+/* Main Content */
 .live-debate-main-content {
     display: flex;
     flex-direction: column;
@@ -46,6 +56,32 @@
     width: 100%;
     max-width: 1200px;
     align-items: center;
+}
+
+/* Loading Status */
+.loading-status {
+    background: rgba(79, 70, 229, 0.1);
+    border: 1px solid #4f46e5;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #4f46e5;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: fade-in 0.3s ease;
+    justify-self: center;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Question Card */
@@ -94,11 +130,12 @@
 .live-debate-controls {
     width: 100%;
     max-width: 1200px;
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 1.5rem;
     padding-top: 2rem;
     border-top: 1px solid #333;
+    align-items: center;
 }
 
 .control-button {
@@ -109,7 +146,7 @@
     border-radius: 10px;
     cursor: pointer;
     color: #fff;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    transition: all 0.2s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -119,7 +156,7 @@
 
 .control-button.primary:hover:not([disabled]) {
     background-color: #2563eb;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .control-button.danger {
@@ -128,7 +165,7 @@
 
 .control-button.danger:hover:not([disabled]) {
     background-color: #b91c1c;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .control-button.secondary {
@@ -137,13 +174,14 @@
 
 .control-button.secondary:hover:not([disabled]) {
     background-color: #4b5563;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
-.control-button[disabled] {
+.control-button:disabled {
     background-color: #4b5563;
     cursor: not-allowed;
-    box-shadow: none;
+    opacity: 0.5;
+    transform: none;
 }
 
 /* Status Message */
@@ -174,6 +212,7 @@
     background-color: #2563eb;
 }
 
+/* fire and reloads */
 .live-debate-header-right {
     display: flex;
     align-items: center;
@@ -265,21 +304,24 @@
     pointer-events: none;
 }
 
-.timer-display.running-timer:hover {
-    transform: none;
+.timer-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: wrap;
 }
 
+/* Animations */
 @keyframes pulse {
-    0% {
+
+    0%,
+    100% {
         transform: scale(1);
     }
 
     50% {
         transform: scale(1.05);
-    }
-
-    100% {
-        transform: scale(1);
     }
 }
 
@@ -300,15 +342,7 @@
     }
 }
 
-.timer-controls {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    width: 100%;
-    flex-wrap: wrap;
-}
-
-/* 📱 Responsive */
+/* Responsive Design */
 @media (max-width: 768px) {
     .live-debate-container {
         padding: 1rem;
@@ -326,19 +360,15 @@
         white-space: normal;
     }
 
-    .question-card {
-        padding: 1.5rem;
-        min-height: 200px;
-    }
-
-    .live-debate-question {
-        font-size: 1.8rem;
-    }
-
+    .question-card,
     .timer-card {
         padding: 1.5rem;
         min-height: 200px;
         max-width: 100%;
+    }
+
+    .live-debate-question {
+        font-size: 1.8rem;
     }
 
     .timer-display {
@@ -351,6 +381,11 @@
         width: 180px;
     }
 
+    .live-debate-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
     .control-button {
         width: 100%;
         padding: 0.8rem 1.5rem;
@@ -360,11 +395,6 @@
     .timer-controls {
         flex-direction: column;
         gap: 0.8rem;
-    }
-
-    .live-debate-controls {
-        flex-direction: column;
-        gap: 1rem;
     }
 }
 

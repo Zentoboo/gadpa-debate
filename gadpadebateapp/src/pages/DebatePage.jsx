@@ -137,9 +137,7 @@ export default function DebatePage() {
             </div> */}
 
             <div className="section-card chart-card">
-                <h2 className="chart-title">🔥 Heatmap Chart</h2>
                 <HeatmapChart
-                    // Pass the specific debate ID to the heatmap component
                     fetchUrl={`http://localhost:5076/debate/${debateId}/heatmap-data`}
                     intervalSeconds={10}
                     onDataUpdate={handleDataUpdate}

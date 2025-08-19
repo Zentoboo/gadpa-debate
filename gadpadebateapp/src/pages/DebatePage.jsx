@@ -98,7 +98,9 @@ export default function DebatePage() {
             <div className="debate-details">
                 <h1 className="debate-title">{debate.title}</h1>
                 <p className="debate-description">{debate.description}</p>
-                <p className="debate-round">Current Round: {debate.currentRound}</p>
+                <div className="debate-info">
+                    <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
+                </div>
             </div>
             <div className={`fire-card ${isShaking ? "shake" : ""}`}>
                 <h1 className="card-title">🔥 Show your support 🔥</h1>
@@ -130,9 +132,9 @@ export default function DebatePage() {
                 {message && <p className="card-message">{message}</p>}
             </div>
 
-            <div className="police-strip-container">
+            {/* <div className="police-strip-container">
                 <div className="police-strip"></div>
-            </div>
+            </div> */}
 
             <div className="section-card chart-card">
                 <h2 className="chart-title">🔥 Heatmap Chart</h2>

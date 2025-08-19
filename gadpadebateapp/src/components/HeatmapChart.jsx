@@ -18,6 +18,7 @@ function HeatmapChart({
   onDataUpdate
 }) {
   const [data, setData] = useState([]);
+  const [actualTotal, setActualTotal] = useState(0);
 
   useEffect(() => {
     const fetchHeatmapData = async () => {
@@ -29,8 +30,25 @@ function HeatmapChart({
         const json = await response.json();
 
         if (json.buckets) {
-          setData(json.buckets);
-          if (onDataUpdate) onDataUpdate(json); // Pass the entire JSON object
+          const currentTotal = json.total || 0;
+          const windowCumulativeTotal = json.buckets.reduce((sum, bucket) => sum + bucket.intervalTotal, 0);
+
+          // Calculate the baseline (total fires before this time window started)
+          const baselineTotal = currentTotal - windowCumulativeTotal;
+
+          // Calculate the actual running total for each bucket
+          let runningActualTotal = baselineTotal;
+          const enhancedBuckets = json.buckets.map((bucket) => {
+            runningActualTotal += bucket.intervalTotal;
+            return {
+              ...bucket,
+              actualTotal: runningActualTotal
+            };
+          });
+
+          setData(enhancedBuckets);
+          setActualTotal(currentTotal);
+          if (onDataUpdate) onDataUpdate(json);
         } else {
           console.error("No 'buckets' property found in the response:", json);
         }
@@ -46,8 +64,43 @@ function HeatmapChart({
     return () => clearInterval(intervalId);
   }, [fetchUrl, intervalSeconds, lastMinutes, onDataUpdate]);
 
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{
+          backgroundColor: "#1e1e1e",
+          border: "1px solid #2a2a2a",
+          color: "#fff",
+          padding: "12px",
+          borderRadius: "6px"
+        }}>
+          <p style={{ color: "#fff", margin: "0 0 8px 0" }}>{`Time: ${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color, margin: "4px 0" }}>
+              {`${entry.name}: ${entry.value}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div style={{ width: "100%", height: 400 }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "12px",
+        color: "#ccc",
+        fontSize: "14px"
+      }}>
+        <span>Live Heatmap Data</span>
+        <span style={{ fontWeight: "bold" }}>
+          Total Fires: {actualTotal}
+        </span>
+      </div>
       <ResponsiveContainer>
         <ComposedChart data={data}>
           <CartesianGrid stroke="#333" strokeDasharray="3 3" />
@@ -70,15 +123,7 @@ function HeatmapChart({
               fill: "#ccc",
             }}
           />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#1e1e1e",
-              border: "1px solid #2a2a2a",
-              color: "#fff",
-            }}
-            labelStyle={{ color: "#fff" }}
-            itemStyle={{ color: "#ccc" }}
-          />
+          <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{
               color: "#ccc",
@@ -91,11 +136,22 @@ function HeatmapChart({
           />
           <Line
             type="monotone"
-            dataKey="total" // Reverted to 'total' to show cumulative sum
+            dataKey="windowCumulative"
             stroke="#dc2626"
             activeDot={{ r: 6, fill: "#fff", stroke: "#dc2626" }}
             dot={{ r: 3 }}
-            name="Cumulative Total" // Updated name for clarity
+            name="Window Cumulative"
+            strokeWidth={2}
+          />
+          <Line
+            type="monotone"
+            dataKey="actualTotal"
+            stroke="#10b981"
+            activeDot={{ r: 6, fill: "#fff", stroke: "#10b981" }}
+            dot={{ r: 3 }}
+            name="Debate Total"
+            strokeWidth={2}
+            strokeDasharray="5 5"
           />
         </ComposedChart>
       </ResponsiveContainer>

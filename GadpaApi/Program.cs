@@ -279,13 +279,20 @@ public class Program
             var now = DateTime.UtcNow;
             var since = now.AddMinutes(-lastMinutes);
 
+            // Get all events in the time window
             var allEvents = await db.FireEvents
                 .Where(f => f.LiveDebateId == liveDebate.Id && f.Timestamp >= since)
                 .OrderBy(f => f.Timestamp)
                 .ToListAsync();
 
+            // Get the total fires that existed before the time window started
+            var fireCountBeforeWindow = await db.FireEvents
+                .Where(f => f.LiveDebateId == liveDebate.Id && f.Timestamp < since)
+                .SumAsync(f => f.FireCount);
+
             var buckets = new List<object>();
             var bucketDuration = TimeSpan.FromSeconds(intervalSeconds);
+            var runningActualTotal = fireCountBeforeWindow; // Start with fires from before the window
             var cumulativeTotal = 0;
 
             var currentBucketStart = since;
@@ -296,7 +303,9 @@ public class Program
                     .Where(e => e.Timestamp >= currentBucketStart && e.Timestamp < currentBucketEnd)
                     .Sum(e => e.FireCount);
 
-                cumulativeTotal += intervalTotal;
+                // Update running totals
+                cumulativeTotal += intervalTotal; // Cumulative within window
+                runningActualTotal += intervalTotal; // Actual running total from debate start
 
                 var bucketLabel = $"{currentBucketStart:HH:mm:ss}-{currentBucketEnd:HH:mm:ss}";
                 var bucketEndLabel = currentBucketEnd.ToString("HH:mm:ss");
@@ -306,7 +315,8 @@ public class Program
                     bucketLabel,
                     bucketEndLabel,
                     intervalTotal,
-                    total = cumulativeTotal,
+                    windowCumulative = cumulativeTotal, // Cumulative within time window
+                    actualTotal = runningActualTotal, // True running total from debate start
                     bucketEndTimestamp = (long)(currentBucketEnd - new DateTime(1970, 1, 1)).TotalSeconds
                 });
 
@@ -314,7 +324,13 @@ public class Program
             }
 
             var currentTotal = await db.FireEvents.Where(e => e.LiveDebateId == liveDebate.Id).SumAsync(e => e.FireCount);
-            return Results.Ok(new { buckets, total = currentTotal });
+            return Results.Ok(new
+            {
+                buckets,
+                total = currentTotal,
+                windowStart = since,
+                windowEnd = now
+            });
         });
 
         // ===========================

@@ -38,6 +38,40 @@
     white-space: nowrap;
 }
 
+/* Display Mode Controls */
+.display-mode-controls {
+    display: flex;
+    gap: 1rem;
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
+    padding: 0.5rem;
+    border: 1px solid #333;
+}
+
+.mode-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #9ca3af;
+    background: transparent;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.mode-button:hover {
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-button.active {
+    color: #fff;
+    background: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
 /* Main Content */
 .live-debate-main-content {
     display: flex;
@@ -46,6 +80,123 @@
     width: 100%;
     max-width: 1200px;
     align-items: center;
+}
+
+/* Unified Display Card */
+.unified-display-card {
+    position: relative;
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    min-height: 400px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Heatmap Background */
+.heatmap-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* For heatmap only mode - make it relative positioning */
+.unified-display-card.heatmap .heatmap-background {
+    position: relative;
+    padding: 1rem;
+}
+
+/* Question Overlay */
+.question-overlay {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+}
+
+/* For both mode - add background overlay to improve text readability */
+.unified-display-card.both .question-overlay {
+    background: linear-gradient(135deg,
+            rgba(0, 0, 0, 0.85) 0%,
+            rgba(0, 0, 0, 0.7) 50%,
+            rgba(0, 0, 0, 0.85) 100%);
+    backdrop-filter: blur(3px);
+    border-radius: 16px;
+    margin: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* For question only mode - traditional styling */
+.unified-display-card.question .question-overlay {
+    background: transparent;
+    margin: 0;
+}
+
+/* For heatmap only mode - full heatmap display */
+.unified-display-card.heatmap {
+    padding: 1rem;
+}
+
+.live-debate-question {
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.4;
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    text-align: center;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.8);
+    font-family: "Poppins", sans-serif;
+    letter-spacing: 0.5px;
+}
+
+/* Total fires overlay for heatmap modes */
+.total-fires-overlay {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 3;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Timer Card */
+.timer-card {
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    min-height: 200px;
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Loading Status */
@@ -72,48 +223,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Question Card */
-.question-card {
-    background: rgba(20, 20, 20, 0.9);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    border: 1px solid #333;
-    min-height: 200px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.live-debate-question {
-    font-size: 2.5rem;
-    font-weight: 400;
-    color: #ffffff;
-    line-height: 1.4;
-    margin: 0;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    text-align: center;
-}
-
-/* Timer Card */
-.timer-card {
-    background: rgba(20, 20, 20, 0.9);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    border: 1px solid #333;
-    min-height: 200px;
-    width: 100%;
-    max-width: 500px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
 }
 
 /* Controls */
@@ -204,7 +313,7 @@
     background-color: #2563eb;
 }
 
-/* fire and reloads */
+/* Header Right Section */
 .live-debate-header-right {
     display: flex;
     align-items: center;
@@ -361,7 +470,25 @@
         white-space: normal;
     }
 
-    .question-card,
+    .display-mode-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .mode-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .unified-display-card {
+        min-height: 300px;
+        max-width: 100%;
+    }
+
+    .unified-display-card.both .question-overlay {
+        margin: 0.5rem;
+    }
+
     .timer-card {
         padding: 1.5rem;
         min-height: 200px;
@@ -383,12 +510,11 @@
     }
 
     .live-debate-controls {
-        flex-direction: column;
+        grid-template-columns: 1fr 1fr;
         gap: 1rem;
     }
 
     .control-button {
-        width: 100%;
         padding: 0.8rem 1.5rem;
         font-size: 1rem;
     }
@@ -397,11 +523,25 @@
         flex-direction: column;
         gap: 0.8rem;
     }
+
+    .total-fires-overlay {
+        bottom: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
 }
 
 @media (max-width: 480px) {
+    .unified-display-card {
+        min-height: 250px;
+    }
 
-    .question-card,
+    .unified-display-card.both .question-overlay {
+        padding: 1rem;
+        margin: 0.25rem;
+    }
+
     .timer-card {
         padding: 1rem;
         min-height: 150px;
@@ -420,21 +560,9 @@
         font-size: 2.5rem;
         width: 150px;
     }
-}
 
-/* heatmap chart */
-.section-card {
-    border-radius: 16px;
-    border: 1px solid #333;
-    margin: 1rem auto;
-}
-
-.chart-card {
-    width: 100%;
-    max-width: 1200px;
-}
-
-.total-fires-display {
-    text-align: center;
-    margin-top: 30px;
+    .live-debate-controls {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
 }

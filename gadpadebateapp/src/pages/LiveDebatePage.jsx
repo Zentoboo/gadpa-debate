@@ -15,6 +15,7 @@ export default function LiveDebatePage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [loadingAction, setLoadingAction] = useState("");
     const [total, setTotal] = useState(0);
+    const [displayMode, setDisplayMode] = useState("both"); // "question", "heatmap", "both"
 
     // Helper fetch with authentication header
     const authFetch = (url, options = {}) =>
@@ -163,13 +164,63 @@ export default function LiveDebatePage() {
                 </div>
             </div>
 
+            {/* Display Mode Controls */}
+            <div className="display-mode-controls">
+                <button
+                    onClick={() => setDisplayMode("question")}
+                    className={`mode-button ${displayMode === "question" ? "active" : ""}`}
+                >
+                    Question Only
+                </button>
+                <button
+                    onClick={() => setDisplayMode("heatmap")}
+                    className={`mode-button ${displayMode === "heatmap" ? "active" : ""}`}
+                >
+                    Heatmap Only
+                </button>
+                <button
+                    onClick={() => setDisplayMode("both")}
+                    className={`mode-button ${displayMode === "both" ? "active" : ""}`}
+                >
+                    Both (Overlay)
+                </button>
+            </div>
+
             {/* Main Content */}
             <div className="live-debate-main-content">
-                <div className="question-card">
-                    <h1 className="live-debate-question">
-                        {liveStatus.currentQuestion || "No question set for this round"}
-                    </h1>
+                {/* Unified Display Area */}
+                <div className={`unified-display-card ${displayMode}`}>
+                    {/* Heatmap Background (for both and heatmap modes) */}
+                    {(displayMode === "both" || displayMode === "heatmap") && (
+                        <div className="heatmap-background">
+                            <HeatmapChart
+                                fetchUrl={`http://localhost:5076/debate/${debateId}/heatmap-data`}
+                                intervalSeconds={10}
+                                onDataUpdate={handleDataUpdate}
+                                displayMode={displayMode === "both" ? "overlay" : "full"}
+                                showControls={displayMode === "heatmap"}
+                            />
+                        </div>
+                    )}
+
+                    {/* Question Overlay (for both and question modes) */}
+                    {(displayMode === "both" || displayMode === "question") && (
+                        <div className="question-overlay">
+                            <h1 className="live-debate-question">
+                                {liveStatus.currentQuestion || "No question set for this round"}
+                            </h1>
+                        </div>
+                    )}
+
+                    {/* Total fires display for heatmap modes */}
+                    {(displayMode === "both" || displayMode === "heatmap") && (
+                        <div className="total-fires-overlay">
+                            Total fires: {total}
+                        </div>
+                    )}
                 </div>
+
+                {/* Timer Card */}
                 <div className="timer-card">
                     <Timer key={liveStatus.currentRound} initialDuration={180} />
                 </div>
@@ -222,15 +273,6 @@ export default function LiveDebatePage() {
                     )}
                 </button>
                 {actionLoading && <div className="loading-status">Loading...</div>}
-            </div>
-
-            <div className="section-card chart-card">
-                <HeatmapChart
-                    fetchUrl={`http://localhost:5076/debate/${debateId}/heatmap-data`}
-                    intervalSeconds={10}
-                    onDataUpdate={handleDataUpdate}
-                />
-                <p className="total-fires-display">Total fires: {total}</p>
             </div>
         </div>
     );

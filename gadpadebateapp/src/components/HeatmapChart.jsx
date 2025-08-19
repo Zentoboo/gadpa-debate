@@ -19,6 +19,9 @@ function HeatmapChart({
 }) {
   const [data, setData] = useState([]);
   const [actualTotal, setActualTotal] = useState(0);
+  const [showDebateTotal, setShowDebateTotal] = useState(true);
+  const [showWindowCumulative, setShowWindowCumulative] = useState(true);
+  const [showFiresPerInterval, setShowFiresPerInterval] = useState(true);
 
   useEffect(() => {
     const fetchHeatmapData = async () => {
@@ -87,7 +90,7 @@ function HeatmapChart({
   };
 
   return (
-    <div style={{ width: "100%", height: 400 }}>
+    <div style={{ width: "100%", height: 480 }}>
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -101,7 +104,49 @@ function HeatmapChart({
           Total Fires: {actualTotal}
         </span>
       </div>
-      <ResponsiveContainer>
+
+      {/* Visibility Controls */}
+      <div style={{
+        display: "flex",
+        gap: "20px",
+        marginBottom: "16px",
+        padding: "12px",
+        backgroundColor: "#1e1e1e",
+        borderRadius: "6px",
+        border: "1px solid #333"
+      }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", fontSize: "13px", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={showFiresPerInterval}
+            onChange={(e) => setShowFiresPerInterval(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          <span style={{ color: "#3b82f6" }}>■</span> Fires per {intervalSeconds}s
+        </label>
+
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", fontSize: "13px", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={showWindowCumulative}
+            onChange={(e) => setShowWindowCumulative(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          <span style={{ color: "#dc2626" }}>■</span> Window Cumulative
+        </label>
+
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", fontSize: "13px", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={showDebateTotal}
+            onChange={(e) => setShowDebateTotal(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          <span style={{ color: "#10b981" }}>- - -</span> Debate Total
+        </label>
+      </div>
+
+      <ResponsiveContainer height={400}>
         <ComposedChart data={data}>
           <CartesianGrid stroke="#333" strokeDasharray="3 3" />
           <XAxis
@@ -129,30 +174,36 @@ function HeatmapChart({
               color: "#ccc",
             }}
           />
-          <Bar
-            dataKey="intervalTotal"
-            fill="#3b82f6"
-            name={`Fires per ${intervalSeconds}s`}
-          />
-          <Line
-            type="monotone"
-            dataKey="windowCumulative"
-            stroke="#dc2626"
-            activeDot={{ r: 6, fill: "#fff", stroke: "#dc2626" }}
-            dot={{ r: 3 }}
-            name="Window Cumulative"
-            strokeWidth={2}
-          />
-          <Line
-            type="monotone"
-            dataKey="actualTotal"
-            stroke="#10b981"
-            activeDot={{ r: 6, fill: "#fff", stroke: "#10b981" }}
-            dot={{ r: 3 }}
-            name="Debate Total"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-          />
+          {showFiresPerInterval && (
+            <Bar
+              dataKey="intervalTotal"
+              fill="#3b82f6"
+              name={`Fires per ${intervalSeconds}s`}
+            />
+          )}
+          {showWindowCumulative && (
+            <Line
+              type="monotone"
+              dataKey="windowCumulative"
+              stroke="#dc2626"
+              activeDot={{ r: 6, fill: "#fff", stroke: "#dc2626" }}
+              dot={{ r: 3 }}
+              name="Window Cumulative"
+              strokeWidth={2}
+            />
+          )}
+          {showDebateTotal && (
+            <Line
+              type="monotone"
+              dataKey="actualTotal"
+              stroke="#10b981"
+              activeDot={{ r: 6, fill: "#fff", stroke: "#10b981" }}
+              dot={{ r: 3 }}
+              name="Debate Total"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>

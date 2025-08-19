@@ -33,6 +33,11 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                 home
                             </Link>
                         </li>
+                        <li>
+                            <Link to="/about" className={location.pathname === "/about" ? "active" : ""}>
+                                about
+                            </Link>
+                        </li>
 
                         {/* Show auth options only if not logged in */}
                         {!isAuthenticated && (

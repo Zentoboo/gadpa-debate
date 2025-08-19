@@ -420,3 +420,20 @@
         width: 150px;
     }
 }
+
+/* heatmap chart */
+.section-card {
+    border-radius: 16px;
+    border: 1px solid #333;
+    margin: 1rem auto;
+}
+
+.chart-card {
+    width: 100%;
+    max-width: 1200px;
+}
+
+.total-fires-display {
+    text-align: center;
+    margin-top: 30px;
+}

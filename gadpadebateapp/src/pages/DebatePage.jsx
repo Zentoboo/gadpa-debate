@@ -4,7 +4,7 @@ import HeatmapChart from "../components/HeatmapChart";
 import "../css/DebatePage.css";
 
 export default function DebatePage() {
-    const { debateId } = useParams(); // Get the debate ID from the URL
+    const { debateId } = useParams();
     const [total, setTotal] = useState(0);
     const [message, setMessage] = useState("");
     const [fires, setFires] = useState([]);
@@ -33,7 +33,7 @@ export default function DebatePage() {
             }
         };
         fetchDebateDetails();
-    }, [debateId]); // Rerun if debateId changes
+    }, [debateId]);
 
     const sendFire = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -69,7 +69,7 @@ export default function DebatePage() {
 
     const handleDataUpdate = useCallback((json) => {
         if (json && typeof json.total !== "undefined") {
-            setTotal(json.total); // Updates total from the heatmap GET request
+            setTotal(json.total);
         }
     }, []);
 

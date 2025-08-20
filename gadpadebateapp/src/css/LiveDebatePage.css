@@ -38,38 +38,41 @@
     white-space: nowrap;
 }
 
-/* Display Mode Controls */
-.display-mode-controls {
+.live-debate-header-right {
     display: flex;
-    gap: 1rem;
-    background: rgba(20, 20, 20, 0.9);
-    border-radius: 12px;
-    padding: 0.5rem;
-    border: 1px solid #333;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 1rem;
+    color: #ccc;
 }
 
-.mode-button {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
+.live-debate-fires {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 600;
+    color: #ff6b6b;
+}
+
+.refresh-button {
+    background: none;
     border: none;
-    border-radius: 8px;
     cursor: pointer;
-    color: #9ca3af;
-    background: transparent;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    padding: 0;
+    display: flex;
+    align-items: center;
 }
 
-.mode-button:hover {
-    color: #e0e0e0;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.mode-button.active {
+.refresh-icon {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease, fill 0.3s ease;
     color: #fff;
-    background: #3b82f6;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.refresh-button:hover .refresh-icon {
+    transform: rotate(90deg);
+    color: #3b82f6;
 }
 
 /* Main Content */
@@ -183,65 +186,92 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Timer Card */
-.timer-card {
+/* NEW GRID LAYOUT FOR CONTROLS */
+.controls-grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+    max-width: 1200px;
+    padding: 2rem 0;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+    align-items: stretch;
+}
+
+/* Timer Section - Left Side */
+.timer-section-container {
     background: rgba(20, 20, 20, 0.9);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     border: 1px solid #333;
-    min-height: 200px;
-    width: 100%;
-    max-width: 500px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
 }
 
-/* Loading Status */
-.loading-status {
-    background: rgba(79, 70, 229, 0.1);
-    border: 1px solid #4f46e5;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    color: #4f46e5;
-    font-weight: 500;
-    font-size: 0.9rem;
-    text-align: center;
-    animation: fade-in 0.3s ease;
-    justify-self: center;
-}
-
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Controls */
-.live-debate-controls {
-    width: 100%;
-    max-width: 1200px;
+/* Controls Section - Right Side */
+.controls-section-container {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
     gap: 1.5rem;
-    padding-bottom: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #333;
-    border-bottom: 1px solid #333;
+}
+
+/* Display Mode Controls - Top Right */
+.display-mode-controls {
+    display: flex;
+    gap: 0.75rem;
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid #333;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.mode-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #9ca3af;
+    background: transparent;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 120px;
+}
+
+.mode-button:hover {
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-button.active {
+    color: #fff;
+    background: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Navigation Controls - Bottom Right */
+.live-debate-controls {
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #333;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
     align-items: center;
 }
 
 .control-button {
-    padding: 1rem 2.2rem;
-    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
     font-weight: bold;
     border: none;
     border-radius: 10px;
@@ -249,6 +279,7 @@
     color: #fff;
     transition: all 0.2s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
 }
 
 .control-button.primary {
@@ -285,6 +316,21 @@
     transform: none;
 }
 
+/* Loading Status */
+.loading-status {
+    background: rgba(79, 70, 229, 0.1);
+    border: 1px solid #4f46e5;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    color: #4f46e5;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: fade-in 0.3s ease;
+    grid-column: 1 / -1;
+    margin-top: 1rem;
+}
+
 /* Status Message */
 .status-message-container {
     text-align: center;
@@ -313,44 +359,6 @@
     background-color: #2563eb;
 }
 
-/* Header Right Section */
-.live-debate-header-right {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    font-size: 1rem;
-    color: #ccc;
-}
-
-.live-debate-fires {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: #ff6b6b;
-}
-
-.refresh-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-}
-
-.refresh-icon {
-    width: 24px;
-    height: 24px;
-    transition: transform 0.3s ease, fill 0.3s ease;
-    color: #fff;
-}
-
-.refresh-button:hover .refresh-icon {
-    transform: rotate(90deg);
-    color: #3b82f6;
-}
-
 /* Timer Styles */
 .timer-section {
     display: flex;
@@ -362,7 +370,7 @@
 
 .timer-display {
     font-family: 'Poppins', sans-serif;
-    font-size: 4rem;
+    font-size: 3.5rem;
     font-weight: 700;
     color: #3b82f6;
     text-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
@@ -395,7 +403,7 @@
     border-radius: 8px;
     color: #fff;
     font-family: 'Poppins', sans-serif;
-    font-size: 4rem;
+    font-size: 3.5rem;
     font-weight: 700;
     text-align: center;
     padding: 0.5rem;
@@ -422,7 +430,29 @@
     flex-wrap: wrap;
 }
 
+/* Button spinner animation */
+.button-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
 /* Animations */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 @keyframes pulse {
 
     0%,
@@ -452,17 +482,29 @@
     }
 }
 
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .live-debate-container {
         padding: 1rem;
+        gap: 1.5rem;
     }
 
     .live-debate-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
-        max-width: 100%;
     }
 
     .live-debate-subtitle {
@@ -470,58 +512,59 @@
         white-space: normal;
     }
 
-    .display-mode-controls {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .mode-button {
-        padding: 0.5rem 1rem;
-        font-size: 0.8rem;
-    }
-
     .unified-display-card {
         min-height: 300px;
-        max-width: 100%;
     }
 
     .unified-display-card.both .question-overlay {
         margin: 0.5rem;
     }
 
-    .timer-card {
-        padding: 1.5rem;
-        min-height: 200px;
-        max-width: 100%;
-    }
-
     .live-debate-question {
         font-size: 1.8rem;
     }
 
+    .controls-grid-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem 0;
+    }
+
+    .timer-section-container {
+        min-height: 200px;
+        padding: 1.5rem;
+    }
+
     .timer-display {
-        font-size: 3rem;
-        min-width: 180px;
+        font-size: 2.8rem;
+        min-width: 160px;
     }
 
     .timer-display.editable-input {
-        font-size: 3rem;
-        width: 180px;
+        font-size: 2.8rem;
+        width: 160px;
     }
 
     .live-debate-controls {
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        padding: 1rem;
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
     }
 
     .control-button {
-        padding: 0.8rem 1.5rem;
-        font-size: 1rem;
+        padding: 0.8rem 1.2rem;
+        font-size: 0.9rem;
     }
 
-    .timer-controls {
-        flex-direction: column;
-        gap: 0.8rem;
+    .display-mode-controls {
+        padding: 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .mode-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+        min-width: 100px;
     }
 
     .total-fires-overlay {
@@ -542,27 +585,32 @@
         margin: 0.25rem;
     }
 
-    .timer-card {
-        padding: 1rem;
-        min-height: 150px;
-    }
-
     .live-debate-question {
         font-size: 1.5rem;
     }
 
+    .timer-section-container {
+        min-height: 160px;
+        padding: 1rem;
+    }
+
     .timer-display {
-        font-size: 2.5rem;
-        min-width: 150px;
+        font-size: 2.2rem;
+        min-width: 140px;
     }
 
     .timer-display.editable-input {
-        font-size: 2.5rem;
-        width: 150px;
+        font-size: 2.2rem;
+        width: 140px;
     }
 
-    .live-debate-controls {
-        grid-template-columns: 1fr;
-        gap: 0.8rem;
+    .display-mode-controls {
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .mode-button {
+        min-width: auto;
+        width: 100%;
     }
 }

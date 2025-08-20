@@ -164,31 +164,9 @@ export default function LiveDebatePage() {
                 </div>
             </div>
 
-            {/* Display Mode Controls */}
-            <div className="display-mode-controls">
-                <button
-                    onClick={() => setDisplayMode("question")}
-                    className={`mode-button ${displayMode === "question" ? "active" : ""}`}
-                >
-                    Question Only
-                </button>
-                <button
-                    onClick={() => setDisplayMode("heatmap")}
-                    className={`mode-button ${displayMode === "heatmap" ? "active" : ""}`}
-                >
-                    Heatmap Only
-                </button>
-                <button
-                    onClick={() => setDisplayMode("both")}
-                    className={`mode-button ${displayMode === "both" ? "active" : ""}`}
-                >
-                    Both (Overlay)
-                </button>
-            </div>
-
             {/* Main Content */}
             <div className="live-debate-main-content">
-                {/* Unified Display Area */}
+                {/* Unified Display Card */}
                 <div className={`unified-display-card ${displayMode}`}>
                     {/* Heatmap Background (for both and heatmap modes) */}
                     {(displayMode === "both" || displayMode === "heatmap") && (
@@ -211,68 +189,92 @@ export default function LiveDebatePage() {
                             </h1>
                         </div>
                     )}
-
-                    {/* Total fires display for heatmap modes */}
-                    {(displayMode === "both" || displayMode === "heatmap") && (
-                        <div className="total-fires-overlay">
-                            Total fires: {total}
-                        </div>
-                    )}
-                </div>
-
-                {/* Timer Card */}
-                <div className="timer-card">
-                    <Timer key={liveStatus.currentRound} initialDuration={180} />
                 </div>
             </div>
 
-            {/* Controls */}
-            <div className="live-debate-controls">
-                <button
-                    onClick={() => changeRound(liveStatus.currentRound - 1)}
-                    disabled={liveStatus.currentRound <= 1 || actionLoading}
-                    className={`control-button secondary ${loadingAction === "prev" ? "loading" : ""}`}
-                >
-                    {loadingAction === "prev" ? (
-                        <>
-                            <span className="button-spinner"></span>
-                            ← Prev
-                        </>
-                    ) : (
-                        "← Prev"
-                    )}
-                </button>
+            {/* NEW GRID LAYOUT FOR CONTROLS */}
+            <div className="controls-grid-container">
+                {/* Timer Section - Left Side */}
+                <div className="timer-section-container">
+                    <Timer key={liveStatus.currentRound} initialDuration={180} />
+                </div>
 
-                <button
-                    onClick={() => changeRound(liveStatus.currentRound + 1)}
-                    disabled={liveStatus.currentRound >= liveStatus.totalRounds || actionLoading}
-                    className={`control-button primary ${loadingAction === "next" ? "loading" : ""}`}
-                >
-                    {loadingAction === "next" ? (
-                        <>
-                            Next →
-                            <span className="button-spinner"></span>
-                        </>
-                    ) : (
-                        "Next →"
-                    )}
-                </button>
+                {/* Controls Section - Right Side */}
+                <div className="controls-section-container">
+                    {/* Display Mode Controls - Top Right */}
+                    <div className="display-mode-controls">
+                        <button
+                            onClick={() => setDisplayMode("question")}
+                            className={`mode-button ${displayMode === "question" ? "active" : ""}`}
+                        >
+                            Question Only
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode("both")}
+                            className={`mode-button ${displayMode === "both" ? "active" : ""}`}
+                        >
+                            Both (Overlay)
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode("heatmap")}
+                            className={`mode-button ${displayMode === "heatmap" ? "active" : ""}`}
+                        >
+                            Heatmap Only
+                        </button>
+                    </div>
 
-                <button
-                    onClick={endLive}
-                    disabled={actionLoading}
-                    className={`control-button danger ${loadingAction === "end" ? "loading" : ""}`}
-                >
-                    {loadingAction === "end" ? (
-                        <>
-                            <span className="button-spinner"></span>
-                            Ending...
-                        </>
-                    ) : (
-                        "End"
-                    )}
-                </button>
-                {actionLoading && <div className="loading-status">Loading...</div>}
+                    {/* Navigation Controls - Bottom Right */}
+                    <div className="live-debate-controls">
+                        <button
+                            onClick={() => changeRound(liveStatus.currentRound - 1)}
+                            disabled={liveStatus.currentRound <= 1 || actionLoading}
+                            className={`control-button secondary ${loadingAction === "prev" ? "loading" : ""}`}
+                        >
+                            {loadingAction === "prev" ? (
+                                <>
+                                    <span className="button-spinner"></span>
+                                    ← Prev
+                                </>
+                            ) : (
+                                "← Prev"
+                            )}
+                        </button>
+
+                        <button
+                            onClick={() => changeRound(liveStatus.currentRound + 1)}
+                            disabled={liveStatus.currentRound >= liveStatus.totalRounds || actionLoading}
+                            className={`control-button primary ${loadingAction === "next" ? "loading" : ""}`}
+                        >
+                            {loadingAction === "next" ? (
+                                <>
+                                    Next →
+                                    <span className="button-spinner"></span>
+                                </>
+                            ) : (
+                                "Next →"
+                            )}
+                        </button>
+
+                        <button
+                            onClick={endLive}
+                            disabled={actionLoading}
+                            className={`control-button danger ${loadingAction === "end" ? "loading" : ""}`}
+                        >
+                            {loadingAction === "end" ? (
+                                <>
+                                    <span className="button-spinner"></span>
+                                    Ending...
+                                </>
+                            ) : (
+                                "End"
+                            )}
+                        </button>
+
+                        {actionLoading && (
+                            <div className="loading-status">Loading...</div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

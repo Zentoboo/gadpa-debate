@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import "../css/NotFound.css";
 
 export default function NotFound() {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function NotFound() {
                     It might have been consumed by the flames! 🔥
                 </p>
                 <button onClick={handleGoHome} className="notfound-button">
-                    🏠 Take Me Home
+                    Back to Safety
                 </button>
             </div>
 

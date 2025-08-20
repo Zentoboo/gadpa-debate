@@ -17,53 +17,52 @@ import { AuthProvider } from "./hooks/AuthContext.jsx";
 export default function App() {
   const [adminRegisterEnabled, setAdminRegisterEnabled] = useState(null);
   const [debateManagerRegisterEnabled, setDebateManagerRegisterEnabled] = useState(null);
+  const [showHeader, setShowHeader] = useState(true);
+
+  // Keyboard shortcut: Ctrl+H / Cmd+H
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
+        setShowHeader((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   useEffect(() => {
     // Fetch admin register status
     fetch("http://localhost:5076/admin/register-status")
       .then((res) => {
         if (!res.ok) {
-          throw new Error('Failed to fetch admin register status');
+          throw new Error("Failed to fetch admin register status");
         }
         return res.json();
       })
-      .then((data) => {
-        console.log('Admin register status:', data);
-        setAdminRegisterEnabled(data.enabled);
-      })
-      .catch((error) => {
-        console.error('Error fetching admin register status:', error);
-        setAdminRegisterEnabled(true);
-      });
+      .then((data) => setAdminRegisterEnabled(data.enabled))
+      .catch(() => setAdminRegisterEnabled(true));
 
     // Fetch debate manager register status
     fetch("http://localhost:5076/debate-manager/register-status")
       .then((res) => {
         if (!res.ok) {
-          throw new Error('Failed to fetch debate manager register status');
+          throw new Error("Failed to fetch debate manager register status");
         }
         return res.json();
       })
-      .then((data) => {
-        console.log('Debate manager register status:', data);
-        setDebateManagerRegisterEnabled(data.enabled);
-      })
-      .catch((error) => {
-        console.error('Error fetching debate manager register status:', error);
-        setDebateManagerRegisterEnabled(true);
-      });
+      .then((data) => setDebateManagerRegisterEnabled(data.enabled))
+      .catch(() => setDebateManagerRegisterEnabled(true));
   }, []);
 
-  // Show loading while we determine register statuses
   if (adminRegisterEnabled === null || debateManagerRegisterEnabled === null) {
     return (
       <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        color: '#fff',
-        fontSize: '1.2rem'
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        color: "#fff",
+        fontSize: "1.2rem"
       }}>
         Loading...
       </div>
@@ -72,10 +71,24 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <Header
-        adminRegisterEnabled={adminRegisterEnabled}
-        debateManagerRegisterEnabled={debateManagerRegisterEnabled}
-      />
+      {showHeader && (
+        <Header
+          adminRegisterEnabled={adminRegisterEnabled}
+          debateManagerRegisterEnabled={debateManagerRegisterEnabled}
+          onHide={() => setShowHeader(false)}
+        />
+      )}
+
+      {/* Restore button - only visible when header is hidden */}
+      {!showHeader && (
+        <button
+          className="header-restore-btn"
+          onClick={() => setShowHeader(true)}
+        >
+          Show Header
+        </button>
+      )}
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />

@@ -4,10 +4,10 @@ import logo from "../assets/gadpa-logo.png";
 import { useAuth } from "../hooks/AuthContext";
 import "../css/Header.css";
 
-export default function Header({ adminRegisterEnabled, debateManagerRegisterEnabled }) {
+export default function Header({ adminRegisterEnabled, debateManagerRegisterEnabled, onHide }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const location = useLocation();
-    const { isAdmin, isDebateManager, logout, userRole } = useAuth();
+    const { isAdmin, isDebateManager, logout } = useAuth();
 
     useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -16,16 +16,21 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
     return (
         <header className="header-container">
             <div className="header-inner">
+                {/* Logo */}
                 <Link to="/" className="logo">
                     <img src={logo} alt="gadpa logo" />
                     <span>Gadpa Election 2025</span>
                 </Link>
+
+                {/* Mobile Menu Toggle */}
                 <button
                     className="menu-toggle lg-hidden"
                     onClick={() => setMenuOpen(!menuOpen)}
                 >
                     ☰
                 </button>
+
+                {/* Navigation */}
                 <nav className={`main-nav ${menuOpen ? "open" : ""}`}>
                     <ul>
                         <li>
@@ -39,10 +44,10 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                             </Link>
                         </li>
 
-                        {/* Show auth options only if not logged in */}
+                        {/* Auth Links (if not authenticated) */}
                         {!isAuthenticated && (
                             <>
-                                {/* Admin Auth Section */}
+                                {/* Admin Auth */}
                                 <li>
                                     <Link
                                         to="/admin/login"
@@ -62,7 +67,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                     </li>
                                 )}
 
-                                {/* Debate Manager Auth Section */}
+                                {/* Debate Manager Auth */}
                                 <li>
                                     <Link
                                         to="/debate-manager/login"
@@ -127,6 +132,11 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                 </li>
                             </>
                         )}
+
+                        {/* Hide Header (styled like a nav item) */}
+                        <li>
+                            <button onClick={onHide} style={{opacity: 0.1}}className="nav-link-button">hide</button>
+                        </li>
                     </ul>
                 </nav>
             </div>

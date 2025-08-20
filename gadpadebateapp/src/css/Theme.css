@@ -75,3 +75,31 @@ button:hover {
     padding: 1.25rem;
     margin-bottom: 1.5rem;
 }
+
+/* === Restore Button (when header is hidden) === */
+.header-restore-btn {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1100;
+  background: rgba(30, 32, 37, 0.6);
+  border: 1px solid rgba(190, 48, 48, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  width: auto;
+  height: auto;
+  border-radius: 0%;
+  cursor: pointer;
+  opacity: 0.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background 0.2s, transform 0.2s;
+}
+
+.header-restore-btn:hover {
+  opacity: 1;
+  background: rgba(190, 48, 48, 0.9);
+  transform: scale(1.1);
+  background-color: rgba(190, 48, 48, 0.2);
+}

@@ -135,6 +135,14 @@
     background: none;
 }
 
+.nav-link-button[style] {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.nav-link-button[style]:hover {
+    opacity: 1 !important;
+}
+
 /* Role labels (admin / debate-manager) */
 .main-nav span {
     font-family: "Poppins", sans-serif;

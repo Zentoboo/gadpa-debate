@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
@@ -13,6 +13,7 @@ import Header from "./components/Header.jsx";
 import LiveDebatePage from "./pages/LiveDebatePage.jsx";
 import DebatePage from "./pages/DebatePage.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
+import UserQuestionsPage from "./pages/UserQuestionsPage.jsx";
 
 export default function App() {
   const [adminRegisterEnabled, setAdminRegisterEnabled] = useState(null);
@@ -103,7 +104,10 @@ export default function App() {
         <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
         <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
         <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
+        <Route path="/debate-manager/debates/:id/user-questions" element={<UserQuestionsPage />} />
+        <Route path="/debate-manager/user-questions" element={<Navigate to="/debate-manager/dashboard" replace />} />
         <Route path="/debate-manager/live" element={<LiveDebatePage />} />
+        {/* Other */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>

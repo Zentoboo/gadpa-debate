@@ -124,3 +124,141 @@
     border: 2px solid #10b981;
     background: #0f172a;
 }
+
+/* ============================ */
+/* === Create & Edit Forms  === */
+/* ============================ */
+
+.form-box {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    color: #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.form-box h3 {
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    color: #fff;
+}
+
+.auth-input,
+.form-box input[type="text"],
+.form-box textarea,
+.form-box input[type="number"] {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.8rem;
+    border-radius: 6px;
+    border: 1px solid #4b5563;
+    background-color: #111827;
+    color: #f3f4f6;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.auth-input:focus,
+.form-box input:focus,
+.form-box textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.form-box textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.settings label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #d1d5db;
+}
+
+.form-box h4 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1rem;
+    color: #f9fafb;
+}
+
+.form-box .question-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-box .question-row input {
+    flex: 1;
+}
+
+.form-box .question-row button {
+    background: #dc2626;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    border-radius: 4px;
+    padding: 0.45rem 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    min-width: 38px;
+    line-height: 1;
+}
+
+.form-box .question-row button:hover {
+    background: #b91c1c;
+}
+
+.form-box button {
+    margin-top: 0.5rem;
+    margin-right: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.form-box button:not(.danger):not(.secondary) {
+    background: #3b82f6;
+    color: white;
+}
+
+.form-box button:hover:not(.danger):not(.secondary) {
+    background: #2563eb;
+}
+
+.form-box button.secondary {
+    background: #6b7280;
+    color: #fff;
+}
+
+.form-box button.secondary:hover {
+    background: #4b5563;
+}
+
+.form-box button.danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.form-box button.danger:hover {
+    background: #b91c1c;
+}

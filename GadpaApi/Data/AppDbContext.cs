@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<Debate> Debates => Set<Debate>();
     public DbSet<DebateQuestion> DebateQuestions => Set<DebateQuestion>();
     public DbSet<LiveDebate> LiveDebates => Set<LiveDebate>();
+    public DbSet<UserSubmittedQuestion> UserSubmittedQuestions => Set<UserSubmittedQuestion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,13 @@ public class AppDbContext : DbContext
             .HasForeignKey(fe => fe.LiveDebateId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // UserSubmittedQuestion -> Debate relationship
+        modelBuilder.Entity<UserSubmittedQuestion>()
+            .HasOne<Debate>(usq => usq.Debate)
+            .WithMany(d => d.UserSubmittedQuestions)
+            .HasForeignKey(usq => usq.DebateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         base.OnModelCreating(modelBuilder);
     }
 }
@@ -63,7 +71,6 @@ public class FireEvent
     public int FireCount { get; set; } = 0;
     public int LiveDebateId { get; set; }
 
-    // Add the navigation property
     [ForeignKey("LiveDebateId")]
     public required LiveDebate LiveDebate { get; set; }
 }
@@ -92,8 +99,14 @@ public class Debate
     public int CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    // User question submission settings
+    public bool AllowUserQuestions { get; set; } = false;
+    public int MaxQuestionsPerUser { get; set; } = 3;
+    public bool AllowQuestionsWhenLive { get; set; } = false; // If true, allows during live; if false, only when not live
 
     public List<DebateQuestion> Questions { get; set; } = new();
+    public List<UserSubmittedQuestion> UserSubmittedQuestions { get; set; } = new();
 }
 
 public class DebateQuestion
@@ -105,6 +118,20 @@ public class DebateQuestion
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+public class UserSubmittedQuestion
+{
+    public int Id { get; set; }
+    public int DebateId { get; set; }
+    public string Question { get; set; } = string.Empty;
+    public string IpAddress { get; set; } = string.Empty;
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+    public bool IsApproved { get; set; } = false;
+    public bool IsUsed { get; set; } = false; // Track if question has been added to debate rounds
+
+    [ForeignKey("DebateId")]
+    public required Debate Debate { get; set; }
+}
+
 public class LiveDebate
 {
     public int Id { get; set; }
@@ -114,7 +141,6 @@ public class LiveDebate
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
 
-    // Add the navigation property
     [ForeignKey("DebateId")]
     public required Debate Debate { get; set; }
 }

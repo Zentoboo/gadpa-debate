@@ -16,9 +16,10 @@ public record DebateManagerCredentials(string Username, string Password);
 public record BanIpRequest(string IpAddress);
 public record UnbanIpRequest(string IpAddress);
 public record RateLimitEntry(int Count, DateTime WindowStart);
-public record CreateDebateRequest(string Title, string Description, List<string> Questions);
-public record UpdateDebateRequest(string Title, string Description, List<string> Questions);
+public record CreateDebateRequest(string Title, string Description, List<string> Questions, bool AllowUserQuestions = false, int MaxQuestionsPerUser = 3, bool AllowQuestionsWhenLive = false);
+public record UpdateDebateRequest(string Title, string Description, List<string> Questions, bool? AllowUserQuestions = null, int? MaxQuestionsPerUser = null, bool? AllowQuestionsWhenLive = null);
 public record ChangeRoundRequest(int RoundNumber);
+public record SubmitQuestionRequest(string Question);
 
 public class Program
 {
@@ -120,7 +121,8 @@ public class Program
                 title = ld.Debate.Title,
                 description = ld.Debate.Description,
                 currentRound = ld.CurrentRound,
-                totalRounds = ld.Debate.Questions.Count
+                totalRounds = ld.Debate.Questions.Count,
+                allowUserQuestions = ld.Debate.AllowUserQuestions && ld.Debate.AllowQuestionsWhenLive
             }).ToList();
 
             return Results.Ok(new { isLive = true, debates = debateList });
@@ -153,13 +155,14 @@ public class Program
                 isLive = true,
                 debate = new
                 {
-                    id = debate.Id, // <-- Add this line to include the debate ID
+                    id = debate.Id,
                     title = debate.Title,
                     description = debate.Description,
                     currentRound = liveDebate.CurrentRound,
                     totalRounds = debate.Questions.Count,
                     currentQuestion = currentQuestion?.Question,
-                    questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question })
+                    questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                    allowUserQuestions = debate.AllowUserQuestions && debate.AllowQuestionsWhenLive
                 }
             });
         });
@@ -178,6 +181,20 @@ public class Program
             var liveDebateStatus = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debate.Id && ld.IsActive);
             bool isLive = liveDebateStatus != null;
 
+            // Determine if user questions are allowed
+            bool allowUserQuestions = false;
+            if (debate.AllowUserQuestions)
+            {
+                if (isLive && debate.AllowQuestionsWhenLive)
+                {
+                    allowUserQuestions = true;
+                }
+                else if (!isLive)
+                {
+                    allowUserQuestions = true;
+                }
+            }
+
             // Now return the debate details regardless of live status
             return Results.Ok(new
             {
@@ -188,8 +205,115 @@ public class Program
                 currentRound = isLive ? liveDebateStatus.CurrentRound : 0, // Only show round if live
                 totalRounds = debate.Questions.Count,
                 currentQuestion = isLive ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
-                questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question })
+                questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                allowUserQuestions = allowUserQuestions,
+                maxQuestionsPerUser = debate.MaxQuestionsPerUser
             });
+        });
+
+        // Submit a question from user (public endpoint)
+        app.MapPost("/debate/{debateId}/submit-question", async (
+            HttpContext context,
+            AppDbContext db,
+            IMemoryCache cache,
+            int debateId,
+            SubmitQuestionRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Question) || request.Question.Trim().Length < 5)
+                return Results.BadRequest(new { message = "Question must be at least 5 characters long." });
+
+            if (request.Question.Length > 500)
+                return Results.BadRequest(new { message = "Question must be less than 500 characters long." });
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId);
+            if (debate == null)
+                return Results.NotFound(new { message = "Debate not found." });
+
+            if (!debate.AllowUserQuestions)
+                return Results.BadRequest(new { message = "This debate does not allow user submitted questions." });
+
+            // Check if debate is live and if questions are allowed when live
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
+            bool isLive = liveDebate != null;
+
+            if (isLive && !debate.AllowQuestionsWhenLive)
+                return Results.BadRequest(new { message = "Questions cannot be submitted while this debate is live." });
+
+            // Get client IP
+            string GetClientIp()
+            {
+                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+                {
+                    var first = xff.ToString().Split(',').First().Trim();
+                    if (!string.IsNullOrWhiteSpace(first)) return first;
+                }
+                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+
+            var ip = GetClientIp();
+
+            // Check if IP is banned
+            if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
+                return Results.Forbid();
+
+            // Check user's question limit
+            var userQuestionCount = await db.UserSubmittedQuestions
+                .CountAsync(usq => usq.DebateId == debateId && usq.IpAddress == ip);
+
+            if (userQuestionCount >= debate.MaxQuestionsPerUser)
+                return Results.BadRequest(new { message = $"You have reached the maximum number of questions allowed ({debate.MaxQuestionsPerUser}) for this debate." });
+
+            // Rate limiting for question submissions (more lenient than fire events)
+            const int QUESTION_LIMIT_PER_WINDOW = 2;
+            var QUESTION_WINDOW = TimeSpan.FromMinutes(5);
+
+            var key = $"question:rl:{ip}:{debateId}";
+            var now = DateTime.UtcNow;
+            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
+            {
+                entry = new RateLimitEntry(1, now);
+                cache.Set(key, entry, entry.WindowStart.Add(QUESTION_WINDOW) - now);
+            }
+            else
+            {
+                if (now - entry.WindowStart >= QUESTION_WINDOW)
+                {
+                    entry = new RateLimitEntry(1, now);
+                    cache.Set(key, entry, QUESTION_WINDOW);
+                }
+                else
+                {
+                    if (entry.Count >= QUESTION_LIMIT_PER_WINDOW)
+                    {
+                        var retryAfter = (int)Math.Ceiling((entry.WindowStart.Add(QUESTION_WINDOW) - now).TotalSeconds);
+                        context.Response.Headers["Retry-After"] = retryAfter.ToString();
+                        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                        return Results.Json(new
+                        {
+                            message = "Too many question submissions. Try again later.",
+                            retryAfterSeconds = retryAfter
+                        });
+                    }
+                    var newCount = entry.Count + 1;
+                    entry = new RateLimitEntry(newCount, entry.WindowStart);
+                    cache.Set(key, entry, entry.WindowStart.Add(QUESTION_WINDOW) - now);
+                }
+            }
+
+            // Create the question submission
+            var userQuestion = new UserSubmittedQuestion
+            {
+                DebateId = debateId,
+                Question = request.Question.Trim(),
+                IpAddress = ip,
+                SubmittedAt = DateTime.UtcNow,
+                Debate = debate
+            };
+
+            db.UserSubmittedQuestions.Add(userQuestion);
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = "Question submitted successfully. It will be reviewed by the debate manager." });
         });
 
         // Post a fire event for a specific debate
@@ -576,7 +700,11 @@ public class Program
                     d.Description,
                     d.CreatedAt,
                     d.UpdatedAt,
+                    d.AllowUserQuestions,
+                    d.MaxQuestionsPerUser,
+                    d.AllowQuestionsWhenLive,
                     questionCount = d.Questions.Count,
+                    userSubmittedCount = d.UserSubmittedQuestions.Count,
                     Questions = d.Questions
                         .OrderBy(q => q.RoundNumber)
                         .Select(q => new
@@ -592,7 +720,6 @@ public class Program
             return Results.Ok(debates);
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
-
         // Create new debate
         app.MapPost("/debate-manager/debates", async (HttpContext context, AppDbContext db, CreateDebateRequest request) =>
         {
@@ -604,11 +731,17 @@ public class Program
             if (request.Questions == null || request.Questions.Count == 0)
                 return Results.BadRequest(new { message = "At least one question is required." });
 
+            if (request.MaxQuestionsPerUser < 1 || request.MaxQuestionsPerUser > 20)
+                return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+
             var debate = new Debate
             {
                 Title = request.Title.Trim(),
                 Description = request.Description?.Trim() ?? "",
-                CreatedByUserId = userId
+                CreatedByUserId = userId,
+                AllowUserQuestions = request.AllowUserQuestions,
+                MaxQuestionsPerUser = request.MaxQuestionsPerUser,
+                AllowQuestionsWhenLive = request.AllowQuestionsWhenLive
             };
 
             db.Debates.Add(debate);
@@ -647,6 +780,9 @@ public class Program
                 debate.Description,
                 debate.CreatedAt,
                 debate.UpdatedAt,
+                debate.AllowUserQuestions,
+                debate.MaxQuestionsPerUser,
+                debate.AllowQuestionsWhenLive,
                 questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question })
             });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
@@ -671,6 +807,20 @@ public class Program
             debate.Title = request.Title?.Trim() ?? debate.Title;
             debate.Description = request.Description?.Trim() ?? debate.Description;
             debate.UpdatedAt = DateTime.UtcNow;
+
+            // Update user question settings if provided
+            if (request.AllowUserQuestions.HasValue)
+                debate.AllowUserQuestions = request.AllowUserQuestions.Value;
+
+            if (request.MaxQuestionsPerUser.HasValue)
+            {
+                if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
+                    return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+                debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
+            }
+
+            if (request.AllowQuestionsWhenLive.HasValue)
+                debate.AllowQuestionsWhenLive = request.AllowQuestionsWhenLive.Value;
 
             // Update questions if provided
             if (request.Questions != null && request.Questions.Count > 0)
@@ -710,6 +860,97 @@ public class Program
             db.Debates.Remove(debate);
             await db.SaveChangesAsync();
             return Results.Ok(new { message = "Debate deleted successfully." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get user submitted questions for a debate
+        app.MapGet("/debate-manager/debates/{id:int}/user-questions", async (HttpContext context, AppDbContext db, int id) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+            if (debate == null)
+                return Results.NotFound();
+
+            var userQuestions = await db.UserSubmittedQuestions
+                .Where(usq => usq.DebateId == id)
+                .OrderByDescending(usq => usq.SubmittedAt)
+                .Select(usq => new
+                {
+                    usq.Id,
+                    usq.Question,
+                    usq.SubmittedAt,
+                    usq.IsApproved,
+                    usq.IsUsed,
+                    ipAddress = usq.IpAddress // Consider if you want to show this or hash it
+                })
+                .ToListAsync();
+
+            return Results.Ok(userQuestions);
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Approve/disapprove user question
+        app.MapPost("/debate-manager/debates/{debateId:int}/user-questions/{questionId:int}/approve", async (HttpContext context, AppDbContext db, int debateId, int questionId, bool approve = true) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+            if (debate == null)
+                return Results.NotFound();
+
+            var userQuestion = await db.UserSubmittedQuestions.FirstOrDefaultAsync(usq => usq.Id == questionId && usq.DebateId == debateId);
+            if (userQuestion == null)
+                return Results.NotFound();
+
+            userQuestion.IsApproved = approve;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = approve ? "Question approved." : "Question disapproved." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Add approved user question to debate rounds
+        app.MapPost("/debate-manager/debates/{debateId:int}/user-questions/{questionId:int}/add-to-rounds", async (HttpContext context, AppDbContext db, int debateId, int questionId) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates
+                .Include(d => d.Questions)
+                .FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+
+            if (debate == null)
+                return Results.NotFound();
+
+            // Check if debate is currently live
+            var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == debateId && ld.IsActive);
+            if (isLive)
+                return Results.BadRequest(new { message = "Cannot add questions to a live debate." });
+
+            var userQuestion = await db.UserSubmittedQuestions.FirstOrDefaultAsync(usq => usq.Id == questionId && usq.DebateId == debateId);
+            if (userQuestion == null)
+                return Results.NotFound();
+
+            if (!userQuestion.IsApproved)
+                return Results.BadRequest(new { message = "Question must be approved first." });
+
+            if (userQuestion.IsUsed)
+                return Results.BadRequest(new { message = "Question has already been added to debate rounds." });
+
+            // Get the next round number
+            var nextRoundNumber = debate.Questions.Any() ? debate.Questions.Max(q => q.RoundNumber) + 1 : 1;
+
+            // Add as new debate question
+            var debateQuestion = new DebateQuestion
+            {
+                DebateId = debateId,
+                RoundNumber = nextRoundNumber,
+                Question = userQuestion.Question
+            };
+
+            db.DebateQuestions.Add(debateQuestion);
+            userQuestion.IsUsed = true;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = $"Question added to round {nextRoundNumber}." });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Start live debate
@@ -795,7 +1036,9 @@ public class Program
                 {
                     id = debate.Id,
                     title = debate.Title,
-                    description = debate.Description
+                    description = debate.Description,
+                    allowUserQuestions = debate.AllowUserQuestions,
+                    allowQuestionsWhenLive = debate.AllowQuestionsWhenLive
                 },
                 currentRound = liveDebate.CurrentRound,
                 totalRounds = debate.Questions.Count,

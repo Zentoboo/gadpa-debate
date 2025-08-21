@@ -55,18 +55,14 @@ export default function Home() {
           <thead>
             <tr>
               <th>Title</th>
-              <th>Description</th>
-              <th>Current Round</th>
               <th>Status</th>
-              <th></th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {liveDebates.map((debate) => (
               <tr key={debate.id}>
                 <td>{debate.title}</td>
-                <td>{debate.description}</td>
-                <td>{debate.currentRound}</td>
                 <td>
                   <span className="live-indicator">
                     <span className="live-dot"></span> LIVE

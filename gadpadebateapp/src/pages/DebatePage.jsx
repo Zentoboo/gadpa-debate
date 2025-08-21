@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import HeatmapChart from "../components/HeatmapChart";
 import "../css/DebatePage.css";
 
 export default function DebatePage() {
@@ -102,6 +101,7 @@ export default function DebatePage() {
                     <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
                 </div>
             </div>
+            <p className="debate-question">{debate.currentQuestion}</p>
             <div className={`fire-card ${isShaking ? "shake" : ""}`}>
                 <h1 className="card-title">🔥 Show your support 🔥</h1>
                 <p className="card-total">Total fires: {total}</p>
@@ -135,14 +135,6 @@ export default function DebatePage() {
             {/* <div className="police-strip-container">
                 <div className="police-strip"></div>
             </div> */}
-
-            <div className="section-card chart-card">
-                <HeatmapChart
-                    fetchUrl={`http://localhost:5076/debate/${debateId}/heatmap-data`}
-                    intervalSeconds={10}
-                    onDataUpdate={handleDataUpdate}
-                />
-            </div>
         </div>
     );
 }

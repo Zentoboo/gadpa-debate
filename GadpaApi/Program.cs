@@ -722,6 +722,7 @@ public class Program
                     d.UpdatedAt,
                     d.AllowUserQuestions,
                     d.MaxQuestionsPerUser,
+                    d.ScheduledStartTime,
                     questionCount = d.Questions.Count,
                     userSubmittedCount = d.UserSubmittedQuestions.Count,
                     Questions = d.Questions

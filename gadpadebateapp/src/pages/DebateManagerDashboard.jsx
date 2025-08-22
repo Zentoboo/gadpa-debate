@@ -455,13 +455,12 @@ export default function DebateManagerDashboard() {
             {/* Debate List */}
             <table className="dashboard-table">
                 <thead>
-                    <tr><th>Title</th><th>Description</th><th>Questions</th><th>Created</th><th>Actions</th></tr>
+                    <tr><th>Title</th><th>Questions</th><th>Created</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     {debates.map(d => (
                         <tr key={d.id}>
                             <td>{d.title}</td>
-                            <td>{d.description}</td>
                             <td>{d.questionCount}</td>
                             <td>{new Date(d.createdAt).toLocaleDateString()}</td>
                             <td>

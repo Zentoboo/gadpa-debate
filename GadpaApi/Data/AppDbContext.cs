@@ -164,6 +164,7 @@ public class LiveDebate
     public int CurrentRound { get; set; } = 1;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
+    public bool IsPreviewable { get; set; } = false;
 
     [ForeignKey("DebateId")]
     public required Debate Debate { get; set; }

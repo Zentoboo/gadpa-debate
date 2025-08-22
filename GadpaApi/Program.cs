@@ -89,6 +89,8 @@ public class Program
         builder.Services.AddSingleton<TokenService>();
         builder.Services.AddMemoryCache();
 
+        builder.Services.AddHostedService<ScheduledDebateService>();
+
         // Swagger/OpenAPI (NSwag)
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddOpenApiDocument(config =>
@@ -121,27 +123,18 @@ public class Program
         app.MapGet("/debate/live-debates", async (AppDbContext db) =>
         {
             var liveDebates = await db.LiveDebates
-                .Where(ld => ld.IsActive)
+                .Where(ld => ld.IsActive || ld.IsPreviewable)
                 .Include(ld => ld.Debate)
-                .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .Select(ld => new
+                {
+                    id = ld.Debate.Id,
+                    title = ld.Debate.Title,
+                    description = ld.Debate.Description,
+                    scheduledStartTime = ld.Debate.ScheduledStartTime,
+                })
                 .ToListAsync();
 
-            if (!liveDebates.Any())
-            {
-                return Results.Ok(new { isLive = false, debates = new List<object>() });
-            }
-
-            var debateList = liveDebates.Select(ld => new
-            {
-                id = ld.Debate.Id,
-                title = ld.Debate.Title,
-                description = ld.Debate.Description,
-                currentRound = ld.CurrentRound,
-                totalRounds = ld.Debate.Questions.Count,
-                allowUserQuestions = ld.Debate.AllowUserQuestions
-            }).ToList();
-
-            return Results.Ok(new { isLive = true, debates = debateList });
+            return Results.Ok(new { isLive = liveDebates.Any(), debates = liveDebates });
         });
 
         app.MapGet("/debate/current", async (AppDbContext db) =>
@@ -987,92 +980,79 @@ public class Program
             if (debate.Questions.Count == 0)
                 return Results.BadRequest(new { message = "Cannot go live with a debate that has no questions." });
 
-            // Check if user already has a live debate
-            var existingLive = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && ld.IsActive);
+            // Check if user already has a live or previewable debate
+            var existingLive = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && (ld.IsActive || ld.IsPreviewable));
             if (existingLive != null)
-                return Results.BadRequest(new { message = "You already have a live debate. End it first before starting a new one." });
+                return Results.BadRequest(new { message = "You already have a live or scheduled debate active. End it first before starting a new one." });
 
-            // Prevent going live before the scheduled start time
-            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
-            {
-                return Results.BadRequest(new
-                {
-                    message = $"This debate is scheduled to start at {debate.ScheduledStartTime:u} and cannot be started early.",
-                    scheduledStartTime = debate.ScheduledStartTime
-                });
-            }
+            // Determine if the debate is a future scheduled event
+            bool isScheduledFuture = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
 
             var liveDebate = new LiveDebate
             {
                 DebateId = id,
                 DebateManagerId = userId,
                 CurrentRound = 1,
-                StartedAt = DateTime.UtcNow,
-                IsActive = true,
+                // Set IsActive and IsPreviewable based on whether it's a future event
+                IsActive = !isScheduledFuture,
+                IsPreviewable = isScheduledFuture,
+                StartedAt = isScheduledFuture ? DateTime.UtcNow : DateTime.UtcNow,
                 Debate = debate
             };
 
             db.LiveDebates.Add(liveDebate);
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { message = "Debate is now live!", liveDebateId = liveDebate.Id });
+            return Results.Ok(new { message = "Debate state has been updated!", liveDebateId = liveDebate.Id });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // End live debate
-        app.MapPost("/debate-manager/live/end", async (HttpContext context, AppDbContext db) =>
-        {
-            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && ld.IsActive);
-            if (liveDebate == null)
-                return Results.NotFound(new { message = "No active live debate found." });
-
-            // Mark as inactive
-            liveDebate.IsActive = false;
-
-            // Delete all fire events for this live debate
-            var fireEvents = await db.FireEvents.Where(fe => fe.LiveDebateId == liveDebate.Id).ToListAsync();
-            db.FireEvents.RemoveRange(fireEvents);
-
-            await db.SaveChangesAsync();
-            return Results.Ok(new { message = "Live debate ended and data cleared." });
-        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-
-        // Get current live debate status
-        app.MapGet("/debate-manager/live/status", async (HttpContext context, AppDbContext db) =>
+        app.MapPost("/debate-manager/live/end", async (AppDbContext db, HttpContext context) =>
         {
             var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
             var liveDebate = await db.LiveDebates
-                .Where(ld => ld.DebateManagerId == userId && ld.IsActive)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ld => (ld.IsActive || ld.IsPreviewable) && ld.DebateManagerId == userId);
 
             if (liveDebate == null)
+            {
+                return Results.NotFound(new { message = "No live or scheduled debate found to end." });
+            }
+
+            db.LiveDebates.Remove(liveDebate);
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = "Debate has been ended/cancelled." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get current live debate status
+        app.MapGet("/debate-manager/live/status", async (AppDbContext db) =>
+        {
+            var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
+                .FirstOrDefaultAsync(ld => ld.IsActive || ld.IsPreviewable);
+
+            if (liveDebate == null)
+            {
                 return Results.Ok(new { isLive = false });
-
-            var debate = await db.Debates
-                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
-                .FirstAsync(d => d.Id == liveDebate.DebateId);
-
-            var currentQuestion = debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
-            var totalFires = await db.FireEvents.Where(fe => fe.LiveDebateId == liveDebate.Id).SumAsync(fe => fe.FireCount);
+            }
 
             return Results.Ok(new
             {
                 isLive = true,
-                liveDebateId = liveDebate.Id,
+                isActive = liveDebate.IsActive,
+                isPreviewable = liveDebate.IsPreviewable,
                 debate = new
                 {
-                    id = debate.Id,
-                    title = debate.Title,
-                    description = debate.Description,
-                    allowUserQuestions = debate.AllowUserQuestions
+                    title = liveDebate.Debate.Title,
+                    id = liveDebate.Debate.Id,
+                    totalRounds = liveDebate.Debate.Questions.Count,
+                    scheduledStartTime = liveDebate.Debate.ScheduledStartTime,
                 },
+                countdown = liveDebate.Debate.ScheduledStartTime.HasValue && DateTime.UtcNow < liveDebate.Debate.ScheduledStartTime.Value,
                 currentRound = liveDebate.CurrentRound,
-                totalRounds = debate.Questions.Count,
-                currentQuestion = currentQuestion?.Question,
-                totalFires,
-                startedAt = liveDebate.StartedAt
+                startedAt = liveDebate.StartedAt,
+                debateManagerId = liveDebate.DebateManagerId
             });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 

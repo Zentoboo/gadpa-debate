@@ -60,24 +60,41 @@ export default function Home() {
             </tr>
           </thead>
           <tbody>
-            {liveDebates.map((debate) => (
-              <tr key={debate.id}>
-                <td>{debate.title}</td>
-                <td>
-                  <span className="live-indicator">
-                    <span className="live-dot"></span> LIVE
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="join-button"
-                    onClick={() => handleJoinDebate(debate.id)}
-                  >
-                    Join
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {liveDebates.map((debate) => {
+              const scheduled = debate.scheduledStartTime
+                ? new Date(debate.scheduledStartTime)
+                : null;
+              const now = new Date();
+              const isScheduledFuture = scheduled && now < scheduled;
+
+              return (
+                <tr key={debate.id}>
+                  <td>{debate.title}</td>
+                  <td>
+                    {isScheduledFuture ? (
+                      <span style={{ color: "orange" }}>
+                        ⏳ Scheduled:{" "}
+                        {scheduled.toLocaleString("en-MY", {
+                          timeZone: "Asia/Kuala_Lumpur",
+                        })}
+                      </span>
+                    ) : (
+                      <span className="live-indicator">
+                        <span className="live-dot"></span> LIVE
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="join-button"
+                      onClick={() => handleJoinDebate(debate.id)}
+                    >
+                      {isScheduledFuture ? "View Debate" : "Join"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (

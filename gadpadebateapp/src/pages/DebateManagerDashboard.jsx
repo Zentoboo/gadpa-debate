@@ -215,8 +215,14 @@ export default function DebateManagerDashboard() {
             .catch(err => alert(err.message));
     };
 
+    // Updated `endLive` function to use the new endpoint
     const endLive = () => {
-        if (!window.confirm("Are you sure you want to end the current live debate?")) return;
+        const confirmationMessage = liveStatus.isActive
+            ? "Are you sure you want to end the current live debate?"
+            : "Are you sure you want to cancel the scheduled debate?";
+
+        if (!window.confirm(confirmationMessage)) return;
+
         authFetch("http://localhost:5076/debate-manager/live/end", { method: "POST" })
             .then(res => res.json())
             .then(() => {
@@ -250,15 +256,22 @@ export default function DebateManagerDashboard() {
 
             {/* Live Status Section */}
             <h2 className="section-title">Live Debate Status</h2>
-            <div className={`live-status ${liveStatus?.isLive ? "active" : ""}`}>
+            <div className={`live-status ${liveStatus?.isActive ? "active" : ""}`}>
                 {liveStatus?.isLive ? (
                     <div>
                         <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
-                        {liveStatus.countdown ? (
-                            <p style={{ color: "orange" }}>⏳ Scheduled to start at {new Date(liveStatus.scheduledStartTime).toLocaleString()}</p>
+                        {liveStatus.isPreviewable ? (
+                            <>
+                                <p style={{ color: "orange" }}>
+                                    ⏳ Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}
+                                </p>
+                                <div className="table-actions" style={{ marginTop: "1rem" }}>
+                                    <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
+                                </div>
+                            </>
                         ) : (
                             <>
-                                <p><strong>Total Rounds:</strong> {liveStatus.totalRounds}</p>
+                                <p><strong>Total Rounds:</strong> {liveStatus.debate.totalRounds}</p>
                                 <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
@@ -504,7 +517,7 @@ export default function DebateManagerDashboard() {
                             <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
                                 : "Not Scheduled"}</td>
                             <td>
-                                <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive}>Go Live</button>
+                                <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
                                 <button onClick={() => startEditDebate(d)}>Edit</button>
                                 <button onClick={() => deleteDebate(d.id)}>Delete</button>
                                 <button onClick={() => navigate(`/debate-manager/debates/${d.id}/user-questions`)}>User Questions</button>

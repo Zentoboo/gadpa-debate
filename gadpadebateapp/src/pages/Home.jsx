@@ -73,7 +73,7 @@ export default function Home() {
                   <td>
                     {isScheduledFuture ? (
                       <span style={{ color: "orange" }}>
-                        ⏳ Scheduled:{" "}
+                        Scheduled:{" "}
                         {scheduled.toLocaleString("en-MY", {
                           timeZone: "Asia/Kuala_Lumpur",
                         })}

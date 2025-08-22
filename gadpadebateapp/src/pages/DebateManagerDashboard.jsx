@@ -263,7 +263,7 @@ export default function DebateManagerDashboard() {
                         {liveStatus.isPreviewable ? (
                             <>
                                 <p style={{ color: "orange" }}>
-                                    ⏳ Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}
+                                    Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}
                                 </p>
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
@@ -282,13 +282,6 @@ export default function DebateManagerDashboard() {
                     </div>
                 ) : <p style={{ color: "#9ca3af" }}>No debate is currently live.</p>}
             </div>
-
-            {heatmapData && (
-                <div className="live-status">
-                    <h3>Live Heatmap Data</h3>
-                    <p><strong>Total Fires:</strong> {heatmapData.total}</p>
-                </div>
-            )}
 
             {/* Create Form */}
             <h2>My Debates</h2>

@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "../css/DebatePage.css";
 
 export default function DebatePage() {
     const { debateId } = useParams();
+    const navigate = useNavigate();
+
     const [total, setTotal] = useState(0);
     const [message, setMessage] = useState("");
     const [fires, setFires] = useState([]);
@@ -12,6 +14,7 @@ export default function DebatePage() {
     const [debate, setDebate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [countdown, setCountdown] = useState(null);
 
     // Fetch the specific debate details on component load
     useEffect(() => {
@@ -34,12 +37,35 @@ export default function DebatePage() {
         fetchDebateDetails();
     }, [debateId]);
 
+    // Countdown logic
+    useEffect(() => {
+        if (debate && debate.scheduledStartTime) {
+            const interval = setInterval(() => {
+                const now = new Date();
+                const scheduledTime = new Date(debate.scheduledStartTime);
+                const timeLeft = scheduledTime.getTime() - now.getTime();
+
+                if (timeLeft > 0) {
+                    const seconds = Math.floor((timeLeft / 1000) % 60);
+                    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                    const countdownString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+                    setCountdown(countdownString);
+                } else {
+                    setCountdown("Starting now!");
+                    clearInterval(interval);
+                }
+            }, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [debate]);
+
     const sendFire = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Use the debateId in the POST request to tie the fire to the correct debate
         fetch(`http://localhost:5076/debate/${debateId}/fire`, { method: "POST" })
             .then(async (res) => {
                 if (res.status === 429) {
@@ -55,7 +81,7 @@ export default function DebatePage() {
                 } else if (res.ok) {
                     const data = await res.json();
                     setMessage(data.message);
-                    setTotal(data.total); // Sets the total from the POST request
+                    setTotal(data.total);
                     const id = Date.now();
                     setFires((prev) => [...prev, { id, x, y }]);
                     setTimeout(() => {
@@ -66,20 +92,15 @@ export default function DebatePage() {
             .catch(console.error);
     };
 
-    const handleDataUpdate = useCallback((json) => {
-        if (json && typeof json.total !== "undefined") {
-            setTotal(json.total);
-        }
-    }, []);
-
     if (loading) {
-        return <div className="debate-page-container">Loading debate...</div>;
+        return <div className="debate-page-container"><p>Loading debate...</p></div>;
     }
 
     if (error) {
         return (
             <div className="debate-page-container">
                 <p className="error-message">{error}</p>
+                <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
             </div>
         );
     }
@@ -88,53 +109,63 @@ export default function DebatePage() {
         return (
             <div className="debate-page-container">
                 <p>Debate not found or is no longer live.</p>
+                <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
             </div>
         );
     }
+
+    const isScheduledFuture = debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
 
     return (
         <div className="debate-page-container">
             <div className="debate-details">
                 <h1 className="debate-title">{debate.title}</h1>
                 <p className="debate-description">{debate.description}</p>
-                <div className="debate-info">
-                    <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
-                </div>
             </div>
-            <p className="debate-question">{debate.currentQuestion}</p>
-            <div className={`fire-card ${isShaking ? "shake" : ""}`}>
-                <h1 className="card-title">🔥 Show your support 🔥</h1>
-                <p className="card-total">Total fires: {total}</p>
-                <div className="fire-btn-wrapper">
-                    <button onClick={sendFire} className="fire-button">
-                        DETONATE
-                    </button>
-                    <div className="fire-animations">
-                        {fires.map((fire) => (
-                            <span
-                                key={fire.id}
-                                className="fire-emoji"
-                                style={{
-                                    left: `${fire.x}px`,
-                                    top: `${fire.y}px`,
-                                }}
-                            >
-                                🔥
+            {isScheduledFuture ? (
+                <div className="fire-card">
+                    <h1 className="card-title">Debate is scheduled to begin soon!</h1>
+                    <p className="card-total">Starts in: {countdown}</p>
+                    <p className="card-message">Please check back when the countdown ends.</p>
+                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                </div>
+            ) : (
+                <>
+                    <div className="debate-info">
+                        <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
+                    </div>
+                    <p className="debate-question">{debate.currentQuestion}</p>
+                    <div className={`fire-card ${isShaking ? "shake" : ""}`}>
+                        <h1 className="card-title">🔥 Show your support 🔥</h1>
+                        <p className="card-total">Total fires: {total}</p>
+                        <div className="fire-btn-wrapper">
+                            <button onClick={sendFire} className="fire-button">
+                                DETONATE
+                            </button>
+                            <div className="fire-animations">
+                                {fires.map((fire) => (
+                                    <span
+                                        key={fire.id}
+                                        className="fire-emoji"
+                                        style={{
+                                            left: `${fire.x}px`,
+                                            top: `${fire.y}px`,
+                                        }}
+                                    >
+                                        🔥
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        {bursts.map((burst) => (
+                            <span key={burst.id} className="burst-emoji">
+                                💢
                             </span>
                         ))}
+                        {message && <p className="card-message">{message}</p>}
                     </div>
-                </div>
-                {bursts.map((burst) => (
-                    <span key={burst.id} className="burst-emoji">
-                        💢
-                    </span>
-                ))}
-                {message && <p className="card-message">{message}</p>}
-            </div>
-
-            {/* <div className="police-strip-container">
-                <div className="police-strip"></div>
-            </div> */}
+                </>
+            )}
         </div>
     );
 }

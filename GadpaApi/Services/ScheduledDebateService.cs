@@ -37,38 +37,55 @@ namespace GadpaDebateApi.Services
 
             try
             {
-                var debatesToStart = await dbContext.Debates
-                    .Where(d => d.ScheduledStartTime.HasValue &&
-                                d.ScheduledStartTime.Value <= DateTime.UtcNow)
+                var now = DateTime.UtcNow;
+
+                // Find debates that should start now and have existing LiveDebate entries that are previewable
+                var debatesToActivate = await dbContext.LiveDebates
+                    .Include(ld => ld.Debate)
+                    .Where(ld => ld.IsPreviewable &&
+                                 !ld.IsActive &&
+                                 ld.Debate.ScheduledStartTime.HasValue &&
+                                 ld.Debate.ScheduledStartTime.Value <= now)
                     .ToListAsync();
 
-                foreach (var debate in debatesToStart)
+                foreach (var liveDebate in debatesToActivate)
                 {
-                    // Check if this debate is already live to prevent duplicates
-                    var isAlreadyLive = await dbContext.LiveDebates
-                        .AnyAsync(ld => ld.DebateId == debate.Id);
+                    // Transition from previewable to active
+                    liveDebate.IsPreviewable = false;
+                    liveDebate.IsActive = true;
+                    liveDebate.StartedAt = now; // Update the actual start time
 
-                    if (!isAlreadyLive)
-                    {
-                        var liveDebate = new LiveDebate
-                        {
-                            DebateId = debate.Id,
-                            Debate = debate,
-                            CurrentRound = 1,
-                            IsActive = true,
-                            StartedAt = DateTime.UtcNow
-                        };
-                        dbContext.LiveDebates.Add(liveDebate);
-                        _logger.LogInformation($"Auto-starting debate '{debate.Title}' (ID: {debate.Id}).");
-                    }
-                    else
-                    {
-                        // Set the scheduled time to null so it isn't picked up again
-                        debate.ScheduledStartTime = null;
-                        dbContext.Debates.Update(debate);
-                    }
+                    _logger.LogInformation($"Auto-activating scheduled debate '{liveDebate.Debate.Title}' (ID: {liveDebate.Debate.Id}).");
                 }
-                await dbContext.SaveChangesAsync();
+
+                // Handle standalone scheduled debates (not created via Go Live)
+                var standaloneDebatesToStart = await dbContext.Debates
+                    .Where(d => d.ScheduledStartTime.HasValue &&
+                                d.ScheduledStartTime.Value <= now &&
+                                !dbContext.LiveDebates.Any(ld => ld.DebateId == d.Id))
+                    .ToListAsync();
+
+                foreach (var debate in standaloneDebatesToStart)
+                {
+                    var liveDebate = new LiveDebate
+                    {
+                        DebateId = debate.Id,
+                        Debate = debate,
+                        CurrentRound = 1,
+                        IsActive = true,
+                        IsPreviewable = false,
+                        StartedAt = now,
+                        DebateManagerId = debate.CreatedByUserId
+                    };
+                    dbContext.LiveDebates.Add(liveDebate);
+                    _logger.LogInformation($"Auto-starting standalone scheduled debate '{debate.Title}' (ID: {debate.Id}).");
+                }
+
+                if (debatesToActivate.Any() || standaloneDebatesToStart.Any())
+                {
+                    await dbContext.SaveChangesAsync();
+                    _logger.LogInformation($"Processed {debatesToActivate.Count + standaloneDebatesToStart.Count} scheduled debates.");
+                }
             }
             catch (Exception ex)
             {

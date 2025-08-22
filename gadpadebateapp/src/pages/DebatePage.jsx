@@ -16,50 +16,104 @@ export default function DebatePage() {
     const [error, setError] = useState(null);
     const [countdown, setCountdown] = useState(null);
 
-    // Fetch the specific debate details on component load
-    useEffect(() => {
-        const fetchDebateDetails = async () => {
-            try {
-                const response = await fetch(
-                    `http://localhost:5076/debate/${debateId}`
-                );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch debate details.");
-                }
-                const data = await response.json();
-                setDebate(data);
-            } catch (e) {
-                setError(e.message);
-            } finally {
-                setLoading(false);
+    // Fetch the specific debate details
+    const fetchDebateDetails = useCallback(async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:5076/debate/${debateId}`
+            );
+            if (!response.ok) {
+                throw new Error("Failed to fetch debate details.");
             }
-        };
-        fetchDebateDetails();
+            const data = await response.json();
+            setDebate(data);
+
+            // If debate is live and not in countdown, get the current fire total
+            if (data.isLive && !data.countdown) {
+                fetchFireTotal();
+            }
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
     }, [debateId]);
+
+    // Fetch current fire total
+    const fetchFireTotal = useCallback(async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:5076/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setTotal(data.total || 0);
+            }
+        } catch (e) {
+            console.error("Failed to fetch fire total:", e);
+        }
+    }, [debateId]);
+
+    // Initial fetch on component load
+    useEffect(() => {
+        fetchDebateDetails();
+    }, [fetchDebateDetails]);
+
+    // Set up polling for scheduled debates to detect when they go live
+    useEffect(() => {
+        if (!debate) return;
+
+        const isScheduledFuture = debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
+
+        if (isScheduledFuture || (debate.isLive && debate.countdown)) {
+            // Poll every 30 seconds to check if debate has started
+            const interval = setInterval(() => {
+                fetchDebateDetails();
+            }, 30000);
+
+            return () => clearInterval(interval);
+        }
+    }, [debate, fetchDebateDetails]);
 
     // Countdown logic
     useEffect(() => {
-        if (debate && debate.scheduledStartTime) {
-            const interval = setInterval(() => {
-                const now = new Date();
-                const scheduledTime = new Date(debate.scheduledStartTime);
-                const timeLeft = scheduledTime.getTime() - now.getTime();
+        if (!debate || !debate.scheduledStartTime) return;
 
-                if (timeLeft > 0) {
-                    const seconds = Math.floor((timeLeft / 1000) % 60);
-                    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
-                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-                    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                    const countdownString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-                    setCountdown(countdownString);
-                } else {
-                    setCountdown("Starting now!");
-                    clearInterval(interval);
-                }
-            }, 1000);
-            return () => clearInterval(interval);
-        }
-    }, [debate]);
+        const interval = setInterval(() => {
+            const now = new Date();
+            const scheduledTime = new Date(debate.scheduledStartTime);
+            const timeLeft = scheduledTime.getTime() - now.getTime();
+
+            if (timeLeft > 0) {
+                const seconds = Math.floor((timeLeft / 1000) % 60);
+                const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+                const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const countdownString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+                setCountdown(countdownString);
+            } else {
+                setCountdown("Starting now!");
+                // Refresh debate details when countdown reaches zero
+                setTimeout(() => {
+                    fetchDebateDetails();
+                }, 2000);
+                clearInterval(interval);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [debate?.scheduledStartTime, fetchDebateDetails]);
+
+    // Refresh fire total periodically for live debates
+    useEffect(() => {
+        if (!debate?.isLive || debate.countdown) return;
+
+        const interval = setInterval(() => {
+            fetchFireTotal();
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [debate?.isLive, debate?.countdown, fetchFireTotal]);
 
     const sendFire = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -87,6 +141,11 @@ export default function DebatePage() {
                     setTimeout(() => {
                         setFires((prev) => prev.filter((f) => f.id !== id));
                     }, 2000);
+                } else if (res.status === 400) {
+                    const data = await res.json();
+                    setMessage(data.message);
+                    // Refresh debate status if there's an issue
+                    fetchDebateDetails();
                 }
             })
             .catch(console.error);
@@ -114,7 +173,9 @@ export default function DebatePage() {
         );
     }
 
-    const isScheduledFuture = debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
+    // Show countdown if debate is scheduled for the future OR if it's live but in countdown mode
+    const showCountdown = (debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime)) ||
+        (debate.isLive && debate.countdown);
 
     return (
         <div className="debate-page-container">
@@ -122,19 +183,29 @@ export default function DebatePage() {
                 <h1 className="debate-title">{debate.title}</h1>
                 <p className="debate-description">{debate.description}</p>
             </div>
-            {isScheduledFuture ? (
+
+            {showCountdown ? (
                 <div className="fire-card">
                     <h1 className="card-title">Debate is scheduled to begin soon!</h1>
-                    <p className="card-total">Starts in: {countdown}</p>
-                    <p className="card-message">Please check back when the countdown ends.</p>
+                    <p className="card-total">
+                        {debate.scheduledStartTime ? `Starts in: ${countdown}` : "Starting soon..."}
+                    </p>
+                    <p className="card-message">
+                        {countdown === "Starting now!" ?
+                            "The debate should be starting now! Refreshing..." :
+                            "Please check back when the countdown ends."
+                        }
+                    </p>
                     <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
                 </div>
-            ) : (
+            ) : debate.isLive ? (
                 <>
                     <div className="debate-info">
                         <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
                     </div>
-                    <p className="debate-question">{debate.currentQuestion}</p>
+                    {debate.currentQuestion && (
+                        <p className="debate-question">{debate.currentQuestion}</p>
+                    )}
                     <div className={`fire-card ${isShaking ? "shake" : ""}`}>
                         <h1 className="card-title">🔥 Show your support 🔥</h1>
                         <p className="card-total">Total fires: {total}</p>
@@ -165,6 +236,12 @@ export default function DebatePage() {
                         {message && <p className="card-message">{message}</p>}
                     </div>
                 </>
+            ) : (
+                <div className="fire-card">
+                    <h1 className="card-title">This debate is not currently live</h1>
+                    <p className="card-message">The debate may have ended or hasn't started yet.</p>
+                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                </div>
             )}
         </div>
     );

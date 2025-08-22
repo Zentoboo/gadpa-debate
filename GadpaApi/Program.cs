@@ -338,7 +338,7 @@ public class Program
 
             // Check schedule (must have started)
             var debate = await db.Debates.FirstAsync(d => d.Id == debateId);
-            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value && !liveDebate.IsActive)
                 return Results.BadRequest(new { message = "Debate countdown in progress. Interaction not allowed yet." });
 
             string GetClientIp()
@@ -1030,6 +1030,7 @@ public class Program
         {
             var liveDebate = await db.LiveDebates
                 .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
                 .FirstOrDefaultAsync(ld => ld.IsActive || ld.IsPreviewable);
 
             if (liveDebate == null)
@@ -1037,20 +1038,41 @@ public class Program
                 return Results.Ok(new { isLive = false });
             }
 
+            // Get current question
+            var currentQuestion = liveDebate.Debate.Questions
+                .FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
+
+            // Get total fire count for this live debate
+            var totalFires = await db.FireEvents
+                .Where(fe => fe.LiveDebateId == liveDebate.Id)
+                .SumAsync(fe => fe.FireCount);
+
+            // Determine if countdown is active
+            bool countdown = liveDebate.Debate.ScheduledStartTime.HasValue &&
+                            DateTime.UtcNow < liveDebate.Debate.ScheduledStartTime.Value;
+
             return Results.Ok(new
             {
                 isLive = true,
                 isActive = liveDebate.IsActive,
                 isPreviewable = liveDebate.IsPreviewable,
+                countdown = countdown,
                 debate = new
                 {
-                    title = liveDebate.Debate.Title,
                     id = liveDebate.Debate.Id,
+                    title = liveDebate.Debate.Title,
+                    description = liveDebate.Debate.Description,
                     totalRounds = liveDebate.Debate.Questions.Count,
                     scheduledStartTime = liveDebate.Debate.ScheduledStartTime,
+                    questions = liveDebate.Debate.Questions.Select(q => new
+                    {
+                        round = q.RoundNumber,
+                        question = q.Question
+                    }).ToList()
                 },
-                countdown = liveDebate.Debate.ScheduledStartTime.HasValue && DateTime.UtcNow < liveDebate.Debate.ScheduledStartTime.Value,
                 currentRound = liveDebate.CurrentRound,
+                currentQuestion = currentQuestion?.Question,
+                totalFires = totalFires,
                 startedAt = liveDebate.StartedAt,
                 debateManagerId = liveDebate.DebateManagerId
             });

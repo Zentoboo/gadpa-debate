@@ -13,13 +13,28 @@ export default function DebateManagerDashboard() {
     const [editingDebateId, setEditingDebateId] = useState(null);
     const [heatmapData, setHeatmapData] = useState(null);
 
+    // ✅ Convert datetime-local (local browser time) → UTC ISO
+    const toUtcFromLocal = (localString) => {
+        if (!localString) return null;
+        const d = new Date(localString);
+        return d.toISOString();
+    };
+
+    // ✅ Convert UTC → datetime-local string for input
+    const toLocalDateTimeInputValue = (utcString) => {
+        if (!utcString) return "";
+        const d = new Date(utcString);
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     const [newDebate, setNewDebate] = useState({
         title: "",
         description: "",
         questions: [""],
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
-        allowQuestionsWhenLive: false,
+        scheduledStartTime: "",
     });
 
     const [editDebate, setEditDebate] = useState({
@@ -28,7 +43,7 @@ export default function DebateManagerDashboard() {
         questions: [""],
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
-        allowQuestionsWhenLive: false,
+        scheduledStartTime: "",
     });
 
     const authFetch = (url, options = {}) =>
@@ -88,10 +103,7 @@ export default function DebateManagerDashboard() {
 
     const createDebate = () => {
         const validQuestions = newDebate.questions.filter(q => q.trim());
-        if (!newDebate.title.trim() || validQuestions.length === 0) {
-            alert("Title and at least one question are required");
-            return;
-        }
+        if (!newDebate.title.trim() || validQuestions.length === 0) return;
 
         authFetch("http://localhost:5076/debate-manager/debates", {
             method: "POST",
@@ -101,7 +113,9 @@ export default function DebateManagerDashboard() {
                 questions: validQuestions.map(q => q.trim()),
                 allowUserQuestions: newDebate.allowUserQuestions,
                 maxQuestionsPerUser: newDebate.maxQuestionsPerUser,
-                allowQuestionsWhenLive: newDebate.allowQuestionsWhenLive,
+                scheduledStartTime: newDebate.scheduledStartTime
+                    ? toUtcFromLocal(newDebate.scheduledStartTime)
+                    : null,
             }),
         })
             .then(res => {
@@ -115,7 +129,7 @@ export default function DebateManagerDashboard() {
                     questions: [""],
                     allowUserQuestions: false,
                     maxQuestionsPerUser: 3,
-                    allowQuestionsWhenLive: false,
+                    scheduledStartTime: "",
                 });
                 setIsCreating(false);
                 refreshDebates();
@@ -136,7 +150,9 @@ export default function DebateManagerDashboard() {
                     questions: processedQuestions.length ? processedQuestions : [""],
                     allowUserQuestions: fullDebate.allowUserQuestions,
                     maxQuestionsPerUser: fullDebate.maxQuestionsPerUser || 3,
-                    allowQuestionsWhenLive: fullDebate.allowQuestionsWhenLive,
+                    scheduledStartTime: fullDebate.scheduledStartTime
+                        ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
+                        : "",
                 });
                 setEditingDebateId(debate.id);
                 setIsCreating(false);
@@ -146,10 +162,7 @@ export default function DebateManagerDashboard() {
 
     const saveEditDebate = () => {
         const validQuestions = editDebate.questions.filter(q => q.trim());
-        if (!editDebate.title.trim() || validQuestions.length === 0) {
-            alert("Title and at least one question are required");
-            return;
-        }
+        if (!editDebate.title.trim() || validQuestions.length === 0) return;
 
         authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
             method: "PUT",
@@ -159,7 +172,9 @@ export default function DebateManagerDashboard() {
                 questions: validQuestions.map(q => q.trim()),
                 allowUserQuestions: editDebate.allowUserQuestions,
                 maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
-                allowQuestionsWhenLive: editDebate.allowQuestionsWhenLive,
+                scheduledStartTime: editDebate.scheduledStartTime
+                    ? toUtcFromLocal(editDebate.scheduledStartTime)
+                    : null,
             }),
         })
             .then(res => res.json())
@@ -170,7 +185,7 @@ export default function DebateManagerDashboard() {
                     questions: [""],
                     allowUserQuestions: false,
                     maxQuestionsPerUser: 3,
-                    allowQuestionsWhenLive: false,
+                    scheduledStartTime: "",
                 });
                 setEditingDebateId(null);
                 refreshDebates();
@@ -186,7 +201,7 @@ export default function DebateManagerDashboard() {
             questions: [""],
             allowUserQuestions: false,
             maxQuestionsPerUser: 3,
-            allowQuestionsWhenLive: false,
+            scheduledStartTime: "",
         });
     };
 
@@ -216,7 +231,7 @@ export default function DebateManagerDashboard() {
         authFetch(`http://localhost:5076/debate-manager/debates/${id}`, { method: "DELETE" })
             .then(res => res.json())
             .then(() => refreshDebates())
-            .catch(err => alert(err.message));
+            .catch(console.error);
     };
 
     const addQuestion = () => setNewDebate(prev => ({ ...prev, questions: [...prev.questions, ""] }));
@@ -239,12 +254,18 @@ export default function DebateManagerDashboard() {
                 {liveStatus?.isLive ? (
                     <div>
                         <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
-                        <p><strong>Total Rounds:</strong> {liveStatus.totalRounds}</p>
-                        <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
-                        <div className="table-actions" style={{ marginTop: "1rem" }}>
-                            <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
-                            <button onClick={endLive} className="table-button danger">End Live Debate</button>
-                        </div>
+                        {liveStatus.countdown ? (
+                            <p style={{ color: "orange" }}>⏳ Scheduled to start at {new Date(liveStatus.scheduledStartTime).toLocaleString()}</p>
+                        ) : (
+                            <>
+                                <p><strong>Total Rounds:</strong> {liveStatus.totalRounds}</p>
+                                <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
+                                <div className="table-actions" style={{ marginTop: "1rem" }}>
+                                    <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
+                                    <button onClick={endLive} className="table-button danger">End Live Debate</button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 ) : <p style={{ color: "#9ca3af" }}>No debate is currently live.</p>}
             </div>
@@ -315,17 +336,17 @@ export default function DebateManagerDashboard() {
                             />
                         </label>
                         <label>
+                            Scheduled Start:
                             <input
-                                type="checkbox"
-                                checked={newDebate.allowQuestionsWhenLive}
+                                type="datetime-local"
+                                value={newDebate.scheduledStartTime}
                                 onChange={(e) =>
                                     setNewDebate((prev) => ({
                                         ...prev,
-                                        allowQuestionsWhenLive: e.target.checked,
+                                        scheduledStartTime: e.target.value,
                                     }))
                                 }
                             />
-                            Allow During Live
                         </label>
                     </div>
 
@@ -360,7 +381,12 @@ export default function DebateManagerDashboard() {
                         </tbody>
                     </table>
                     <button onClick={addQuestion}>+ Add Question</button>
-                    <button onClick={createDebate}>Create Debate</button>
+                    <button
+                        onClick={createDebate}
+                        disabled={!newDebate.title.trim() || newDebate.questions.filter(q => q.trim()).length === 0}
+                    >
+                        Create Debate
+                    </button>
                 </div>
             )}
 
@@ -415,17 +441,17 @@ export default function DebateManagerDashboard() {
                             />
                         </label>
                         <label>
+                            Scheduled Start:
                             <input
-                                type="checkbox"
-                                checked={editDebate.allowQuestionsWhenLive}
+                                type="datetime-local"
+                                value={editDebate.scheduledStartTime}
                                 onChange={(e) =>
                                     setEditDebate((prev) => ({
                                         ...prev,
-                                        allowQuestionsWhenLive: e.target.checked,
+                                        scheduledStartTime: e.target.value,
                                     }))
                                 }
                             />
-                            Allow During Live
                         </label>
                     </div>
 
@@ -445,7 +471,12 @@ export default function DebateManagerDashboard() {
                         </div>
                     ))}
                     <button onClick={addEditQuestion}>+ Add Question</button>
-                    <button onClick={saveEditDebate}>Save</button>
+                    <button
+                        onClick={saveEditDebate}
+                        disabled={!editDebate.title.trim() || editDebate.questions.filter(q => q.trim()).length === 0}
+                    >
+                        Save
+                    </button>
                     <button className="secondary" onClick={cancelEdit}>
                         Cancel
                     </button>
@@ -455,14 +486,23 @@ export default function DebateManagerDashboard() {
             {/* Debate List */}
             <table className="dashboard-table">
                 <thead>
-                    <tr><th>Title</th><th>Questions</th><th>Created</th><th>Actions</th></tr>
+                    <tr>
+                        <th>Title</th>
+                        <th>Questions</th>
+                        <th>Created</th>
+                        <th>Scheduled</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {debates.map(d => (
                         <tr key={d.id}>
                             <td>{d.title}</td>
                             <td>{d.questionCount}</td>
-                            <td>{new Date(d.createdAt).toLocaleDateString()}</td>
+                            <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+                            }</td>
+                            <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+                                : "Not Scheduled"}</td>
                             <td>
                                 <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive}>Go Live</button>
                                 <button onClick={() => startEditDebate(d)}>Edit</button>

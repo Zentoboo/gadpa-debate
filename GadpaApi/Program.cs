@@ -16,8 +16,24 @@ public record DebateManagerCredentials(string Username, string Password);
 public record BanIpRequest(string IpAddress);
 public record UnbanIpRequest(string IpAddress);
 public record RateLimitEntry(int Count, DateTime WindowStart);
-public record CreateDebateRequest(string Title, string Description, List<string> Questions, bool AllowUserQuestions = false, int MaxQuestionsPerUser = 3, bool AllowQuestionsWhenLive = false);
-public record UpdateDebateRequest(string Title, string Description, List<string> Questions, bool? AllowUserQuestions = null, int? MaxQuestionsPerUser = null, bool? AllowQuestionsWhenLive = null);
+public record CreateDebateRequest(
+    string Title,
+    string Description,
+    List<string> Questions,
+    bool AllowUserQuestions = false,
+    int MaxQuestionsPerUser = 3,
+    DateTime? ScheduledStartTime = null
+);
+
+public record UpdateDebateRequest(
+    string Title,
+    string Description,
+    List<string> Questions,
+    bool? AllowUserQuestions = null,
+    int? MaxQuestionsPerUser = null,
+    DateTime? ScheduledStartTime = null
+);
+
 public record ChangeRoundRequest(int RoundNumber);
 public record SubmitQuestionRequest(string Question);
 
@@ -122,7 +138,7 @@ public class Program
                 description = ld.Debate.Description,
                 currentRound = ld.CurrentRound,
                 totalRounds = ld.Debate.Questions.Count,
-                allowUserQuestions = ld.Debate.AllowUserQuestions && ld.Debate.AllowQuestionsWhenLive
+                allowUserQuestions = ld.Debate.AllowUserQuestions
             }).ToList();
 
             return Results.Ok(new { isLive = true, debates = debateList });
@@ -150,21 +166,26 @@ public class Program
 
             var currentQuestion = debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
 
+            bool countdown = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
+
             return Results.Ok(new
             {
-                isLive = true,
+                isLive = !countdown,
+                countdown,
+                scheduledStartTime = debate.ScheduledStartTime,
                 debate = new
                 {
                     id = debate.Id,
                     title = debate.Title,
                     description = debate.Description,
-                    currentRound = liveDebate.CurrentRound,
+                    currentRound = !countdown ? liveDebate.CurrentRound : 0,
                     totalRounds = debate.Questions.Count,
-                    currentQuestion = currentQuestion?.Question,
+                    currentQuestion = !countdown ? currentQuestion?.Question : null,
                     questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
-                    allowUserQuestions = debate.AllowUserQuestions && debate.AllowQuestionsWhenLive
+                    allowUserQuestions = debate.AllowUserQuestions && !countdown
                 }
             });
+
         });
 
         app.MapGet("/debate/{debateId}", async (AppDbContext db, int debateId) =>
@@ -181,34 +202,26 @@ public class Program
             var liveDebateStatus = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debate.Id && ld.IsActive);
             bool isLive = liveDebateStatus != null;
 
+            bool countdown = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
             // Determine if user questions are allowed
-            bool allowUserQuestions = false;
-            if (debate.AllowUserQuestions)
-            {
-                if (isLive && debate.AllowQuestionsWhenLive)
-                {
-                    allowUserQuestions = true;
-                }
-                else if (!isLive)
-                {
-                    allowUserQuestions = true;
-                }
-            }
+            bool allowUserQuestions = debate.AllowUserQuestions && isLive && !countdown;
 
-            // Now return the debate details regardless of live status
             return Results.Ok(new
             {
-                isLive = isLive,
+                isLive = isLive && !countdown,
+                countdown,
+                scheduledStartTime = debate.ScheduledStartTime,
                 id = debate.Id,
                 title = debate.Title,
                 description = debate.Description,
-                currentRound = isLive ? liveDebateStatus.CurrentRound : 0, // Only show round if live
+                currentRound = (isLive && !countdown) ? liveDebateStatus.CurrentRound : 0,
                 totalRounds = debate.Questions.Count,
-                currentQuestion = isLive ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
+                currentQuestion = (isLive && !countdown) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
                 questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
-                allowUserQuestions = allowUserQuestions,
+                allowUserQuestions = allowUserQuestions && !countdown,
                 maxQuestionsPerUser = debate.MaxQuestionsPerUser
             });
+
         });
 
         // Submit a question from user (public endpoint)
@@ -232,12 +245,14 @@ public class Program
             if (!debate.AllowUserQuestions)
                 return Results.BadRequest(new { message = "This debate does not allow user submitted questions." });
 
-            // Check if debate is live and if questions are allowed when live
+            // Check if debate is live
             var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
-            bool isLive = liveDebate != null;
+            if (liveDebate == null)
+                return Results.BadRequest(new { message = "Questions can only be submitted during a live debate." });
 
-            if (isLive && !debate.AllowQuestionsWhenLive)
-                return Results.BadRequest(new { message = "Questions cannot be submitted while this debate is live." });
+            // Check schedule (must have started)
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
+                return Results.BadRequest(new { message = "Debate has not started yet. Questions are not allowed." });
 
             // Get client IP
             string GetClientIp()
@@ -327,6 +342,11 @@ public class Program
             var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
             if (liveDebate == null)
                 return Results.BadRequest(new { message = "The specified debate is not currently live." });
+
+            // Check schedule (must have started)
+            var debate = await db.Debates.FirstAsync(d => d.Id == debateId);
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
+                return Results.BadRequest(new { message = "Debate countdown in progress. Interaction not allowed yet." });
 
             string GetClientIp()
             {
@@ -702,7 +722,6 @@ public class Program
                     d.UpdatedAt,
                     d.AllowUserQuestions,
                     d.MaxQuestionsPerUser,
-                    d.AllowQuestionsWhenLive,
                     questionCount = d.Questions.Count,
                     userSubmittedCount = d.UserSubmittedQuestions.Count,
                     Questions = d.Questions
@@ -741,7 +760,7 @@ public class Program
                 CreatedByUserId = userId,
                 AllowUserQuestions = request.AllowUserQuestions,
                 MaxQuestionsPerUser = request.MaxQuestionsPerUser,
-                AllowQuestionsWhenLive = request.AllowQuestionsWhenLive
+                ScheduledStartTime = request.ScheduledStartTime
             };
 
             db.Debates.Add(debate);
@@ -782,7 +801,6 @@ public class Program
                 debate.UpdatedAt,
                 debate.AllowUserQuestions,
                 debate.MaxQuestionsPerUser,
-                debate.AllowQuestionsWhenLive,
                 questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question })
             });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
@@ -819,8 +837,8 @@ public class Program
                 debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
             }
 
-            if (request.AllowQuestionsWhenLive.HasValue)
-                debate.AllowQuestionsWhenLive = request.AllowQuestionsWhenLive.Value;
+            if (request.ScheduledStartTime.HasValue)
+                debate.ScheduledStartTime = request.ScheduledStartTime.Value;
 
             // Update questions if provided
             if (request.Questions != null && request.Questions.Count > 0)
@@ -973,6 +991,16 @@ public class Program
             if (existingLive != null)
                 return Results.BadRequest(new { message = "You already have a live debate. End it first before starting a new one." });
 
+            // Prevent going live before the scheduled start time
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
+            {
+                return Results.BadRequest(new
+                {
+                    message = $"This debate is scheduled to start at {debate.ScheduledStartTime:u} and cannot be started early.",
+                    scheduledStartTime = debate.ScheduledStartTime
+                });
+            }
+
             var liveDebate = new LiveDebate
             {
                 DebateId = id,
@@ -1037,8 +1065,7 @@ public class Program
                     id = debate.Id,
                     title = debate.Title,
                     description = debate.Description,
-                    allowUserQuestions = debate.AllowUserQuestions,
-                    allowQuestionsWhenLive = debate.AllowQuestionsWhenLive
+                    allowUserQuestions = debate.AllowUserQuestions
                 },
                 currentRound = liveDebate.CurrentRound,
                 totalRounds = debate.Questions.Count,

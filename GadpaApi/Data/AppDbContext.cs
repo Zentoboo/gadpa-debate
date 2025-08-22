@@ -99,11 +99,10 @@ public class Debate
     public int CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    
+    public DateTime? ScheduledStartTime { get; set; }
     // User question submission settings
     public bool AllowUserQuestions { get; set; } = false;
     public int MaxQuestionsPerUser { get; set; } = 3;
-    public bool AllowQuestionsWhenLive { get; set; } = false; // If true, allows during live; if false, only when not live
 
     public List<DebateQuestion> Questions { get; set; } = new();
     public List<UserSubmittedQuestion> UserSubmittedQuestions { get; set; } = new();

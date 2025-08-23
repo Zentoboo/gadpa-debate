@@ -16,6 +16,12 @@ export default function DebatePage() {
     const [error, setError] = useState(null);
     const [countdown, setCountdown] = useState(null);
 
+    // Question submission state
+    const [userQuestion, setUserQuestion] = useState("");
+    const [questionSubmitting, setQuestionSubmitting] = useState(false);
+    const [questionMessage, setQuestionMessage] = useState("");
+    const [userQuestionsCount, setUserQuestionsCount] = useState(0);
+
     // Fetch the specific debate details
     const fetchDebateDetails = useCallback(async () => {
         try {
@@ -31,6 +37,15 @@ export default function DebatePage() {
             // If debate is live and not in countdown, get the current fire total
             if (data.isLive && !data.countdown) {
                 fetchFireTotal();
+            }
+
+            // Fetch user question count for this debate
+            const countRes = await fetch(
+                `http://localhost:5076/debate/${debateId}/user-questions/count`
+            );
+            if (countRes.ok) {
+                const countData = await countRes.json();
+                setUserQuestionsCount(countData.count);
             }
         } catch (e) {
             setError(e.message);
@@ -54,6 +69,45 @@ export default function DebatePage() {
         }
     }, [debateId]);
 
+    // Submit user question
+    const submitQuestion = async () => {
+        if (!userQuestion.trim() || questionSubmitting) return;
+
+        setQuestionSubmitting(true);
+        setQuestionMessage("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5076/debate/${debateId}/submit-question`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        question: userQuestion.trim(),
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setQuestionMessage(data.message);
+                setUserQuestion("");
+                setUserQuestionsCount(prev => prev + 1);
+            } else if (response.status === 429) {
+                setQuestionMessage(`${data.message} Retry after ${data.retryAfterSeconds}s`);
+            } else {
+                setQuestionMessage(data.message || "Failed to submit question.");
+            }
+        } catch (error) {
+            setQuestionMessage("Failed to submit question. Please try again.");
+        } finally {
+            setQuestionSubmitting(false);
+        }
+    };
+
     // Initial fetch on component load
     useEffect(() => {
         fetchDebateDetails();
@@ -66,7 +120,6 @@ export default function DebatePage() {
         const isScheduledFuture = debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
 
         if (isScheduledFuture || (debate.isLive && debate.countdown)) {
-            // Poll every 30 seconds to check if debate has started
             const interval = setInterval(() => {
                 fetchDebateDetails();
             }, 30000);
@@ -93,7 +146,6 @@ export default function DebatePage() {
                 setCountdown(countdownString);
             } else {
                 setCountdown("Starting now!");
-                // Refresh debate details when countdown reaches zero
                 setTimeout(() => {
                     fetchDebateDetails();
                 }, 2000);
@@ -144,7 +196,6 @@ export default function DebatePage() {
                 } else if (res.status === 400) {
                     const data = await res.json();
                     setMessage(data.message);
-                    // Refresh debate status if there's an issue
                     fetchDebateDetails();
                 }
             })
@@ -173,9 +224,11 @@ export default function DebatePage() {
         );
     }
 
-    // Show countdown if debate is scheduled for the future OR if it's live but in countdown mode
     const showCountdown = (debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime)) ||
         (debate.isLive && debate.countdown);
+
+    const hasReachedQuestionLimit = userQuestionsCount >= (debate.maxQuestionsPerUser || 3);
+    const canSubmitQuestions = debate.allowUserQuestions && debate.isLive && !showCountdown && !hasReachedQuestionLimit;
 
     return (
         <div className="debate-page-container">
@@ -235,6 +288,56 @@ export default function DebatePage() {
                         ))}
                         {message && <p className="card-message">{message}</p>}
                     </div>
+
+                    {/* Question submission section */}
+                    {debate.allowUserQuestions && (
+                        <div className="question-submission-card">
+                            <div className="question-header">
+                                <h3 className="card-title">Submit Question</h3>
+                                {(questionMessage || hasReachedQuestionLimit) && (
+                                    <span
+                                        className={`question-status ${questionMessage.includes('successfully') ? 'success' : 'error'}`}
+                                    >
+                                        {hasReachedQuestionLimit
+                                            ? `Max reached (${debate.maxQuestionsPerUser})`
+                                            : questionMessage}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="question-form">
+                                <textarea
+                                    value={userQuestion}
+                                    onChange={(e) => setUserQuestion(e.target.value)}
+                                    placeholder="Ask your question here..."
+                                    maxLength={500}
+                                    disabled={!canSubmitQuestions || questionSubmitting}
+                                    className="question-textarea"
+                                    rows={2}
+                                />
+                                <div className="question-form-footer">
+                                    <div className="question-info">
+                                        <span className="char-count">
+                                            {userQuestion.length}/500
+                                        </span>
+                                        <span className="questions-count">
+                                            {userQuestionsCount}/{debate.maxQuestionsPerUser} used
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={submitQuestion}
+                                        disabled={
+                                            !canSubmitQuestions ||
+                                            questionSubmitting ||
+                                            userQuestion.trim().length < 5
+                                        }
+                                        className="submit-question-btn"
+                                    >
+                                        {questionSubmitting ? "Submitting..." : "Submit"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </>
             ) : (
                 <div className="fire-card">

@@ -470,6 +470,25 @@ public class Program
             });
         });
 
+        app.MapGet("/debate/{debateId}/user-questions/count", async (HttpContext context, AppDbContext db, int debateId) =>
+        {
+            string GetClientIp()
+            {
+                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+                {
+                    var first = xff.ToString().Split(',').First().Trim();
+                    if (!string.IsNullOrWhiteSpace(first)) return first;
+                }
+                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+
+            var ip = GetClientIp();
+            var count = await db.UserSubmittedQuestions
+                .CountAsync(usq => usq.DebateId == debateId && usq.IpAddress == ip);
+
+            return Results.Ok(new { count });
+        });
+
         // ===========================
         // ===== ADMIN ROUTES ========
         // ===========================

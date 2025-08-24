@@ -820,59 +820,73 @@ public class Program
 
         // Update debate
         app.MapPut("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id, UpdateDebateRequest request) =>
+{
+    var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+    var debate = await db.Debates
+        .Include(d => d.Questions)
+        .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+
+    if (debate == null)
+        return Results.NotFound();
+
+    // Check if debate is currently live (for informational purposes)
+    var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
+
+    // Allow updating all fields, even during live debates
+    if (!string.IsNullOrWhiteSpace(request.Title))
+        debate.Title = request.Title.Trim();
+
+    if (request.Description != null)
+        debate.Description = request.Description.Trim();
+
+    debate.UpdatedAt = DateTime.UtcNow;
+
+    // Update user question settings if provided
+    if (request.AllowUserQuestions.HasValue)
+        debate.AllowUserQuestions = request.AllowUserQuestions.Value;
+
+    if (request.MaxQuestionsPerUser.HasValue)
+    {
+        if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
+            return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+        debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
+    }
+
+    // Update scheduled start time if provided
+    if (request.ScheduledStartTime.HasValue)
+        debate.ScheduledStartTime = request.ScheduledStartTime.Value;
+
+    // Update questions if provided
+    if (request.Questions != null && request.Questions.Count > 0)
+    {
+        // Validate questions
+        var validQuestions = request.Questions.Where(q => !string.IsNullOrWhiteSpace(q)).ToList();
+        if (validQuestions.Count == 0)
+            return Results.BadRequest(new { message = "At least one valid question is required." });
+
+        // Remove existing questions
+        db.DebateQuestions.RemoveRange(debate.Questions);
+
+        // Add new questions
+        var newQuestions = validQuestions.Select((q, index) => new DebateQuestion
         {
-            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            DebateId = debate.Id,
+            RoundNumber = index + 1,
+            Question = q.Trim()
+        }).ToList();
 
-            var debate = await db.Debates
-                .Include(d => d.Questions)
-                .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+        db.DebateQuestions.AddRange(newQuestions);
+    }
 
-            if (debate == null)
-                return Results.NotFound();
+    await db.SaveChangesAsync();
 
-            // Check if debate is currently live
-            var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
-            if (isLive)
-                return Results.BadRequest(new { message = "Cannot edit a debate that is currently live." });
+    var responseMessage = isLive
+        ? "Live debate updated successfully. Changes are now active."
+        : "Debate updated successfully.";
 
-            debate.Title = request.Title?.Trim() ?? debate.Title;
-            debate.Description = request.Description?.Trim() ?? debate.Description;
-            debate.UpdatedAt = DateTime.UtcNow;
-
-            // Update user question settings if provided
-            if (request.AllowUserQuestions.HasValue)
-                debate.AllowUserQuestions = request.AllowUserQuestions.Value;
-
-            if (request.MaxQuestionsPerUser.HasValue)
-            {
-                if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
-                    return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
-                debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
-            }
-
-            if (request.ScheduledStartTime.HasValue)
-                debate.ScheduledStartTime = request.ScheduledStartTime.Value;
-
-            // Update questions if provided
-            if (request.Questions != null && request.Questions.Count > 0)
-            {
-                // Remove existing questions
-                db.DebateQuestions.RemoveRange(debate.Questions);
-
-                // Add new questions
-                var newQuestions = request.Questions.Select((q, index) => new DebateQuestion
-                {
-                    DebateId = debate.Id,
-                    RoundNumber = index + 1,
-                    Question = q.Trim()
-                }).ToList();
-
-                db.DebateQuestions.AddRange(newQuestions);
-            }
-
-            await db.SaveChangesAsync();
-            return Results.Ok(new { message = "Debate updated successfully." });
-        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+    return Results.Ok(new { message = responseMessage });
+}).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Delete debate
         app.MapDelete("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id) =>
@@ -949,11 +963,6 @@ public class Program
 
             if (debate == null)
                 return Results.NotFound();
-
-            // Check if debate is currently live
-            var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == debateId && ld.IsActive);
-            if (isLive)
-                return Results.BadRequest(new { message = "Cannot add questions to a live debate." });
 
             var userQuestion = await db.UserSubmittedQuestions.FirstOrDefaultAsync(usq => usq.Id == questionId && usq.DebateId == debateId);
             if (userQuestion == null)

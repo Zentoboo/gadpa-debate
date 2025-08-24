@@ -38,10 +38,15 @@ export default function LiveDebatePage() {
         }
     }, [isAuthenticated, isDebateManager, navigate]);
 
-    // Fetch detailed debate information
-    const fetchDebateDetails = useCallback(async (debateId) => {
+    // Fetch detailed debate information - ENHANCED with cache busting
+    const fetchDebateDetails = useCallback(async (debateId, bustCache = false) => {
         try {
-            const response = await fetch(`http://localhost:5076/debate/${debateId}`);
+            // Add cache busting parameter when needed
+            const url = bustCache
+                ? `http://localhost:5076/debate/${debateId}?_t=${Date.now()}`
+                : `http://localhost:5076/debate/${debateId}`;
+
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 setDebateDetails(data);
@@ -56,15 +61,20 @@ export default function LiveDebatePage() {
         }
     }, []);
 
-    // Fetch live debate status
-    const refreshLiveStatus = useCallback(async (isInitial = false) => {
+    // Fetch live debate status - ENHANCED with better refresh logic
+    const refreshLiveStatus = useCallback(async (isInitial = false, bustCache = false) => {
         if (isInitial) {
             setInitialLoading(true);
             setError(null);
         }
 
         try {
-            const res = await authFetch("http://localhost:5076/debate-manager/live/status");
+            // Add cache busting for live status as well
+            const statusUrl = bustCache
+                ? `http://localhost:5076/debate-manager/live/status?_t=${Date.now()}`
+                : "http://localhost:5076/debate-manager/live/status";
+
+            const res = await authFetch(statusUrl);
 
             if (!res.ok) {
                 if (res.status === 401) {
@@ -80,7 +90,7 @@ export default function LiveDebatePage() {
 
             // If we have a live debate, fetch detailed debate information
             if (data?.isLive && data?.debate?.id) {
-                const details = await fetchDebateDetails(data.debate.id);
+                const details = await fetchDebateDetails(data.debate.id, bustCache);
                 if (details) {
                     setDebateDetails(details);
                 }
@@ -108,12 +118,14 @@ export default function LiveDebatePage() {
         refreshLiveStatus(true);
     }, [token, isAuthenticated, isDebateManager, refreshLiveStatus]);
 
-    // Auto-refresh live status every 30 seconds
+    // Auto-refresh live status every 30 seconds - ENHANCED
     useEffect(() => {
         if (!liveStatus?.isLive) return;
 
         const interval = setInterval(() => {
-            refreshLiveStatus(false);
+            // Use cache busting every few refreshes to ensure we get fresh data
+            const shouldBustCache = Math.random() < 0.3; // 30% chance to bust cache
+            refreshLiveStatus(false, shouldBustCache);
         }, 30000);
 
         return () => clearInterval(interval);
@@ -126,7 +138,7 @@ export default function LiveDebatePage() {
         }
     }, []);
 
-    // Change the round
+    // Change the round - ENHANCED with data refresh
     const changeRound = useCallback((roundNumber) => {
         if (actionLoading || !liveStatus?.isLive || !liveStatus.isActive) {
             console.log("Cannot change round - conditions not met");
@@ -158,9 +170,9 @@ export default function LiveDebatePage() {
             })
             .then((data) => {
                 console.log("Round change successful:", data);
-                // Small delay for better UX
+                // Force refresh with cache busting after round change
                 setTimeout(() => {
-                    refreshLiveStatus(false);
+                    refreshLiveStatus(false, true); // Bust cache on round change
                     setActionLoading(false);
                     setLoadingAction("");
                 }, 300);
@@ -204,7 +216,13 @@ export default function LiveDebatePage() {
             });
     }, [authFetch, navigate]);
 
-    // Get current question text
+    // Manual refresh function - NEW
+    const handleManualRefresh = useCallback(() => {
+        console.log("Manual refresh triggered");
+        refreshLiveStatus(false, true); // Force cache bust
+    }, [refreshLiveStatus]);
+
+    // Get current question text - ENHANCED
     const getCurrentQuestion = useCallback(() => {
         if (!liveStatus?.currentRound) return "No question set for this round";
 
@@ -223,11 +241,12 @@ export default function LiveDebatePage() {
         return "Loading question...";
     }, [liveStatus, debateDetails]);
 
-    // Get total rounds
+    // Get total rounds - ENHANCED
     const getTotalRounds = useCallback(() => {
         return debateDetails?.totalRounds ||
             liveStatus?.debate?.totalRounds ||
             liveStatus?.totalRounds ||
+            (debateDetails?.questions ? debateDetails.questions.length : 0) ||
             0;
     }, [debateDetails, liveStatus]);
 
@@ -305,7 +324,6 @@ export default function LiveDebatePage() {
 
     return (
         <div className="live-debate-container">
-            {/* Header */}
             <div className="live-debate-header">
                 <h2 className="live-debate-title">
                     {debateTitle}
@@ -314,6 +332,19 @@ export default function LiveDebatePage() {
                     <span className="live-debate-subtitle">
                         Round {liveStatus.currentRound} of {totalRounds}
                     </span>
+                    <button
+                        onClick={handleManualRefresh}
+                        className="control-button secondary"
+                        style={{
+                            marginRight: '10px',
+                            padding: '5px 10px',
+                            fontSize: '12px',
+                            minWidth: 'auto'
+                        }}
+                        title="Refresh data to see latest changes"
+                    >
+                        🔄 Refresh
+                    </button>
                     <FireCountDisplay
                         token={token}
                         debateId={debateId}
@@ -441,8 +472,8 @@ export default function LiveDebatePage() {
                 </div>
             </div>
 
-            {/* Debug info (remove in production) */}
-            {/* {process.env.NODE_ENV === 'development' && (
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
                 <div style={{
                     position: 'fixed',
                     bottom: '10px',
@@ -461,8 +492,10 @@ export default function LiveDebatePage() {
                     <div>Loading: {String(actionLoading)} ({loadingAction})</div>
                     <div>Question: {currentQuestion.substring(0, 30)}...</div>
                     <div>Has Details: {String(!!debateDetails)}</div>
+                    <div>Details Questions: {debateDetails?.questions?.length || 0}</div>
+                    <div>Status Questions: {liveStatus?.debate?.questions?.length || 0}</div>
                 </div>
-            )} */}
+            )}
         </div>
     );
 }

@@ -13,14 +13,14 @@ export default function DebateManagerDashboard() {
     const [editingDebateId, setEditingDebateId] = useState(null);
     const [heatmapData, setHeatmapData] = useState(null);
 
-    // ✅ Convert datetime-local (local browser time) → UTC ISO
+    // Convert datetime-local (local browser time) → UTC ISO
     const toUtcFromLocal = (localString) => {
         if (!localString) return null;
         const d = new Date(localString);
         return d.toISOString();
     };
 
-    // ✅ Convert UTC → datetime-local string for input
+    // Convert UTC → datetime-local string for input
     const toLocalDateTimeInputValue = (utcString) => {
         if (!utcString) return "";
         const d = new Date(utcString);
@@ -162,22 +162,43 @@ export default function DebateManagerDashboard() {
 
     const saveEditDebate = () => {
         const validQuestions = editDebate.questions.filter(q => q.trim());
-        if (!editDebate.title.trim() || validQuestions.length === 0) return;
+        if (!editDebate.title.trim()) {
+            alert("Title is required.");
+            return;
+        }
+
+        if (validQuestions.length === 0) {
+            alert("At least one question is required.");
+            return;
+        }
+
+        // Check if this debate is currently live
+        const isCurrentDebateLive = liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
+
+        // Prepare the request body - include all fields regardless of live status
+        const requestBody = {
+            title: editDebate.title.trim(),
+            description: editDebate.description.trim(),
+            questions: validQuestions.map(q => q.trim()),
+            allowUserQuestions: editDebate.allowUserQuestions,
+            maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
+            scheduledStartTime: editDebate.scheduledStartTime
+                ? toUtcFromLocal(editDebate.scheduledStartTime)
+                : null,
+        };
 
         authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
             method: "PUT",
-            body: JSON.stringify({
-                title: editDebate.title.trim(),
-                description: editDebate.description.trim(),
-                questions: validQuestions.map(q => q.trim()),
-                allowUserQuestions: editDebate.allowUserQuestions,
-                maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
-                scheduledStartTime: editDebate.scheduledStartTime
-                    ? toUtcFromLocal(editDebate.scheduledStartTime)
-                    : null,
-            }),
+            body: JSON.stringify(requestBody),
         })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => {
+                        throw new Error(err.message || "Failed to save debate");
+                    });
+                }
+                return res.json();
+            })
             .then(() => {
                 setEditDebate({
                     title: "",
@@ -189,6 +210,8 @@ export default function DebateManagerDashboard() {
                 });
                 setEditingDebateId(null);
                 refreshDebates();
+                // Show success message
+                alert("Debate updated successfully!");
             })
             .catch(err => alert(err.message));
     };
@@ -249,6 +272,9 @@ export default function DebateManagerDashboard() {
     const updateEditQuestion = (i, val) => setEditDebate(prev => ({ ...prev, questions: prev.questions.map((q, idx) => idx === i ? val : q) }));
 
     if (!isAuthenticated || !token || !isDebateManager) return null;
+
+    // Check if the debate being edited is currently live
+    const isEditingLiveDebate = editingDebateId && liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
 
     return (
         <div className="dashboard-container">
@@ -399,7 +425,14 @@ export default function DebateManagerDashboard() {
             {/* Edit Form */}
             {editingDebateId && (
                 <div className="form-box">
-                    <h3>Edit Debate</h3>
+                    <h3>Edit Debate {isEditingLiveDebate && <span style={{ color: "orange" }}>(Live)</span>}</h3>
+
+                    {isEditingLiveDebate && (
+                        <div style={{ padding: "10px", backgroundColor: "#312f26ff", border: "1px solid #ffeaa7", borderRadius: "4px", marginBottom: "1rem" }}>
+                            <strong>Note:</strong> This debate is currently live. Changes will take effect immediately and may affect the ongoing debate experience.
+                        </div>
+                    )}
+
                     <input
                         type="text"
                         value={editDebate.title}
@@ -407,6 +440,7 @@ export default function DebateManagerDashboard() {
                             setEditDebate((prev) => ({ ...prev, title: e.target.value }))
                         }
                         className="auth-input"
+                        placeholder="Debate Title"
                     />
                     <textarea
                         value={editDebate.description}
@@ -414,6 +448,7 @@ export default function DebateManagerDashboard() {
                             setEditDebate((prev) => ({ ...prev, description: e.target.value }))
                         }
                         className="auth-input"
+                        placeholder="Description"
                     />
 
                     {/* Settings */}
@@ -461,31 +496,50 @@ export default function DebateManagerDashboard() {
                         </label>
                     </div>
 
+                    {/* Questions Section - Show for all debates */}
                     <h4>Questions</h4>
-                    {editDebate.questions.map((q, i) => (
-                        <div className="question-row" key={i}>
-                            <input
-                                type="text"
-                                value={q}
-                                onChange={(e) => updateEditQuestion(i, e.target.value)}
-                            />
-                            {editDebate.questions.length > 1 && (
-                                <button className="danger" onClick={() => removeEditQuestion(i)}>
-                                    ×
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                    <button onClick={addEditQuestion}>+ Add Question</button>
-                    <button
-                        onClick={saveEditDebate}
-                        disabled={!editDebate.title.trim() || editDebate.questions.filter(q => q.trim()).length === 0}
-                    >
-                        Save
-                    </button>
-                    <button className="secondary" onClick={cancelEdit}>
-                        Cancel
-                    </button>
+                    <table className="questions-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Question</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {editDebate.questions.map((q, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>
+                                        <textarea
+                                            value={q}
+                                            onChange={(e) => updateEditQuestion(i, e.target.value)}
+                                            rows={2}
+                                            style={{ width: "100%", resize: "vertical", overflowWrap: "break-word" }}
+                                        />
+                                    </td>
+                                    <td>
+                                        {editDebate.questions.length > 1 && (
+                                            <button className="danger" onClick={() => removeEditQuestion(i)}>×</button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div style={{ marginTop: "1rem" }}>
+                        <button
+                            onClick={saveEditDebate}
+                            disabled={!editDebate.title.trim() || editDebate.questions.filter(q => q.trim()).length === 0}
+                        >
+                            Save Changes
+                        </button>
+                        <button onClick={addEditQuestion}>+ Add Question</button>
+                        <button className="secondary" onClick={cancelEdit} style={{ marginLeft: "0.5rem" }}>
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -503,7 +557,14 @@ export default function DebateManagerDashboard() {
                 <tbody>
                     {debates.map(d => (
                         <tr key={d.id}>
-                            <td>{d.title}</td>
+                            <td>
+                                {d.title}
+                                {liveStatus?.isLive && liveStatus?.debate?.id === d.id && (
+                                    <span style={{ color: "orange", fontSize: "0.8em", marginLeft: "0.5rem" }}>
+                                        (LIVE)
+                                    </span>
+                                )}
+                            </td>
                             <td>{d.questionCount}</td>
                             <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
                             }</td>
@@ -512,7 +573,7 @@ export default function DebateManagerDashboard() {
                             <td>
                                 <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
                                 <button onClick={() => startEditDebate(d)}>Edit</button>
-                                <button onClick={() => deleteDebate(d.id)}>Delete</button>
+                                <button onClick={() => deleteDebate(d.id)} disabled={liveStatus?.isLive && liveStatus?.debate?.id === d.id}>Delete</button>
                                 <button onClick={() => navigate(`/debate-manager/debates/${d.id}/user-questions`)}>User Questions</button>
                             </td>
                         </tr>

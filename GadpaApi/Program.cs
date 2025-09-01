@@ -1194,6 +1194,9 @@ public class Program
             return Results.Ok(new { buckets, total = totalFires });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
+        // Map SignalR Hub for real-time features
+        app.MapHub<GadpaDebateApi.Hubs.DebateHub>("/debateHub");
+
         app.Run();
     }
 }

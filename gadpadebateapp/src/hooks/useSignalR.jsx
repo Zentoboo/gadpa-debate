@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { API_CONFIG } from '../config/api.js';
 
 export default function useSignalR() {
   const [connection, setConnection] = useState(null);
@@ -11,7 +12,7 @@ export default function useSignalR() {
   useEffect(() => {
     // Create SignalR connection
     const newConnection = new HubConnectionBuilder()
-      .withUrl('http://localhost:5076/debateHub')
+      .withUrl(API_CONFIG.SIGNALR_HUB)
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Information)
       .build();

@@ -10,6 +10,8 @@ public class DebateHub : Hub
 {
     private readonly AppDbContext _db;
     private readonly ILogger<DebateHub> _logger;
+    private static readonly Dictionary<int, HashSet<string>> _debateConnections = new();
+    private static readonly object _lock = new object();
 
     public DebateHub(AppDbContext db, ILogger<DebateHub> logger)
     {
@@ -333,6 +335,75 @@ public class DebateHub : Hub
         }
     }
 
+    public async Task JoinDebateRoom(int debateId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"Debate-{debateId}");
+        
+        lock (_lock)
+        {
+            if (!_debateConnections.ContainsKey(debateId))
+                _debateConnections[debateId] = new HashSet<string>();
+            
+            _debateConnections[debateId].Add(Context.ConnectionId);
+        }
+
+        var viewerCount = GetViewerCount(debateId);
+        await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new
+        {
+            debateId = debateId,
+            viewerCount = viewerCount,
+            timestamp = DateTime.UtcNow
+        });
+
+        _logger.LogInformation("Client {ConnectionId} joined debate {DebateId}, viewers: {Count}", 
+            Context.ConnectionId, debateId, viewerCount);
+    }
+
+    public async Task LeaveDebateRoom(int debateId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Debate-{debateId}");
+        
+        lock (_lock)
+        {
+            if (_debateConnections.ContainsKey(debateId))
+            {
+                _debateConnections[debateId].Remove(Context.ConnectionId);
+                if (_debateConnections[debateId].Count == 0)
+                    _debateConnections.Remove(debateId);
+            }
+        }
+
+        var viewerCount = GetViewerCount(debateId);
+        await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new
+        {
+            debateId = debateId,
+            viewerCount = viewerCount,
+            timestamp = DateTime.UtcNow
+        });
+
+        _logger.LogInformation("Client {ConnectionId} left debate {DebateId}, viewers: {Count}", 
+            Context.ConnectionId, debateId, viewerCount);
+    }
+
+    public async Task GetViewerCount(int debateId)
+    {
+        var count = GetViewerCount(debateId);
+        await Clients.Caller.SendAsync("ViewerCountUpdate", new
+        {
+            debateId = debateId,
+            viewerCount = count,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    private int GetViewerCount(int debateId)
+    {
+        lock (_lock)
+        {
+            return _debateConnections.ContainsKey(debateId) ? _debateConnections[debateId].Count : 0;
+        }
+    }
+
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
@@ -342,6 +413,37 @@ public class DebateHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
+        
+        // Remove from all debate rooms
+        lock (_lock)
+        {
+            var debatesToUpdate = new List<int>();
+            foreach (var kvp in _debateConnections)
+            {
+                if (kvp.Value.Remove(Context.ConnectionId))
+                {
+                    debatesToUpdate.Add(kvp.Key);
+                    if (kvp.Value.Count == 0)
+                        _debateConnections.Remove(kvp.Key);
+                }
+            }
+            
+            // Update viewer counts for affected debates
+            foreach (var debateId in debatesToUpdate)
+            {
+                var viewerCount = GetViewerCount(debateId);
+                _ = Task.Run(async () => 
+                {
+                    await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new
+                    {
+                        debateId = debateId,
+                        viewerCount = viewerCount,
+                        timestamp = DateTime.UtcNow
+                    });
+                });
+            }
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 }

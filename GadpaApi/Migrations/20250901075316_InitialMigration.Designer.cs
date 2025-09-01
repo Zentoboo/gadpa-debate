@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GadpaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822072741_AddScheduledStartTime")]
-    partial class AddScheduledStartTime
+    [Migration("20250901075316_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -162,6 +162,9 @@ namespace GadpaApi.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPreviewable")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("StartedAt")

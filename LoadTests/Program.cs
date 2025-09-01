@@ -12,16 +12,9 @@ public class SignalRLoadTest
     public static void Main(string[] args)
     {
         Console.WriteLine("🚀 Starting SignalR Load Tests for Debate System");
-        Console.WriteLine("Running simple connection test first...\n");
+        Console.WriteLine("Testing optimized server configuration...\n");
         
-        SimpleSignalRTest.RunTest();
-        
-        Console.WriteLine("\n" + new string('=', 50));
-        Console.WriteLine("Now running comprehensive tests...\n");
-        
-        RunConnectionLoadTest();
-        // RunFireReactionLoadTest();
-        // RunConcurrentUsersTest();
+        QuickConnectionTest.RunTest();
     }
     
     /// <summary>

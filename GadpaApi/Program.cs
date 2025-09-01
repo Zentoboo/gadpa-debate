@@ -44,9 +44,27 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // EF Core + SQLite (expects "DefaultConnection" in appsettings)
+        // Configure Kestrel server for high concurrent connections
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Limits.MaxConcurrentConnections = 500; // Increased from default 100
+            options.Limits.MaxConcurrentUpgradedConnections = 500; // For WebSocket/SignalR
+            options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(30);
+            options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+            options.Limits.MaxRequestBodySize = 1024 * 1024; // 1MB limit
+        });
+
+        // EF Core + SQLite with connection pooling for concurrent access
         builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+        {
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            options.UseSqlite(connectionString, sqliteOptions =>
+            {
+                sqliteOptions.CommandTimeout(30); // 30 second timeout for operations
+            });
+            options.EnableServiceProviderCaching();
+            options.EnableSensitiveDataLogging(false); // Disable for performance
+        }, ServiceLifetime.Scoped);
 
         // JWT Authentication
         builder.Services.AddAuthentication(options =>
@@ -90,8 +108,17 @@ public class Program
         builder.Services.AddSingleton<TokenService>();
         builder.Services.AddMemoryCache();
         
-        // SignalR for real-time features
-        builder.Services.AddSignalR();
+        // SignalR with optimized settings for 300+ concurrent users
+        builder.Services.AddSignalR(options =>
+        {
+            options.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
+            options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            options.MaximumReceiveMessageSize = 1024 * 64; // 64KB max message size
+            options.StreamBufferCapacity = 10; // Buffer capacity for streams
+            options.MaximumParallelInvocationsPerClient = 5; // Prevent client spam
+            options.EnableDetailedErrors = false; // Disable for performance
+        }).AddMessagePackProtocol(); // More efficient than JSON for high load
         
         // Background timer service for live debate updates
         builder.Services.AddSingleton<GadpaDebateApi.Services.DebateTimerService>();

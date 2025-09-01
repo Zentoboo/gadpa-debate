@@ -45,73 +45,162 @@ export default function useSignalR() {
   }, []);
 
   const setupEventListeners = (connection) => {
-    // Viewer count updates
-    connection.on('ViewerCountChanged', (count) => {
-      setViewerCount(count);
-    });
-
-    // Fire events from other users
-    connection.on('FireAdded', (fireData) => {
+    // Fire reaction events (matches backend FireReaction event)
+    connection.on('FireReaction', (fireData) => {
       setFireEvents(prev => [...prev, {
         id: Date.now() + Math.random(),
         ...fireData
       }].slice(-50)); // Keep only last 50 events
-    });
-
-    // Live reactions from other users
-    connection.on('ReceiveFireReaction', (reactionData) => {
-      // This will be used for floating animations from other users
-      const event = new CustomEvent('externalFireReaction', { detail: reactionData });
+      
+      // Dispatch custom event for animations
+      const event = new CustomEvent('externalFireReaction', { detail: fireData });
       window.dispatchEvent(event);
     });
 
-    // Debate status changes
-    connection.on('DebateStatusChanged', (statusData) => {
-      const event = new CustomEvent('debateStatusChanged', { detail: statusData });
+    // Round control events
+    connection.on('RoundStarted', (roundData) => {
+      const event = new CustomEvent('roundStarted', { detail: roundData });
       window.dispatchEvent(event);
     });
 
-    // Question changes
-    connection.on('QuestionChanged', (questionData) => {
-      const event = new CustomEvent('questionChanged', { detail: questionData });
+    connection.on('RoundStopped', (roundData) => {
+      const event = new CustomEvent('roundStopped', { detail: roundData });
       window.dispatchEvent(event);
     });
 
-    // Connection established
-    connection.on('Connected', (data) => {
-      console.log('Connected to debate hub:', data);
+    // Question navigation events
+    connection.on('NextQuestion', (questionData) => {
+      const event = new CustomEvent('nextQuestion', { detail: questionData });
+      window.dispatchEvent(event);
+    });
+
+    connection.on('PreviousQuestion', (questionData) => {
+      const event = new CustomEvent('previousQuestion', { detail: questionData });
+      window.dispatchEvent(event);
+    });
+
+    // Question broadcasting
+    connection.on('QuestionBroadcast', (questionData) => {
+      const event = new CustomEvent('questionBroadcast', { detail: questionData });
+      window.dispatchEvent(event);
+    });
+
+    // Timer updates (every second from backend)
+    connection.on('TimerUpdate', (timerData) => {
+      const event = new CustomEvent('timerUpdate', { detail: timerData });
+      window.dispatchEvent(event);
+    });
+
+    // Automatic debate start
+    connection.on('DebateStarted', (debateData) => {
+      const event = new CustomEvent('debateStarted', { detail: debateData });
+      window.dispatchEvent(event);
+    });
+
+    // Viewer count updates
+    connection.on('ViewerCountUpdate', (viewerData) => {
+      setViewerCount(viewerData.viewerCount);
+      const event = new CustomEvent('viewerCountUpdate', { detail: viewerData });
+      window.dispatchEvent(event);
+    });
+
+    // Error handling
+    connection.on('Error', (errorMessage) => {
+      console.error('SignalR Error:', errorMessage);
+      const event = new CustomEvent('signalRError', { detail: { message: errorMessage } });
+      window.dispatchEvent(event);
     });
   };
 
-  // Send fire reaction with coordinates
-  const sendFireReaction = async (x, y, userName = 'Anonymous') => {
+  // Send fire reaction (matches backend SendFireReaction method)
+  const sendFireReaction = async (debateId) => {
     if (connection && isConnected) {
       try {
-        await connection.invoke('SendFireReaction', userName, x, y);
+        await connection.invoke('SendFireReaction', debateId);
       } catch (error) {
         console.error('Error sending fire reaction:', error);
       }
     }
   };
 
-  // Get current viewer count
-  const requestViewerCount = async () => {
+  // Round control methods for debate managers
+  const startRound = async (debateId, roundNumber) => {
     if (connection && isConnected) {
       try {
-        await connection.invoke('GetViewerCount');
+        await connection.invoke('StartRound', debateId, roundNumber);
       } catch (error) {
-        console.error('Error requesting viewer count:', error);
+        console.error('Error starting round:', error);
       }
     }
   };
 
-  // Send typing indicator (for moderators)
-  const sendTypingIndicator = async (isTyping) => {
+  const stopRound = async (debateId) => {
     if (connection && isConnected) {
       try {
-        await connection.invoke('SendTypingIndicator', isTyping);
+        await connection.invoke('StopRound', debateId);
       } catch (error) {
-        console.error('Error sending typing indicator:', error);
+        console.error('Error stopping round:', error);
+      }
+    }
+  };
+
+  const nextQuestion = async (debateId) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('NextQuestion', debateId);
+      } catch (error) {
+        console.error('Error going to next question:', error);
+      }
+    }
+  };
+
+  const previousQuestion = async (debateId) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('PreviousQuestion', debateId);
+      } catch (error) {
+        console.error('Error going to previous question:', error);
+      }
+    }
+  };
+
+  const broadcastQuestion = async (debateId, roundNumber, questionText) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('BroadcastQuestion', debateId, roundNumber, questionText);
+      } catch (error) {
+        console.error('Error broadcasting question:', error);
+      }
+    }
+  };
+
+  // Room management for viewer count
+  const joinDebateRoom = async (debateId) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('JoinDebateRoom', debateId);
+      } catch (error) {
+        console.error('Error joining debate room:', error);
+      }
+    }
+  };
+
+  const leaveDebateRoom = async (debateId) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('LeaveDebateRoom', debateId);
+      } catch (error) {
+        console.error('Error leaving debate room:', error);
+      }
+    }
+  };
+
+  const getViewerCount = async (debateId) => {
+    if (connection && isConnected) {
+      try {
+        await connection.invoke('GetViewerCount', debateId);
+      } catch (error) {
+        console.error('Error getting viewer count:', error);
       }
     }
   };
@@ -122,7 +211,13 @@ export default function useSignalR() {
     viewerCount,
     fireEvents,
     sendFireReaction,
-    requestViewerCount,
-    sendTypingIndicator
+    startRound,
+    stopRound,
+    nextQuestion,
+    previousQuestion,
+    broadcastQuestion,
+    joinDebateRoom,
+    leaveDebateRoom,
+    getViewerCount
   };
 }

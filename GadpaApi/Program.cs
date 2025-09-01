@@ -9,6 +9,7 @@ using GadpaDebateApi.Hubs;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.SignalR;
+using DotNetEnv;
 
 namespace GadpaDebateApi;
 
@@ -42,6 +43,18 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        // Load .env file if it exists
+        if (File.Exists(".env"))
+        {
+            DotNetEnv.Env.Load(".env");
+            Console.WriteLine("✅ Loaded .env file");
+            Console.WriteLine($"JWT_SECRET_KEY loaded: {(!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET_KEY")) ? "YES" : "NO")}");
+        }
+        else
+        {
+            Console.WriteLine("❌ .env file not found");
+        }
+        
         var builder = WebApplication.CreateBuilder(args);
 
         // Configure Kestrel server for high concurrent connections
@@ -75,7 +88,20 @@ public class Program
         })
         .AddJwtBearer(options =>
         {
-            var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
+            // Get JWT key from environment variable in production, fallback to config
+            var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+                         ?? builder.Configuration["Jwt:Key"];
+            
+            Console.WriteLine($"🔑 Using JWT key (first 20 chars): {jwtKey?.Substring(0, Math.Min(20, jwtKey?.Length ?? 0))}...");
+            
+            if (string.IsNullOrEmpty(jwtKey) || jwtKey.Contains("REPLACE_WITH"))
+            {
+                throw new InvalidOperationException(
+                    "JWT secret key must be set via JWT_SECRET_KEY environment variable in production. " +
+                    "Generate a secure key with: openssl rand -base64 64");
+            }
+            
+            var key = Encoding.UTF8.GetBytes(jwtKey);
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -92,12 +118,18 @@ public class Program
 
         builder.Services.AddAuthorization();
 
-        // CORS (React dev server default)
+        // CORS Configuration
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("ReactApp", b =>
             {
-                b.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:3001")
+                // Get allowed origins from environment variable or use development defaults
+                var allowedOrigins = Environment.GetEnvironmentVariable("FRONTEND_URLS")?.Split(',') 
+                                   ?? new[] { "http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:3001" };
+                
+                Console.WriteLine($"🌐 CORS allowed origins: {string.Join(", ", allowedOrigins)}");
+                
+                b.WithOrigins(allowedOrigins)
                  .AllowAnyMethod()
                  .AllowAnyHeader()
                  .AllowCredentials();
@@ -107,6 +139,10 @@ public class Program
         // Token service and memory cache
         builder.Services.AddSingleton<TokenService>();
         builder.Services.AddMemoryCache();
+        
+        // Health checks
+        builder.Services.AddHealthChecks()
+            .AddDbContextCheck<AppDbContext>();
         
         // SignalR with optimized settings for 300+ concurrent users
         builder.Services.AddSignalR(options =>
@@ -143,10 +179,14 @@ public class Program
             app.UseSwaggerUi();
         }
 
+        // CORS must come before Authentication and Authorization
+        app.UseCors("ReactApp");
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseCors("ReactApp");
         app.UseAuthRateLimit();
+        
+        // Health check endpoint
+        app.MapHealthChecks("/health");
 
         // ===========================
         // ===== PUBLIC ROUTES =======
@@ -242,9 +282,9 @@ public class Program
                 id = debate.Id,
                 title = debate.Title,
                 description = debate.Description,
-                currentRound = (isLive && !countdown) ? liveDebateStatus.CurrentRound : 0,
+                currentRound = (isLive && !countdown) ? liveDebateStatus?.CurrentRound ?? 0 : 0,
                 totalRounds = debate.Questions.Count,
-                currentQuestion = (isLive && !countdown) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
+                currentQuestion = (isLive && !countdown && liveDebateStatus != null) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
                 questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
                 allowUserQuestions = allowUserQuestions && !countdown,
                 maxQuestionsPerUser = debate.MaxQuestionsPerUser
@@ -312,7 +352,7 @@ public class Program
 
             var key = $"question:rl:{ip}:{debateId}";
             var now = DateTime.UtcNow;
-            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
+            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry) || entry == null)
             {
                 entry = new RateLimitEntry(1, now);
                 cache.Set(key, entry, entry.WindowStart.Add(QUESTION_WINDOW) - now);
@@ -393,7 +433,7 @@ public class Program
 
             var key = $"fire:rl:{ip}:{liveDebate.Id}";
             var now = DateTime.UtcNow;
-            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
+            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry) || entry == null)
             {
                 entry = new RateLimitEntry(1, now);
                 cache.Set(key, entry, entry.WindowStart.Add(WINDOW) - now);
@@ -623,20 +663,20 @@ public class Program
 
             var result = liveDebates.Select(item =>
             {
-                var currentQuestion = item.debate.Questions.FirstOrDefault(q => q.RoundNumber == item.liveDebate.CurrentRound);
+                var currentQuestion = item.liveDebate != null && item.debate != null ? item.debate.Questions.FirstOrDefault(q => q.RoundNumber == item.liveDebate.CurrentRound) : null;
 
                 return new
                 {
                     isLive = true,
                     debate = new
                     {
-                        id = item.debate.Id,
-                        title = item.debate.Title,
-                        description = item.debate.Description,
-                        currentRound = item.liveDebate.CurrentRound,
-                        totalRounds = item.debate.Questions.Count,
+                        id = item.debate?.Id ?? 0,
+                        title = item.debate?.Title ?? "",
+                        description = item.debate?.Description ?? "",
+                        currentRound = item.liveDebate?.CurrentRound ?? 0,
+                        totalRounds = item.debate?.Questions.Count ?? 0,
                         currentQuestion = currentQuestion?.Question,
-                        debateManagerId = item.liveDebate.DebateManagerId
+                        debateManagerId = item.liveDebate?.DebateManagerId
                     }
                 };
             }).ToList();

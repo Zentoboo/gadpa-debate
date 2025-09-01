@@ -347,7 +347,7 @@ public class DebateHub : Hub
             _debateConnections[debateId].Add(Context.ConnectionId);
         }
 
-        var viewerCount = GetViewerCount(debateId);
+        var viewerCount = GetViewerCountInternal(debateId);
         await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new
         {
             debateId = debateId,
@@ -373,7 +373,7 @@ public class DebateHub : Hub
             }
         }
 
-        var viewerCount = GetViewerCount(debateId);
+        var viewerCount = GetViewerCountInternal(debateId);
         await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new
         {
             debateId = debateId,
@@ -387,7 +387,7 @@ public class DebateHub : Hub
 
     public async Task GetViewerCount(int debateId)
     {
-        var count = GetViewerCount(debateId);
+        var count = GetViewerCountInternal(debateId);
         await Clients.Caller.SendAsync("ViewerCountUpdate", new
         {
             debateId = debateId,
@@ -396,7 +396,7 @@ public class DebateHub : Hub
         });
     }
 
-    private int GetViewerCount(int debateId)
+    private int GetViewerCountInternal(int debateId)
     {
         lock (_lock)
         {
@@ -431,7 +431,7 @@ public class DebateHub : Hub
             // Update viewer counts for affected debates
             foreach (var debateId in debatesToUpdate)
             {
-                var viewerCount = GetViewerCount(debateId);
+                var viewerCount = GetViewerCountInternal(debateId);
                 _ = Task.Run(async () => 
                 {
                     await Clients.Group($"Debate-{debateId}").SendAsync("ViewerCountUpdate", new

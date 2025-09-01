@@ -92,6 +92,9 @@ public class Program
         
         // SignalR for real-time features
         builder.Services.AddSignalR();
+        
+        // Background timer service for live debate updates
+        builder.Services.AddHostedService<GadpaDebateApi.Services.DebateTimerService>();
 
         builder.Services.AddHostedService<ScheduledDebateService>();
 

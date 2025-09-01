@@ -94,7 +94,8 @@ public class Program
         builder.Services.AddSignalR();
         
         // Background timer service for live debate updates
-        builder.Services.AddHostedService<GadpaDebateApi.Services.DebateTimerService>();
+        builder.Services.AddSingleton<GadpaDebateApi.Services.DebateTimerService>();
+        builder.Services.AddHostedService(provider => provider.GetService<GadpaDebateApi.Services.DebateTimerService>()!);
 
         builder.Services.AddHostedService<ScheduledDebateService>();
 

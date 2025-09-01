@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using GadpaDebateApi.Data;
+using GadpaDebateApi.Services;
 
 namespace GadpaDebateApi.Hubs;
 
@@ -10,13 +11,15 @@ public class DebateHub : Hub
 {
     private readonly AppDbContext _db;
     private readonly ILogger<DebateHub> _logger;
+    private readonly DebateTimerService _timerService;
     private static readonly Dictionary<int, HashSet<string>> _debateConnections = new();
     private static readonly object _lock = new object();
 
-    public DebateHub(AppDbContext db, ILogger<DebateHub> logger)
+    public DebateHub(AppDbContext db, ILogger<DebateHub> logger, DebateTimerService timerService)
     {
         _db = db;
         _logger = logger;
+        _timerService = timerService;
     }
 
     public async Task SendFireReaction(int debateId)
@@ -55,30 +58,43 @@ public class DebateHub : Hub
                 return;
             }
 
-            // Add fire event
-            _db.FireEvents.Add(new FireEvent
+            // Use transaction to prevent race conditions in fire counting
+            int totalFires;
+            using var transaction = await _db.Database.BeginTransactionAsync();
+            try
             {
-                IpAddress = ipAddress,
-                FireCount = 1,
-                Timestamp = DateTime.UtcNow,
-                LiveDebateId = liveDebate.Id,
-                LiveDebate = liveDebate
-            });
+                // Add fire event
+                _db.FireEvents.Add(new FireEvent
+                {
+                    IpAddress = ipAddress,
+                    FireCount = 1,
+                    Timestamp = DateTime.UtcNow,
+                    LiveDebateId = liveDebate.Id,
+                    LiveDebate = liveDebate
+                });
 
-            await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync();
 
-            // Get total fires for this debate
-            var totalFires = await _db.FireEvents
-                .Where(f => f.LiveDebateId == liveDebate.Id)
-                .SumAsync(f => f.FireCount);
+                // Get total fires for this debate (within transaction for consistency)
+                totalFires = await _db.FireEvents
+                    .Where(f => f.LiveDebateId == liveDebate.Id)
+                    .SumAsync(f => f.FireCount);
 
-            // Broadcast to all clients
-            await Clients.All.SendAsync("FireReaction", new
+                await transaction.CommitAsync();
+
+                // Broadcast to all clients (after transaction committed)
+                await Clients.All.SendAsync("FireReaction", new
+                {
+                    debateId = debateId,
+                    totalFires = totalFires,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception)
             {
-                debateId = debateId,
-                totalFires = totalFires,
-                timestamp = DateTime.UtcNow
-            });
+                await transaction.RollbackAsync();
+                throw; // Re-throw to be handled by outer catch block
+            }
 
             _logger.LogInformation("Fire reaction added for debate {DebateId}, total: {TotalFires}", debateId, totalFires);
         }
@@ -355,6 +371,10 @@ public class DebateHub : Hub
             timestamp = DateTime.UtcNow
         });
 
+        // Notify timer service if this is the first viewer across all debates
+        var totalViewers = GetTotalViewerCount();
+        _timerService.NotifyViewersChanged(totalViewers > 0);
+
         _logger.LogInformation("Client {ConnectionId} joined debate {DebateId}, viewers: {Count}", 
             Context.ConnectionId, debateId, viewerCount);
     }
@@ -381,6 +401,10 @@ public class DebateHub : Hub
             timestamp = DateTime.UtcNow
         });
 
+        // Notify timer service about viewer count changes
+        var totalViewers = GetTotalViewerCount();
+        _timerService.NotifyViewersChanged(totalViewers > 0);
+
         _logger.LogInformation("Client {ConnectionId} left debate {DebateId}, viewers: {Count}", 
             Context.ConnectionId, debateId, viewerCount);
     }
@@ -401,6 +425,14 @@ public class DebateHub : Hub
         lock (_lock)
         {
             return _debateConnections.ContainsKey(debateId) ? _debateConnections[debateId].Count : 0;
+        }
+    }
+
+    private int GetTotalViewerCount()
+    {
+        lock (_lock)
+        {
+            return _debateConnections.Values.Sum(connections => connections.Count);
         }
     }
 

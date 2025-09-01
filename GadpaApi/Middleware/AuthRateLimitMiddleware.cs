@@ -62,7 +62,7 @@ public class AuthRateLimitMiddleware
         var key = $"auth:rl:{ip}:{path}";
         var now = DateTime.UtcNow;
 
-        if (!_cache.TryGetValue<AuthRateLimitEntry>(key, out var entry))
+        if (!_cache.TryGetValue<AuthRateLimitEntry>(key, out var entry) || entry == null)
         {
             // First request
             entry = new AuthRateLimitEntry(1, now, false, null);
@@ -71,7 +71,7 @@ public class AuthRateLimitMiddleware
         }
 
         // Check if currently banned
-        if (entry.IsBanned && entry.BanExpiry.HasValue && now < entry.BanExpiry.Value)
+        if (entry.IsBanned && entry.BanExpiry.HasValue && now < entry.BanExpiry)
         {
             var remainingBan = (int)Math.Ceiling((entry.BanExpiry.Value - now).TotalSeconds);
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;

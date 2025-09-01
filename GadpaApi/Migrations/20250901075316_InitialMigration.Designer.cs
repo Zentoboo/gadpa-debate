@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GadpaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822092946_AddIsPreviewable")]
-    partial class AddIsPreviewable
+    [Migration("20250901075316_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

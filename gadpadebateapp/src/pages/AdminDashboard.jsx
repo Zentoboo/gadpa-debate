@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   const [ip, setIp] = useState("");
   const [registerEnabled, setRegisterEnabled] = useState(true);
   const [debateManagerRegisterEnabled, setDebateManagerRegisterEnabled] = useState(true);
-  const [liveDebates, setLiveDebates] = useState([]); // Changed to an array
+  const [liveDebates, setLiveDebates] = useState([]);
 
   const authFetch = (url, options = {}) =>
     fetch(url, {
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
     refreshBannedIps();
     refreshRegisterStatus();
     refreshDebateManagerRegisterStatus();
-    refreshLiveDebates(); // Call new function to get all live debates
+    refreshLiveDebates();
   }, [token, isAuthenticated]);
 
   const refreshBannedIps = () => {
@@ -50,68 +50,30 @@ export default function AdminDashboard() {
   const refreshRegisterStatus = () => {
     authFetch("http://localhost:5076/admin/register-status")
       .then((res) => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch register status');
-        }
+        if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
       })
       .then((data) => setRegisterEnabled(data.enabled))
-      .catch((error) => console.error('Error fetching register status:', error));
+      .catch(console.error);
   };
 
   const refreshDebateManagerRegisterStatus = () => {
     authFetch("http://localhost:5076/debate-manager/register-status")
       .then((res) => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch debate manager register status');
-        }
+        if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
       })
       .then((data) => setDebateManagerRegisterEnabled(data.enabled))
-      .catch((error) => console.error('Error fetching debate manager register status:', error));
+      .catch(console.error);
   };
 
   const refreshLiveDebates = () => {
-    authFetch("http://localhost:5076/admin/live/all-status") // Use the new admin endpoint
+    authFetch("http://localhost:5076/admin/live/all-status")
       .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch live status');
+        if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
       })
-      .then(data => {
-        setLiveDebates(data); // Set the array of debates
-      })
-      .catch(console.error);
-  };
-
-  const toggleRegister = () => {
-    authFetch("http://localhost:5076/admin/toggle-register", {
-      method: "POST",
-      body: JSON.stringify({})
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to toggle registration');
-        return res.json();
-      })
-      .then((data) => {
-        setRegisterEnabled(data.enabled);
-        alert(`Registration is now ${data.enabled ? 'enabled' : 'disabled'}`);
-      })
-      .catch(console.error);
-  };
-
-  const toggleDebateManagerRegister = () => {
-    authFetch("http://localhost:5076/admin/toggle-debate-manager-register", {
-      method: "POST",
-      body: JSON.stringify({})
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to toggle debate manager registration');
-        return res.json();
-      })
-      .then((data) => {
-        setDebateManagerRegisterEnabled(data.enabled);
-        alert(`Debate Manager Registration is now ${data.enabled ? 'enabled' : 'disabled'}`);
-      })
+      .then((data) => setLiveDebates(data))
       .catch(console.error);
   };
 
@@ -119,31 +81,55 @@ export default function AdminDashboard() {
     if (!ip.trim()) return;
     authFetch("http://localhost:5076/admin/ban-ip", {
       method: "POST",
-      body: JSON.stringify({ ipAddress: ip })
+      body: JSON.stringify({ IpAddress: ip.trim() }),
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to ban IP');
         return res.json();
       })
       .then(() => {
-        refreshBannedIps();
         setIp("");
+        refreshBannedIps();
       })
       .catch(console.error);
   };
 
-  const unbanIp = (ipToUnban) => {
+  const unbanIp = (ipAddress) => {
     authFetch("http://localhost:5076/admin/unban-ip", {
-        method: "POST",
-        body: JSON.stringify({ ipAddress: ipToUnban })
+      method: "POST",
+      body: JSON.stringify({ IpAddress: ipAddress }),
     })
-        .then((res) => {
-            if (!res.ok) throw new Error('Failed to unban IP');
-            return res.json();
-        })
-        .then(() => refreshBannedIps())
-        .catch(console.error);
-};
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to unban IP');
+        return res.json();
+      })
+      .then(() => refreshBannedIps())
+      .catch(console.error);
+  };
+
+  const toggleRegister = () => {
+    authFetch("http://localhost:5076/admin/toggle-register", {
+      method: "POST",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to toggle register');
+        return res.json();
+      })
+      .then((data) => setRegisterEnabled(data.enabled))
+      .catch(console.error);
+  };
+
+  const toggleDebateManagerRegister = () => {
+    authFetch("http://localhost:5076/admin/toggle-debate-manager-register", {
+      method: "POST",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to toggle debate manager register');
+        return res.json();
+      })
+      .then((data) => setDebateManagerRegisterEnabled(data.enabled))
+      .catch(console.error);
+  };
 
   if (!isAuthenticated || !token) {
     return null;

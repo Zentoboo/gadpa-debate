@@ -29,88 +29,19 @@ export default function AdminRegister() {
       })
       .catch(() => {
         setStatusError(true);
-        setRegisterEnabled(true);
+        setRegisterEnabled(true); // Default to enabled if check fails
       });
   }, []);
 
-  if (statusError) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <h1 className="auth-title">⚠️ Connection Issue</h1>
-          <p className="auth-message error" style={{ marginBottom: "1.5rem" }}>
-            Could not verify registration status. The server might be down.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button onClick={() => window.location.reload()} className="auth-button">
-              Try Again
-            </button>
-            <button onClick={() => navigate("/admin/login")} className="auth-button">
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (registerEnabled === null) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <h1 className="auth-title">Loading...</h1>
-          <p className="small-text">Checking registration status...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (registerEnabled === false) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <h1 className="auth-title">Registration Disabled 🚫</h1>
-          <p className="small-text" style={{ marginBottom: "1.5rem" }}>
-            Registration is currently disabled.
-          </p>
-          <button onClick={() => navigate("/admin/login")} className="auth-button">
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAdmin) {
-    return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <h1 className="auth-title">You are already signed in ✅</h1>
-          <button onClick={() => navigate("/admin/dashboard")} className="auth-button">
-            Go to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (isAdmin) {
+      navigate("/admin/dashboard");
+    }
+  }, [isAdmin, navigate]);
 
   const handleRegister = (e) => {
     e.preventDefault();
-    setMessage("");
-    setIsSuccess(false);
-
-    if (!username.trim()) {
-      setMessage("Username is required");
-      setIsSuccess(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters long");
-      setIsSuccess(false);
-      return;
-    }
-
+    
     if (password !== confirmPassword) {
       setMessage("Passwords do not match");
       setIsSuccess(false);
@@ -118,21 +49,23 @@ export default function AdminRegister() {
     }
 
     setIsLoading(true);
+    setMessage("");
 
     fetch("http://localhost:5076/admin/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim(), password }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
     })
-      .then(async (res) => {
-        const data = await res.json();
+      .then((res) => {
         if (!res.ok) {
-          throw new Error(data.message || "Registration failed");
+          throw new Error(`Registration failed: ${res.status}`);
         }
-        return data;
+        return res.json();
       })
       .then(() => {
-        setMessage("Registration successful!");
+        setMessage("✅ Admin account created successfully! Redirecting...");
         setIsSuccess(true);
         setUsername("");
         setPassword("");
@@ -145,6 +78,41 @@ export default function AdminRegister() {
       })
       .finally(() => setIsLoading(false));
   };
+
+  // Loading state while checking registration status
+  if (registerEnabled === null) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="loading-message">
+            {statusError ? "⚠️ Could not verify registration status" : "Loading..."}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Registration is disabled
+  if (!registerEnabled) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">Admin Registration</h1>
+          <div className="auth-message error">
+            ⚠️ Admin registration is currently disabled.
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button 
+              onClick={() => navigate("/admin/login")} 
+              className="auth-button secondary"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container">
@@ -163,13 +131,12 @@ export default function AdminRegister() {
           />
           <input
             type="password"
-            placeholder="Password (min 6 characters)"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className="auth-input"
             disabled={isLoading}
-            minLength={6}
           />
           <input
             type="password"
@@ -180,21 +147,25 @@ export default function AdminRegister() {
             className="auth-input"
             disabled={isLoading}
           />
-          <button
-            type="submit"
-            className="auth-button"
+          <button 
+            type="submit" 
+            className="auth-button primary" 
             disabled={isLoading}
           >
-            {isLoading ? "Registering..." : "Register"}
+            {isLoading ? "Creating Account..." : "Register"}
           </button>
         </form>
-
-        <p className="small-text">
-          Already have an account?
-          <button onClick={() => navigate("/admin/login")} className="link-button">
+        
+        <div className="auth-links">
+          <span>Already have an account? </span>
+          <button 
+            onClick={() => navigate("/admin/login")}
+            className="auth-link-button"
+            disabled={isLoading}
+          >
             Login here
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );

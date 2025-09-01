@@ -135,7 +135,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
 
                         {/* Hide Header (styled like a nav item) */}
                         <li>
-                            <button onClick={onHide} style={{opacity: 0.1}}className="nav-link-button">hide</button>
+                            <button onClick={onHide} style={{opacity: 0.1}} className="nav-link-button">hide</button>
                         </li>
                     </ul>
                 </nav>

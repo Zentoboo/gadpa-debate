@@ -14,18 +14,30 @@ namespace GadpaDebateApi;
 
 // ---- DTOs ----
 public record AdminCredentials(string Username, string Password);
+public record DebateManagerCredentials(string Username, string Password);
 public record BanIpRequest(string IpAddress);
 public record UnbanIpRequest(string IpAddress);
 public record RateLimitEntry(int Count, DateTime WindowStart);
+public record CreateDebateRequest(
+    string Title,
+    string Description,
+    List<string> Questions,
+    bool AllowUserQuestions = false,
+    int MaxQuestionsPerUser = 3,
+    DateTime? ScheduledStartTime = null
+);
 
-// Kongres PPI DTOs
-public record VoteRequest(int VoterId, int CandidateId);
-public record StartShiftRequest(int BpuMemberId, string Activity, string? Notes);
+public record UpdateDebateRequest(
+    string Title,
+    string Description,
+    List<string> Questions,
+    bool? AllowUserQuestions = null,
+    int? MaxQuestionsPerUser = null,
+    DateTime? ScheduledStartTime = null
+);
 
-// Debate Session DTOs
-public record CreateDebateSessionRequest(string Title, string Description, string SessionType, DateTime? ScheduledAt, int TotalDurationMinutes);
-public record AddQuestionRequest(string Question, int OrderIndex, int DurationMinutes, string QuestionType, string? TargetCandidate);
-public record LiveControlRequest(string Action, int? QuestionId, int? ExtendTimeSeconds); // Actions: "start", "pause", "next", "prev", "extend", "end"
+public record ChangeRoundRequest(int RoundNumber);
+public record SubmitQuestionRequest(string Question);
 public class Program
 {
     public static void Main(string[] args)
@@ -67,7 +79,7 @@ public class Program
         {
             options.AddPolicy("ReactApp", b =>
             {
-                b.WithOrigins("http://localhost:5173")
+                b.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:3001")
                  .AllowAnyMethod()
                  .AllowAnyHeader()
                  .AllowCredentials();
@@ -80,6 +92,8 @@ public class Program
         
         // SignalR for real-time features
         builder.Services.AddSignalR();
+
+        builder.Services.AddHostedService<ScheduledDebateService>();
 
         // Swagger/OpenAPI (NSwag)
         builder.Services.AddEndpointsApiExplorer();
@@ -109,12 +123,228 @@ public class Program
         const int LIMIT_PER_WINDOW = 5;
         var WINDOW = TimeSpan.FromMinutes(1);
 
-        app.MapPost("/debate/fire", async (
+        // Get a list of all currently live debates for the public home page.
+        app.MapGet("/debate/live-debates", async (AppDbContext db) =>
+        {
+            var liveDebates = await db.LiveDebates
+                .Where(ld => ld.IsActive || ld.IsPreviewable)
+                .Include(ld => ld.Debate)
+                .Select(ld => new
+                {
+                    id = ld.Debate.Id,
+                    title = ld.Debate.Title,
+                    description = ld.Debate.Description,
+                    scheduledStartTime = ld.Debate.ScheduledStartTime,
+                })
+                .ToListAsync();
+
+            return Results.Ok(new { isLive = liveDebates.Any(), debates = liveDebates });
+        });
+
+        app.MapGet("/debate/current", async (AppDbContext db) =>
+        {
+            // Find the single active live debate.
+            var liveDebate = await db.LiveDebates
+                .FirstOrDefaultAsync(ld => ld.IsActive);
+
+            // If no live debate is found, return `isLive = false` immediately.
+            if (liveDebate == null)
+            {
+                return Results.Ok(new { isLive = false });
+            }
+            var debate = await db.Debates
+                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .FirstOrDefaultAsync(d => d.Id == liveDebate.DebateId);
+
+            if (debate == null)
+            {
+                return Results.Ok(new { isLive = false });
+            }
+
+            var currentQuestion = debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
+
+            bool countdown = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
+
+            return Results.Ok(new
+            {
+                isLive = !countdown,
+                countdown,
+                scheduledStartTime = debate.ScheduledStartTime,
+                debate = new
+                {
+                    id = debate.Id,
+                    title = debate.Title,
+                    description = debate.Description,
+                    currentRound = !countdown ? liveDebate.CurrentRound : 0,
+                    totalRounds = debate.Questions.Count,
+                    currentQuestion = !countdown ? currentQuestion?.Question : null,
+                    questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                    allowUserQuestions = debate.AllowUserQuestions && !countdown
+                }
+            });
+
+        });
+
+        app.MapGet("/debate/{debateId}", async (AppDbContext db, int debateId) =>
+        {
+            var debate = await db.Debates
+                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .FirstOrDefaultAsync(d => d.Id == debateId);
+
+            if (debate == null)
+            {
+                return Results.NotFound(new { message = "Debate not found." });
+            }
+
+            var liveDebateStatus = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debate.Id && ld.IsActive);
+            bool isLive = liveDebateStatus != null;
+
+            bool countdown = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
+            // Determine if user questions are allowed
+            bool allowUserQuestions = debate.AllowUserQuestions && isLive && !countdown;
+
+            return Results.Ok(new
+            {
+                isLive = isLive && !countdown,
+                countdown,
+                scheduledStartTime = debate.ScheduledStartTime,
+                id = debate.Id,
+                title = debate.Title,
+                description = debate.Description,
+                currentRound = (isLive && !countdown) ? liveDebateStatus.CurrentRound : 0,
+                totalRounds = debate.Questions.Count,
+                currentQuestion = (isLive && !countdown) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
+                questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                allowUserQuestions = allowUserQuestions && !countdown,
+                maxQuestionsPerUser = debate.MaxQuestionsPerUser
+            });
+
+        });
+
+        // Submit a question from user (public endpoint)
+        app.MapPost("/debate/{debateId}/submit-question", async (
             HttpContext context,
             AppDbContext db,
             IMemoryCache cache,
-            IHubContext<DebateHub> hubContext) =>
+            int debateId,
+            SubmitQuestionRequest request) =>
         {
+            if (string.IsNullOrWhiteSpace(request.Question) || request.Question.Trim().Length < 5)
+                return Results.BadRequest(new { message = "Question must be at least 5 characters long." });
+
+            if (request.Question.Length > 500)
+                return Results.BadRequest(new { message = "Question must be less than 500 characters long." });
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId);
+            if (debate == null)
+                return Results.NotFound(new { message = "Debate not found." });
+
+            if (!debate.AllowUserQuestions)
+                return Results.BadRequest(new { message = "This debate does not allow user submitted questions." });
+
+            // Check if debate is live
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
+            if (liveDebate == null)
+                return Results.BadRequest(new { message = "Questions can only be submitted during a live debate." });
+
+            // Check schedule (must have started)
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value)
+                return Results.BadRequest(new { message = "Debate has not started yet. Questions are not allowed." });
+
+            // Get client IP
+            string GetClientIp()
+            {
+                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+                {
+                    var first = xff.ToString().Split(',').First().Trim();
+                    if (!string.IsNullOrWhiteSpace(first)) return first;
+                }
+                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+
+            var ip = GetClientIp();
+
+            // Check if IP is banned
+            if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
+                return Results.Forbid();
+
+            // Check user's question limit
+            var userQuestionCount = await db.UserSubmittedQuestions
+                .CountAsync(usq => usq.DebateId == debateId && usq.IpAddress == ip);
+
+            if (userQuestionCount >= debate.MaxQuestionsPerUser)
+                return Results.BadRequest(new { message = $"You have reached the maximum number of questions allowed ({debate.MaxQuestionsPerUser}) for this debate." });
+
+            // Rate limiting for question submissions (more lenient than fire events)
+            const int QUESTION_LIMIT_PER_WINDOW = 2;
+            var QUESTION_WINDOW = TimeSpan.FromMinutes(5);
+
+            var key = $"question:rl:{ip}:{debateId}";
+            var now = DateTime.UtcNow;
+            if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
+            {
+                entry = new RateLimitEntry(1, now);
+                cache.Set(key, entry, entry.WindowStart.Add(QUESTION_WINDOW) - now);
+            }
+            else
+            {
+                if (now - entry.WindowStart >= QUESTION_WINDOW)
+                {
+                    entry = new RateLimitEntry(1, now);
+                    cache.Set(key, entry, QUESTION_WINDOW);
+                }
+                else
+                {
+                    if (entry.Count >= QUESTION_LIMIT_PER_WINDOW)
+                    {
+                        var retryAfter = (int)Math.Ceiling((entry.WindowStart.Add(QUESTION_WINDOW) - now).TotalSeconds);
+                        context.Response.Headers["Retry-After"] = retryAfter.ToString();
+                        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                        return Results.Json(new
+                        {
+                            message = "Too many question submissions. Try again later.",
+                            retryAfterSeconds = retryAfter
+                        });
+                    }
+                    var newCount = entry.Count + 1;
+                    entry = new RateLimitEntry(newCount, entry.WindowStart);
+                    cache.Set(key, entry, entry.WindowStart.Add(QUESTION_WINDOW) - now);
+                }
+            }
+
+            // Create the question submission
+            var userQuestion = new UserSubmittedQuestion
+            {
+                DebateId = debateId,
+                Question = request.Question.Trim(),
+                IpAddress = ip,
+                SubmittedAt = DateTime.UtcNow,
+                Debate = debate
+            };
+
+            db.UserSubmittedQuestions.Add(userQuestion);
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = "Question submitted successfully. It will be reviewed by the debate manager." });
+        });
+
+        // Post a fire event for a specific debate
+        app.MapPost("/debate/{debateId}/fire", async (
+            HttpContext context,
+            AppDbContext db,
+            IMemoryCache cache,
+            int debateId) =>
+        {
+            // First, find the specific live debate
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
+            if (liveDebate == null)
+                return Results.BadRequest(new { message = "The specified debate is not currently live." });
+
+            // Check schedule (must have started)
+            var debate = await db.Debates.FirstAsync(d => d.Id == debateId);
+            if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value && !liveDebate.IsActive)
+                return Results.BadRequest(new { message = "Debate countdown in progress. Interaction not allowed yet." });
+
             string GetClientIp()
             {
                 if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
@@ -130,7 +360,7 @@ public class Program
             if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
                 return Results.Forbid();
 
-            var key = $"fire:rl:{ip}";
+            var key = $"fire:rl:{ip}:{liveDebate.Id}";
             var now = DateTime.UtcNow;
             if (!cache.TryGetValue<RateLimitEntry>(key, out var entry))
             {
@@ -167,45 +397,114 @@ public class Program
             {
                 IpAddress = ip,
                 FireCount = 1,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
+                LiveDebateId = liveDebate.Id,
+                LiveDebate = liveDebate
             });
 
             await db.SaveChangesAsync();
-            var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            
-            // Broadcast fire event to all connected clients
-            await hubContext.Clients.All.SendAsync("FireAdded", new { 
-                total, 
-                ip = ip.Substring(0, Math.Min(ip.Length, 10)) + "...", // Partial IP for privacy
-                timestamp = DateTime.UtcNow 
-            });
-            
+            var total = await db.FireEvents.Where(f => f.LiveDebateId == liveDebate.Id).SumAsync(f => f.FireCount);
             return Results.Ok(new { message = "🔥 added", total });
         });
 
-        // app.MapGet("/debate/heatmap", async (AppDbContext db) =>
-        // {
-        //     var total = await db.FireEvents.SumAsync(f => f.FireCount);
-        //     return Results.Ok(new { total });
-        // });
-
-        app.MapGet("/debate/heatmap-data", async (AppDbContext db, int intervalSeconds) =>
+        // Get heatmap data for a specific debate
+        app.MapGet("/debate/{debateId}/heatmap-data", async (AppDbContext db, int debateId, int intervalSeconds = 10, int lastMinutes = 3) =>
         {
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateId == debateId && ld.IsActive);
+            if (liveDebate == null)
+                return Results.BadRequest(new { message = "Debate not found or is not live." });
+
             if (intervalSeconds <= 0) intervalSeconds = 10;
-            var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            var since = DateTime.UtcNow.AddSeconds(-intervalSeconds);
-            var intervalTotal = await db.FireEvents
-                .Where(f => f.Timestamp >= since)
+            if (lastMinutes <= 0) lastMinutes = 3;
+
+            var now = DateTime.UtcNow;
+            var since = now.AddMinutes(-lastMinutes);
+
+            // Get all events in the time window
+            var allEvents = await db.FireEvents
+                .Where(f => f.LiveDebateId == liveDebate.Id && f.Timestamp >= since)
+                .OrderBy(f => f.Timestamp)
+                .ToListAsync();
+
+            // Get the total fires that existed before the time window started
+            var fireCountBeforeWindow = await db.FireEvents
+                .Where(f => f.LiveDebateId == liveDebate.Id && f.Timestamp < since)
                 .SumAsync(f => f.FireCount);
 
-            return Results.Ok(new { total, intervalTotal, intervalSeconds });
+            var buckets = new List<object>();
+            var bucketDuration = TimeSpan.FromSeconds(intervalSeconds);
+            var runningActualTotal = fireCountBeforeWindow; // Start with fires from before the window
+            var cumulativeTotal = 0;
+
+            var currentBucketStart = since;
+            while (currentBucketStart < now)
+            {
+                var currentBucketEnd = currentBucketStart.Add(bucketDuration);
+                var intervalTotal = allEvents
+                    .Where(e => e.Timestamp >= currentBucketStart && e.Timestamp < currentBucketEnd)
+                    .Sum(e => e.FireCount);
+
+                // Update running totals
+                cumulativeTotal += intervalTotal; // Cumulative within window
+                runningActualTotal += intervalTotal; // Actual running total from debate start
+
+                var bucketLabel = $"{currentBucketStart:HH:mm:ss}-{currentBucketEnd:HH:mm:ss}";
+                var bucketEndLabel = currentBucketEnd.ToString("HH:mm:ss");
+
+                buckets.Add(new
+                {
+                    bucketLabel,
+                    bucketEndLabel,
+                    intervalTotal,
+                    windowCumulative = cumulativeTotal, // Cumulative within time window
+                    actualTotal = runningActualTotal, // True running total from debate start
+                    bucketEndTimestamp = (long)(currentBucketEnd - new DateTime(1970, 1, 1)).TotalSeconds
+                });
+
+                currentBucketStart = currentBucketEnd;
+            }
+
+            var currentTotal = await db.FireEvents.Where(e => e.LiveDebateId == liveDebate.Id).SumAsync(e => e.FireCount);
+            return Results.Ok(new
+            {
+                buckets,
+                total = currentTotal,
+                windowStart = since,
+                windowEnd = now
+            });
+        });
+
+        app.MapGet("/debate/{debateId}/user-questions/count", async (HttpContext context, AppDbContext db, int debateId) =>
+        {
+            string GetClientIp()
+            {
+                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+                {
+                    var first = xff.ToString().Split(',').First().Trim();
+                    if (!string.IsNullOrWhiteSpace(first)) return first;
+                }
+                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            }
+
+            var ip = GetClientIp();
+            var count = await db.UserSubmittedQuestions
+                .CountAsync(usq => usq.DebateId == debateId && usq.IpAddress == ip);
+
+            return Results.Ok(new { count });
         });
 
         // ===========================
         // ===== ADMIN ROUTES ========
         // ===========================
 
-        // Admin register with enable/disable check
+        // Get admin register status
+        app.MapGet("/admin/register-status", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
+            return Results.Ok(new { enabled = setting?.Value != "false" });
+        });
+
+        // Admin register
         app.MapPost("/admin/register", async (AppDbContext db, AdminCredentials creds) =>
         {
             var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
@@ -214,6 +513,12 @@ public class Program
 
             if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
                 return Results.BadRequest(new { message = "Username and password required." });
+
+            if (creds.Username.Length < 3)
+                return Results.BadRequest(new { message = "Username must be at least 3 characters long." });
+
+            if (creds.Password.Length < 6)
+                return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
 
             var exists = await db.Users.AnyAsync(u => u.Username == creds.Username);
             if (exists)
@@ -229,6 +534,20 @@ public class Program
             await db.SaveChangesAsync();
 
             return Results.Created($"/admin/{user.Id}", new { user.Id, user.Username });
+        });
+
+        // Admin login
+        app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
+        {
+            if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
+                return Results.BadRequest(new { message = "Username and password required." });
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
+            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
+                return Results.Unauthorized();
+
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role);
+            return Results.Ok(new { token });
         });
 
         // Toggle admin register
@@ -248,41 +567,53 @@ public class Program
             }
 
             await db.SaveChangesAsync();
-
             return Results.Ok(new { enabled = setting.Value == "true" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-        // Get register status
-        app.MapGet("/admin/register-status", async (AppDbContext db) =>
+
+        // Get a list of all live debates for the admin dashboard
+        app.MapGet("/admin/live/all-status", async (AppDbContext db) =>
         {
-            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "AdminRegisterEnabled");
-            return Results.Ok(new { enabled = setting?.Value != "false" });
+            var liveDebates = await db.LiveDebates
+                .Where(ld => ld.IsActive)
+                .Select(ld => new
+                {
+                    liveDebate = ld,
+                    debate = db.Debates
+                        .Where(d => d.Id == ld.DebateId)
+                        .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            if (liveDebates == null || !liveDebates.Any())
+            {
+                return Results.Ok(new List<object>()); // Return an empty list if no debates are live
+            }
+
+            var result = liveDebates.Select(item =>
+            {
+                var currentQuestion = item.debate.Questions.FirstOrDefault(q => q.RoundNumber == item.liveDebate.CurrentRound);
+
+                return new
+                {
+                    isLive = true,
+                    debate = new
+                    {
+                        id = item.debate.Id,
+                        title = item.debate.Title,
+                        description = item.debate.Description,
+                        currentRound = item.liveDebate.CurrentRound,
+                        totalRounds = item.debate.Questions.Count,
+                        currentQuestion = currentQuestion?.Question,
+                        debateManagerId = item.liveDebate.DebateManagerId
+                    }
+                };
+            }).ToList();
+
+            return Results.Ok(result);
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Admin login
-        app.MapPost("/admin/login", async (TokenService tokenService, AppDbContext db, AdminCredentials creds) =>
-        {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "Admin");
-            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
-                return Results.Unauthorized();
-
-            var token = tokenService.CreateToken(user.Username, user.Role);
-            return Results.Ok(new { token });
-        });
-
-        // Admin-protected endpoints
-        app.MapGet("/admin/heatmap", async (AppDbContext db) =>
-        {
-            var total = await db.FireEvents.SumAsync(f => f.FireCount);
-            return Results.Ok(new { total });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPost("/admin/reset", async (AppDbContext db) =>
-        {
-            db.FireEvents.RemoveRange(db.FireEvents);
-            await db.SaveChangesAsync();
-            return Results.Ok(new { message = "Heatmap reset." });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
+        // Admin-only endpoints
         app.MapPost("/admin/ban-ip", async (AppDbContext db, BanIpRequest request) =>
         {
             if (string.IsNullOrWhiteSpace(request.IpAddress))
@@ -313,454 +644,552 @@ public class Program
             return Results.Ok(list);
         }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // ===========================
-        // ===== BPU ENDPOINTS =======
-        // ===========================
-
-        // BPU Members Management
-        app.MapGet("/api/bpu/members", async (AppDbContext db) =>
+        // Toggle debate manager register (Admin only)
+        app.MapPost("/admin/toggle-debate-manager-register", async (AppDbContext db) =>
         {
-            var members = await db.BpuMembers.Where(m => m.IsActive).ToListAsync();
-            return Results.Ok(members);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "DebateManagerRegisterEnabled");
 
-        app.MapPost("/api/bpu/members", async (AppDbContext db, BpuMember member) =>
-        {
-            member.OathDate = DateTime.UtcNow;
-            db.BpuMembers.Add(member);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/bpu/members/{member.Id}", member);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // BPU Tasks Management
-        app.MapGet("/api/bpu/tasks", async (AppDbContext db) =>
-        {
-            var tasks = await db.BpuTasks.Include(t => t.AssignedToBpuMember).ToListAsync();
-            return Results.Ok(tasks);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPost("/api/bpu/tasks", async (AppDbContext db, BpuTask task) =>
-        {
-            db.BpuTasks.Add(task);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/bpu/tasks/{task.Id}", task);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPut("/api/bpu/tasks/{id}/status", async (AppDbContext db, int id, string status) =>
-        {
-            var task = await db.BpuTasks.FindAsync(id);
-            if (task == null) return Results.NotFound();
-            
-            task.Status = status;
-            if (status == "Completed")
-                task.CompletedAt = DateTime.UtcNow;
-            
-            await db.SaveChangesAsync();
-            return Results.Ok(task);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Candidates Management
-        app.MapGet("/api/candidates", async (AppDbContext db) =>
-        {
-            var candidates = await db.Candidates.ToListAsync();
-            return Results.Ok(candidates);
-        });
-
-        app.MapPost("/api/candidates", async (AppDbContext db, Candidate candidate) =>
-        {
-            db.Candidates.Add(candidate);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/candidates/{candidate.Id}", candidate);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Voters Management
-        app.MapGet("/api/voters", async (AppDbContext db) =>
-        {
-            var voters = await db.Voters.Where(v => v.IsEligible).ToListAsync();
-            return Results.Ok(voters);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPost("/api/voters", async (AppDbContext db, Voter voter) =>
-        {
-            db.Voters.Add(voter);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/voters/{voter.Id}", voter);
-        });
-
-        // Voting System
-        app.MapPost("/api/vote", async (HttpContext context, AppDbContext db, VoteRequest request) =>
-        {
-            var voter = await db.Voters.FindAsync(request.VoterId);
-            if (voter == null || !voter.IsEligible || voter.HasVoted)
-                return Results.BadRequest(new { message = "Voter tidak eligible atau sudah memilih" });
-
-            var candidate = await db.Candidates.FindAsync(request.CandidateId);
-            if (candidate == null || !candidate.IsApproved)
-                return Results.BadRequest(new { message = "Kandidat tidak valid" });
-
-            var vote = new Vote
+            if (setting == null)
             {
-                VoterId = request.VoterId,
-                CandidateId = request.CandidateId,
-                IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
-            };
-
-            voter.HasVoted = true;
-            voter.VotedAt = DateTime.UtcNow;
-
-            db.Votes.Add(vote);
-            db.Voters.Update(voter);
-            await db.SaveChangesAsync();
-
-            return Results.Ok(new { message = "Vote berhasil dicatat" });
-        });
-
-        // Campaign Monitoring
-        app.MapGet("/api/campaign-monitors", async (AppDbContext db) =>
-        {
-            var monitors = await db.CampaignMonitors.Include(m => m.BpuMember).ToListAsync();
-            return Results.Ok(monitors);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPost("/api/campaign-monitors", async (AppDbContext db, CampaignMonitor monitor) =>
-        {
-            db.CampaignMonitors.Add(monitor);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/campaign-monitors/{monitor.Id}", monitor);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Shift Records
-        app.MapGet("/api/shift-records", async (AppDbContext db) =>
-        {
-            var shifts = await db.ShiftRecords.Include(s => s.BpuMember).ToListAsync();
-            return Results.Ok(shifts);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPost("/api/shift-records/start", async (AppDbContext db, StartShiftRequest request) =>
-        {
-            var shift = new ShiftRecord
-            {
-                BpuMemberId = request.BpuMemberId,
-                Activity = request.Activity,
-                StartTime = DateTime.UtcNow,
-                Notes = request.Notes
-            };
-            db.ShiftRecords.Add(shift);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/shift-records/{shift.Id}", shift);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        app.MapPut("/api/shift-records/{id}/end", async (AppDbContext db, int id, string? notes) =>
-        {
-            var shift = await db.ShiftRecords.FindAsync(id);
-            if (shift == null) return Results.NotFound();
-            
-            shift.EndTime = DateTime.UtcNow;
-            shift.IsActive = false;
-            if (!string.IsNullOrEmpty(notes))
-                shift.Notes = notes;
-            
-            await db.SaveChangesAsync();
-            return Results.Ok(shift);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // ================================
-        // ===== VOTE RESULTS API ========
-        // ================================
-
-        // Get live vote results
-        app.MapGet("/api/vote-results", async (AppDbContext db) =>
-        {
-            // Get vote counts by candidate
-            var voteResults = await db.Votes
-                .GroupBy(v => v.CandidateId)
-                .Select(g => new {
-                    CandidateId = g.Key,
-                    VoteCount = g.Count()
-                })
-                .ToListAsync();
-
-            // Get all candidates
-            var allCandidates = await db.Candidates.ToListAsync();
-
-            // Build result list with vote counts
-            var candidateResults = allCandidates.Select(c => new {
-                c.Id,
-                c.Name,
-                c.Position,
-                c.VisionMission,
-                c.TicketNumber,
-                c.IsApproved,
-                VoteCount = voteResults.FirstOrDefault(r => r.CandidateId == c.Id)?.VoteCount ?? 0
-            }).OrderByDescending(c => c.VoteCount).ToList();
-
-            var totalVotes = await db.Votes.CountAsync();
-            var totalEligibleVoters = await db.Voters.CountAsync(v => v.IsEligible);
-            var turnoutPercentage = totalEligibleVoters > 0 ? (double)totalVotes / totalEligibleVoters * 100 : 0;
-
-            // Determine winner (simple majority)
-            var winner = candidateResults.FirstOrDefault();
-            var isWinnerDetermined = totalVotes > 0 && winner != null && 
-                                   (candidateResults.Count == 1 || winner.VoteCount > (candidateResults.Skip(1).FirstOrDefault()?.VoteCount ?? 0));
-
-            return Results.Ok(new {
-                results = candidateResults,
-                summary = new {
-                    totalVotes,
-                    totalEligibleVoters,
-                    turnoutPercentage = Math.Round(turnoutPercentage, 2),
-                    isWinnerDetermined,
-                    winner = isWinnerDetermined ? new { 
-                        name = winner.Name, 
-                        position = winner.Position,
-                        ticketNumber = winner.TicketNumber,
-                        voteCount = winner.VoteCount,
-                        percentage = totalVotes > 0 ? Math.Round((double)winner.VoteCount / totalVotes * 100, 2) : 0
-                    } : null
-                },
-                lastUpdated = DateTime.UtcNow
-            });
-        });
-
-        // Get detailed vote audit trail (admin only)
-        app.MapGet("/api/vote-audit", async (AppDbContext db) =>
-        {
-            var auditData = await db.Votes
-                .Include(v => v.Voter)
-                .Include(v => v.Candidate)
-                .Select(v => new {
-                    id = v.Id,
-                    voterStudentId = v.Voter!.StudentId,
-                    candidateName = v.Candidate!.Name,
-                    timestamp = v.VotedAt,
-                    ipAddress = v.IpAddress.Substring(0, Math.Min(v.IpAddress.Length, 10)) + "..." // Partial IP for privacy
-                })
-                .OrderByDescending(v => v.timestamp)
-                .ToListAsync();
-
-            var votingPattern = await db.Votes
-                .GroupBy(v => v.VotedAt.Date)
-                .Select(g => new {
-                    date = g.Key,
-                    count = g.Count()
-                })
-                .OrderBy(g => g.date)
-                .ToListAsync();
-
-            return Results.Ok(new {
-                auditTrail = auditData,
-                votingPattern,
-                totalRecords = auditData.Count
-            });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // Export election results (admin only)
-        app.MapGet("/api/export-results", async (AppDbContext db) =>
-        {
-            var results = await db.Votes
-                .Include(v => v.Candidate)
-                .Include(v => v.Voter)
-                .GroupBy(v => v.CandidateId)
-                .Select(g => new {
-                    CandidateName = g.First().Candidate!.Name,
-                    Position = g.First().Candidate!.Position,
-                    TicketNumber = g.First().Candidate!.TicketNumber,
-                    VoteCount = g.Count(),
-                    Percentage = 0.0 // Will calculate below
-                })
-                .ToListAsync();
-
-            var totalVotes = results.Sum(r => r.VoteCount);
-            var exportData = results.Select(r => new {
-                r.CandidateName,
-                r.Position,
-                r.TicketNumber,
-                r.VoteCount,
-                Percentage = totalVotes > 0 ? Math.Round((double)r.VoteCount / totalVotes * 100, 2) : 0
-            }).OrderByDescending(r => r.VoteCount);
-
-            var reportData = new {
-                electionTitle = "Kongres PPI XMUM 2025/2026 - Presidential Election",
-                generatedAt = DateTime.UtcNow,
-                results = exportData,
-                summary = new {
-                    totalVotes,
-                    totalCandidates = results.Count,
-                    winner = exportData.FirstOrDefault()
-                }
-            };
-
-            return Results.Ok(reportData);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
-
-        // ===============================
-        // ===== DEBATE SESSION API =====
-        // ===============================
-
-        // Get current live session status
-        app.MapGet("/api/live-status", async (AppDbContext db) =>
-        {
-            var liveSession = await db.LiveSessions.Include(l => l.DebateSession).Include(l => l.CurrentQuestion).FirstOrDefaultAsync();
-            if (liveSession == null)
-            {
-                return Results.Ok(new { isLive = false, status = "Offline" });
+                setting = new AppSetting { Key = "DebateManagerRegisterEnabled", Value = "true" };
+                db.AppSettings.Add(setting);
             }
-            
-            return Results.Ok(new { 
-                isLive = liveSession.IsLive,
-                status = liveSession.Status,
-                debateSession = liveSession.DebateSession?.Title,
-                currentQuestion = liveSession.CurrentQuestion?.Question,
-                timeRemaining = liveSession.TimeRemainingSeconds,
-                startedAt = liveSession.StartedAt
-            });
+            else
+            {
+                setting.Value = (setting.Value?.ToLower() == "true") ? "false" : "true";
+                db.AppSettings.Update(setting);
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { enabled = setting.Value == "true" });
+        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+        // =======================================
+        // ===== DEBATE MANAGER ROUTES ==========
+        // =======================================
+
+        // Get debate manager register status
+        app.MapGet("/debate-manager/register-status", async (AppDbContext db) =>
+        {
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "DebateManagerRegisterEnabled");
+            return Results.Ok(new { enabled = setting?.Value != "false" });
         });
 
-        // Create debate session (draft)
-        app.MapPost("/api/debate-sessions", async (AppDbContext db, CreateDebateSessionRequest request, HttpContext context) =>
+        // Debate manager register
+        app.MapPost("/debate-manager/register", async (AppDbContext db, DebateManagerCredentials creds) =>
         {
-            var session = new DebateSession
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "DebateManagerRegisterEnabled");
+            if (setting != null && setting.Value == "false")
+                return Results.BadRequest(new { message = "Debate manager registration is currently disabled." });
+
+            if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
+                return Results.BadRequest(new { message = "Username and password required." });
+
+            if (creds.Username.Length < 3)
+                return Results.BadRequest(new { message = "Username must be at least 3 characters long." });
+
+            if (creds.Password.Length < 6)
+                return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
+
+            var exists = await db.Users.AnyAsync(u => u.Username == creds.Username);
+            if (exists)
+                return Results.BadRequest(new { message = "Username already exists." });
+
+            var user = new User
             {
-                Title = request.Title,
-                Description = request.Description,
-                SessionType = request.SessionType,
-                ScheduledAt = request.ScheduledAt,
-                TotalDurationMinutes = request.TotalDurationMinutes,
-                CreatedByAdminId = context.User.Identity?.Name
+                Username = creds.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(creds.Password),
+                Role = "DebateManager"
             };
-            
-            db.DebateSessions.Add(session);
+            db.Users.Add(user);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/debate-sessions/{session.Id}", session);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Get all debate sessions
-        app.MapGet("/api/debate-sessions", async (AppDbContext db) =>
-        {
-            var sessions = await db.DebateSessions.Include(s => s.Questions.OrderBy(q => q.OrderIndex)).ToListAsync();
-            return Results.Ok(sessions);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+            return Results.Created($"/debate-manager/{user.Id}", new { user.Id, user.Username });
+        });
 
-        // Add question to debate session
-        app.MapPost("/api/debate-sessions/{sessionId}/questions", async (AppDbContext db, int sessionId, AddQuestionRequest request) =>
+        // Debate manager login
+        app.MapPost("/debate-manager/login", async (TokenService tokenService, AppDbContext db, DebateManagerCredentials creds) =>
         {
-            var session = await db.DebateSessions.FindAsync(sessionId);
-            if (session == null) return Results.NotFound();
-            
-            var question = new DebateQuestion
+            if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
+                return Results.BadRequest(new { message = "Username and password required." });
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == creds.Username && u.Role == "DebateManager");
+            if (user == null || !BCrypt.Net.BCrypt.Verify(creds.Password, user.PasswordHash))
+                return Results.Unauthorized();
+
+            var token = tokenService.CreateToken(user.Id, user.Username, user.Role);
+            return Results.Ok(new { token });
+        });
+
+        // Get debates created by current debate manager
+        app.MapGet("/debate-manager/debates", async (HttpContext context, AppDbContext db) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debates = await db.Debates
+                .Where(d => d.CreatedByUserId == userId)
+                .OrderByDescending(d => d.UpdatedAt)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.Title,
+                    d.Description,
+                    d.CreatedAt,
+                    d.UpdatedAt,
+                    d.AllowUserQuestions,
+                    d.MaxQuestionsPerUser,
+                    d.ScheduledStartTime,
+                    questionCount = d.Questions.Count,
+                    userSubmittedCount = d.UserSubmittedQuestions.Count,
+                    Questions = d.Questions
+                        .OrderBy(q => q.RoundNumber)
+                        .Select(q => new
+                        {
+                            q.Id,
+                            q.Question,
+                            q.RoundNumber
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Results.Ok(debates);
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Create new debate
+        app.MapPost("/debate-manager/debates", async (HttpContext context, AppDbContext db, CreateDebateRequest request) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            if (string.IsNullOrWhiteSpace(request.Title))
+                return Results.BadRequest(new { message = "Title is required." });
+
+            if (request.Questions == null || request.Questions.Count == 0)
+                return Results.BadRequest(new { message = "At least one question is required." });
+
+            if (request.MaxQuestionsPerUser < 1 || request.MaxQuestionsPerUser > 20)
+                return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+
+            var debate = new Debate
             {
-                DebateSessionId = sessionId,
-                Question = request.Question,
-                OrderIndex = request.OrderIndex,
-                DurationMinutes = request.DurationMinutes,
-                QuestionType = request.QuestionType,
-                TargetCandidate = request.TargetCandidate
+                Title = request.Title.Trim(),
+                Description = request.Description?.Trim() ?? "",
+                CreatedByUserId = userId,
+                AllowUserQuestions = request.AllowUserQuestions,
+                MaxQuestionsPerUser = request.MaxQuestionsPerUser,
+                ScheduledStartTime = request.ScheduledStartTime
             };
-            
-            db.DebateQuestions.Add(question);
+
+            db.Debates.Add(debate);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/debate-sessions/{sessionId}/questions/{question.Id}", question);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Go live with a debate session
-        app.MapPost("/api/debate-sessions/{sessionId}/go-live", async (AppDbContext db, int sessionId, HttpContext context) =>
+            // Add questions
+            var questions = request.Questions.Select((q, index) => new DebateQuestion
+            {
+                DebateId = debate.Id,
+                RoundNumber = index + 1,
+                Question = q.Trim()
+            }).ToList();
+
+            db.DebateQuestions.AddRange(questions);
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/debate-manager/debates/{debate.Id}", new { debate.Id, debate.Title });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get specific debate
+        app.MapGet("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id) =>
         {
-            var session = await db.DebateSessions.Include(s => s.Questions.OrderBy(q => q.OrderIndex)).FirstOrDefaultAsync(s => s.Id == sessionId);
-            if (session == null) return Results.NotFound();
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            // End any existing live session
-            var existingLive = await db.LiveSessions.FirstOrDefaultAsync();
+            var debate = await db.Debates
+                .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+
+            if (debate == null)
+                return Results.NotFound();
+
+            return Results.Ok(new
+            {
+                debate.Id,
+                debate.Title,
+                debate.Description,
+                debate.CreatedAt,
+                debate.UpdatedAt,
+                debate.AllowUserQuestions,
+                debate.MaxQuestionsPerUser,
+                questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question })
+            });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Update debate
+        app.MapPut("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id, UpdateDebateRequest request) =>
+{
+    var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+    var debate = await db.Debates
+        .Include(d => d.Questions)
+        .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+
+    if (debate == null)
+        return Results.NotFound();
+
+    // Check if debate is currently live (for informational purposes)
+    var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
+
+    // Allow updating all fields, even during live debates
+    if (!string.IsNullOrWhiteSpace(request.Title))
+        debate.Title = request.Title.Trim();
+
+    if (request.Description != null)
+        debate.Description = request.Description.Trim();
+
+    debate.UpdatedAt = DateTime.UtcNow;
+
+    // Update user question settings if provided
+    if (request.AllowUserQuestions.HasValue)
+        debate.AllowUserQuestions = request.AllowUserQuestions.Value;
+
+    if (request.MaxQuestionsPerUser.HasValue)
+    {
+        if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
+            return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+        debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
+    }
+
+    // Update scheduled start time if provided
+    if (request.ScheduledStartTime.HasValue)
+        debate.ScheduledStartTime = request.ScheduledStartTime.Value;
+
+    // Update questions if provided
+    if (request.Questions != null && request.Questions.Count > 0)
+    {
+        // Validate questions
+        var validQuestions = request.Questions.Where(q => !string.IsNullOrWhiteSpace(q)).ToList();
+        if (validQuestions.Count == 0)
+            return Results.BadRequest(new { message = "At least one valid question is required." });
+
+        // Remove existing questions
+        db.DebateQuestions.RemoveRange(debate.Questions);
+
+        // Add new questions
+        var newQuestions = validQuestions.Select((q, index) => new DebateQuestion
+        {
+            DebateId = debate.Id,
+            RoundNumber = index + 1,
+            Question = q.Trim()
+        }).ToList();
+
+        db.DebateQuestions.AddRange(newQuestions);
+    }
+
+    await db.SaveChangesAsync();
+
+    var responseMessage = isLive
+        ? "Live debate updated successfully. Changes are now active."
+        : "Debate updated successfully.";
+
+    return Results.Ok(new { message = responseMessage });
+}).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Delete debate
+        app.MapDelete("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+            if (debate == null)
+                return Results.NotFound();
+
+            // Check if debate is currently live
+            var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
+            if (isLive)
+                return Results.BadRequest(new { message = "Cannot delete a debate that is currently live." });
+
+            db.Debates.Remove(debate);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { message = "Debate deleted successfully." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get user submitted questions for a debate
+        app.MapGet("/debate-manager/debates/{id:int}/user-questions", async (HttpContext context, AppDbContext db, int id) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+            if (debate == null)
+                return Results.NotFound();
+
+            var userQuestions = await db.UserSubmittedQuestions
+                .Where(usq => usq.DebateId == id)
+                .OrderByDescending(usq => usq.SubmittedAt)
+                .Select(usq => new
+                {
+                    usq.Id,
+                    usq.Question,
+                    usq.SubmittedAt,
+                    usq.IsApproved,
+                    usq.IsUsed,
+                    ipAddress = usq.IpAddress // Consider if you want to show this or hash it
+                })
+                .ToListAsync();
+
+            return Results.Ok(userQuestions);
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Approve/disapprove user question
+        app.MapPost("/debate-manager/debates/{debateId:int}/user-questions/{questionId:int}/approve", async (HttpContext context, AppDbContext db, int debateId, int questionId, bool approve = true) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+            if (debate == null)
+                return Results.NotFound();
+
+            var userQuestion = await db.UserSubmittedQuestions.FirstOrDefaultAsync(usq => usq.Id == questionId && usq.DebateId == debateId);
+            if (userQuestion == null)
+                return Results.NotFound();
+
+            userQuestion.IsApproved = approve;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = approve ? "Question approved." : "Question disapproved." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Add approved user question to debate rounds
+        app.MapPost("/debate-manager/debates/{debateId:int}/user-questions/{questionId:int}/add-to-rounds", async (HttpContext context, AppDbContext db, int debateId, int questionId) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates
+                .Include(d => d.Questions)
+                .FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+
+            if (debate == null)
+                return Results.NotFound();
+
+            var userQuestion = await db.UserSubmittedQuestions.FirstOrDefaultAsync(usq => usq.Id == questionId && usq.DebateId == debateId);
+            if (userQuestion == null)
+                return Results.NotFound();
+
+            if (!userQuestion.IsApproved)
+                return Results.BadRequest(new { message = "Question must be approved first." });
+
+            if (userQuestion.IsUsed)
+                return Results.BadRequest(new { message = "Question has already been added to debate rounds." });
+
+            // Get the next round number
+            var nextRoundNumber = debate.Questions.Any() ? debate.Questions.Max(q => q.RoundNumber) + 1 : 1;
+
+            // Add as new debate question
+            var debateQuestion = new DebateQuestion
+            {
+                DebateId = debateId,
+                RoundNumber = nextRoundNumber,
+                Question = userQuestion.Question
+            };
+
+            db.DebateQuestions.Add(debateQuestion);
+            userQuestion.IsUsed = true;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = $"Question added to round {nextRoundNumber}." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Start live debate
+        app.MapPost("/debate-manager/debates/{id:int}/go-live", async (HttpContext context, AppDbContext db, int id) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates
+                .Include(d => d.Questions)
+                .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
+
+            if (debate == null)
+                return Results.NotFound();
+
+            if (debate.Questions.Count == 0)
+                return Results.BadRequest(new { message = "Cannot go live with a debate that has no questions." });
+
+            // Check if user already has a live or previewable debate
+            var existingLive = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && (ld.IsActive || ld.IsPreviewable));
             if (existingLive != null)
-            {
-                existingLive.IsLive = false;
-                existingLive.Status = "Ended";
-                existingLive.EndedAt = DateTime.UtcNow;
-                db.LiveSessions.Update(existingLive);
-            }
+                return Results.BadRequest(new { message = "You already have a live or scheduled debate active. End it first before starting a new one." });
 
-            // Start new live session
-            var firstQuestion = session.Questions.FirstOrDefault();
-            var liveSession = new LiveSession
+            // Determine if the debate is a future scheduled event
+            bool isScheduledFuture = debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value;
+
+            var liveDebate = new LiveDebate
             {
-                DebateSessionId = sessionId,
-                IsLive = true,
-                Status = "Live",
-                StartedAt = DateTime.UtcNow,
-                CurrentQuestionId = firstQuestion?.Id,
-                CurrentQuestionStartedAt = DateTime.UtcNow,
-                TimeRemainingSeconds = firstQuestion?.DurationMinutes * 60,
-                AdminControllerUsername = context.User.Identity?.Name
+                DebateId = id,
+                DebateManagerId = userId,
+                CurrentRound = 1,
+                // Set IsActive and IsPreviewable based on whether it's a future event
+                IsActive = !isScheduledFuture,
+                IsPreviewable = isScheduledFuture,
+                StartedAt = isScheduledFuture ? DateTime.UtcNow : DateTime.UtcNow,
+                Debate = debate
             };
 
-            session.Status = "Live";
-            
-            db.LiveSessions.Add(liveSession);
-            db.DebateSessions.Update(session);
+            db.LiveDebates.Add(liveDebate);
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { message = "Debate session is now live!", liveSession });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+            return Results.Ok(new { message = "Debate state has been updated!", liveDebateId = liveDebate.Id });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
-        // Live session control (next question, pause, extend time, etc.)
-        app.MapPost("/api/live-control", async (AppDbContext db, LiveControlRequest request, HttpContext context) =>
+        // End live debate
+        app.MapPost("/debate-manager/live/end", async (AppDbContext db, HttpContext context) =>
         {
-            var liveSession = await db.LiveSessions.Include(l => l.DebateSession).ThenInclude(s => s!.Questions.OrderBy(q => q.OrderIndex)).FirstOrDefaultAsync(l => l.IsLive);
-            if (liveSession == null) return Results.BadRequest(new { message = "No live session found" });
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            switch (request.Action.ToLower())
+            var liveDebate = await db.LiveDebates
+                .FirstOrDefaultAsync(ld => (ld.IsActive || ld.IsPreviewable) && ld.DebateManagerId == userId);
+
+            if (liveDebate == null)
             {
-                case "next":
-                    var questions = liveSession.DebateSession!.Questions.OrderBy(q => q.OrderIndex).ToList();
-                    var currentIndex = questions.FindIndex(q => q.Id == liveSession.CurrentQuestionId);
-                    if (currentIndex < questions.Count - 1)
-                    {
-                        var nextQuestion = questions[currentIndex + 1];
-                        liveSession.CurrentQuestionId = nextQuestion.Id;
-                        liveSession.CurrentQuestionStartedAt = DateTime.UtcNow;
-                        liveSession.TimeRemainingSeconds = nextQuestion.DurationMinutes * 60;
-                    }
-                    break;
-                    
-                case "prev":
-                    var allQuestions = liveSession.DebateSession!.Questions.OrderBy(q => q.OrderIndex).ToList();
-                    var currentIdx = allQuestions.FindIndex(q => q.Id == liveSession.CurrentQuestionId);
-                    if (currentIdx > 0)
-                    {
-                        var prevQuestion = allQuestions[currentIdx - 1];
-                        liveSession.CurrentQuestionId = prevQuestion.Id;
-                        liveSession.CurrentQuestionStartedAt = DateTime.UtcNow;
-                        liveSession.TimeRemainingSeconds = prevQuestion.DurationMinutes * 60;
-                    }
-                    break;
-                    
-                case "pause":
-                    liveSession.Status = "Paused";
-                    break;
-                    
-                case "resume":
-                    liveSession.Status = "Live";
-                    break;
-                    
-                case "extend":
-                    liveSession.TimeRemainingSeconds += request.ExtendTimeSeconds ?? 60;
-                    break;
-                    
-                case "end":
-                    liveSession.IsLive = false;
-                    liveSession.Status = "Ended";
-                    liveSession.EndedAt = DateTime.UtcNow;
-                    if (liveSession.DebateSession != null)
-                        liveSession.DebateSession.Status = "Completed";
-                    break;
+                return Results.NotFound(new { message = "No live or scheduled debate found to end." });
             }
 
-            db.LiveSessions.Update(liveSession);
+            db.LiveDebates.Remove(liveDebate);
             await db.SaveChangesAsync();
-            return Results.Ok(new { message = $"Action '{request.Action}' executed", liveSession });
-        }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-        // Map SignalR Hub
-        app.MapHub<DebateHub>("/debateHub");
+            return Results.Ok(new { message = "Debate has been ended/cancelled." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get current live debate status
+        app.MapGet("/debate-manager/live/status", async (AppDbContext db) =>
+        {
+            var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .FirstOrDefaultAsync(ld => ld.IsActive || ld.IsPreviewable);
+
+            if (liveDebate == null)
+            {
+                return Results.Ok(new { isLive = false });
+            }
+
+            // Get current question
+            var currentQuestion = liveDebate.Debate.Questions
+                .FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
+
+            // Get total fire count for this live debate
+            var totalFires = await db.FireEvents
+                .Where(fe => fe.LiveDebateId == liveDebate.Id)
+                .SumAsync(fe => fe.FireCount);
+
+            // Determine if countdown is active
+            bool countdown = liveDebate.Debate.ScheduledStartTime.HasValue &&
+                            DateTime.UtcNow < liveDebate.Debate.ScheduledStartTime.Value;
+
+            return Results.Ok(new
+            {
+                isLive = true,
+                isActive = liveDebate.IsActive,
+                isPreviewable = liveDebate.IsPreviewable,
+                countdown = countdown,
+                debate = new
+                {
+                    id = liveDebate.Debate.Id,
+                    title = liveDebate.Debate.Title,
+                    description = liveDebate.Debate.Description,
+                    totalRounds = liveDebate.Debate.Questions.Count,
+                    scheduledStartTime = liveDebate.Debate.ScheduledStartTime,
+                    questions = liveDebate.Debate.Questions.Select(q => new
+                    {
+                        round = q.RoundNumber,
+                        question = q.Question
+                    }).ToList()
+                },
+                currentRound = liveDebate.CurrentRound,
+                currentQuestion = currentQuestion?.Question,
+                totalFires = totalFires,
+                startedAt = liveDebate.StartedAt,
+                debateManagerId = liveDebate.DebateManagerId
+            });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Change current round
+        app.MapPost("/debate-manager/live/change-round", async (HttpContext context, AppDbContext db, ChangeRoundRequest request) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && ld.IsActive);
+            if (liveDebate == null)
+                return Results.NotFound(new { message = "No active live debate found." });
+
+            var debate = await db.Debates
+                .Include(d => d.Questions)
+                .FirstAsync(d => d.Id == liveDebate.DebateId);
+
+            if (request.RoundNumber < 1 || request.RoundNumber > debate.Questions.Count)
+                return Results.BadRequest(new { message = $"Round number must be between 1 and {debate.Questions.Count}." });
+
+            liveDebate.CurrentRound = request.RoundNumber;
+            await db.SaveChangesAsync();
+
+            var currentQuestion = debate.Questions.First(q => q.RoundNumber == request.RoundNumber);
+            return Results.Ok(new
+            {
+                message = $"Changed to round {request.RoundNumber}",
+                currentRound = request.RoundNumber,
+                currentQuestion = currentQuestion.Question
+            });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get live debate heatmap (for debate manager)
+        app.MapGet("/debate-manager/live/heatmap", async (HttpContext context, AppDbContext db, int intervalSeconds = 10, int lastMinutes = 3) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var liveDebate = await db.LiveDebates.FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && ld.IsActive);
+            if (liveDebate == null)
+                return Results.NotFound(new { message = "No active live debate found." });
+
+            if (intervalSeconds <= 0) intervalSeconds = 10;
+            if (lastMinutes <= 0) lastMinutes = 3;
+
+            var now = DateTime.UtcNow;
+            var since = now.AddMinutes(-lastMinutes);
+
+            var allEvents = await db.FireEvents
+                .Where(f => f.LiveDebateId == liveDebate.Id && f.Timestamp >= since)
+                .OrderBy(f => f.Timestamp)
+                .ToListAsync();
+
+            var buckets = new List<object>();
+            var bucketDuration = TimeSpan.FromSeconds(intervalSeconds);
+            var cumulativeTotal = 0;
+
+            var currentBucketStart = since;
+            while (currentBucketStart < now)
+            {
+                var currentBucketEnd = currentBucketStart.Add(bucketDuration);
+                var intervalTotal = allEvents
+                    .Where(e => e.Timestamp >= currentBucketStart && e.Timestamp < currentBucketEnd)
+                    .Sum(e => e.FireCount);
+
+                cumulativeTotal += intervalTotal;
+
+                var bucketLabel = $"{currentBucketStart:HH:mm:ss}-{currentBucketEnd:HH:mm:ss}";
+                var bucketEndLabel = currentBucketEnd.ToString("HH:mm:ss");
+
+                buckets.Add(new
+                {
+                    bucketLabel,
+                    bucketEndLabel,
+                    intervalTotal,
+                    total = cumulativeTotal,
+                    bucketEndTimestamp = (long)(currentBucketEnd - new DateTime(1970, 1, 1)).TotalSeconds
+                });
+
+                currentBucketStart = currentBucketEnd;
+            }
+
+            var totalFires = await db.FireEvents.Where(e => e.LiveDebateId == liveDebate.Id).SumAsync(e => e.FireCount);
+            return Results.Ok(new { buckets, total = totalFires });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         app.Run();
     }

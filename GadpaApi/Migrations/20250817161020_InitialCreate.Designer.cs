@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GadpaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250812093036_AddAppSettingsTable")]
-    partial class AddAppSettingsTable
+    [Migration("20250817161020_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

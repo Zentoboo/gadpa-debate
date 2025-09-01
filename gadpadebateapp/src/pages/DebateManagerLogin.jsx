@@ -1,0 +1,135 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/AuthContext";
+import "../css/AuthForms.css";
+
+export default function DebateManagerLogin() {
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [registerEnabled, setRegisterEnabled] = useState(null);
+    const navigate = useNavigate();
+    const { login, isDebateManager } = useAuth();
+
+    useEffect(() => {
+        fetch("http://localhost:5076/debate-manager/register-status")
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Failed to fetch register status');
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setRegisterEnabled(data.enabled);
+            })
+            .catch(() => {
+                setRegisterEnabled(false);
+            });
+    }, []);
+
+    if (isDebateManager) {
+        return (
+            <div className="auth-container">
+                <div className="auth-card">
+                    <h1 className="auth-title">You are already signed in ✅</h1>
+                    <button onClick={() => navigate("/debate-manager/dashboard")} className="auth-button">
+                        Go to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        setError("");
+
+        if (!username.trim()) {
+            setError("Username is required");
+            return;
+        }
+        if (!password) {
+            setError("Password is required");
+            return;
+        }
+
+        setIsLoading(true);
+
+        fetch("http://localhost:5076/debate-manager/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: username.trim(), password }),
+        })
+            .then(async (res) => {
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.message || "Login failed");
+                }
+                return res.json();
+            })
+            .then((data) => {
+                login(data.token);
+                navigate("/debate-manager/dashboard");
+            })
+            .catch((err) => {
+                setError(err.message);
+            })
+            .finally(() => setIsLoading(false));
+    };
+
+    return (
+        <div className="auth-container">
+            <div className="auth-card">
+                <h1 className="auth-title">Debate Manager Login</h1>
+                {error && <div className="auth-message error">{error}</div>}
+                <form onSubmit={handleLogin} className="auth-form">
+                    <input
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                        className="auth-input"
+                        disabled={isLoading}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="auth-input"
+                        disabled={isLoading}
+                    />
+                    <button
+                        type="submit"
+                        className="auth-button"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Logging in..." : "Login"}
+                    </button>
+                </form>
+
+                {registerEnabled === true && (
+                    <p className="small-text">
+                        Don't have an account?
+                        <button onClick={() => navigate("/debate-manager/register")} className="link-button">
+                            Register here
+                        </button>
+                    </p>
+                )}
+                {registerEnabled === false && (
+                    <p className="small-text" style={{ color: "#666", fontSize: "0.8rem" }}>
+                        Registration is disabled
+                    </p>
+                )}
+                {registerEnabled === null && (
+                    <p className="small-text" style={{ color: "#666", fontSize: "0.8rem" }}>
+                        Loading...
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}

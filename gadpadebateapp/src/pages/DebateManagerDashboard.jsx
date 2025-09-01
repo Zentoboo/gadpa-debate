@@ -1,0 +1,585 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/AuthContext";
+import "../css/Dashboard.css";
+
+export default function DebateManagerDashboard() {
+    const { token, isAuthenticated, isDebateManager } = useAuth();
+    const navigate = useNavigate();
+
+    const [debates, setDebates] = useState([]);
+    const [liveStatus, setLiveStatus] = useState(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [editingDebateId, setEditingDebateId] = useState(null);
+    const [heatmapData, setHeatmapData] = useState(null);
+
+    // Convert datetime-local (local browser time) → UTC ISO
+    const toUtcFromLocal = (localString) => {
+        if (!localString) return null;
+        const d = new Date(localString);
+        return d.toISOString();
+    };
+
+    // Convert UTC → datetime-local string for input
+    const toLocalDateTimeInputValue = (utcString) => {
+        if (!utcString) return "";
+        const d = new Date(utcString);
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const [newDebate, setNewDebate] = useState({
+        title: "",
+        description: "",
+        questions: [""],
+        allowUserQuestions: false,
+        maxQuestionsPerUser: 3,
+        scheduledStartTime: "",
+    });
+
+    const [editDebate, setEditDebate] = useState({
+        title: "",
+        description: "",
+        questions: [""],
+        allowUserQuestions: false,
+        maxQuestionsPerUser: 3,
+        scheduledStartTime: "",
+    });
+
+    const authFetch = (url, options = {}) =>
+        fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                ...options.headers,
+            },
+        });
+
+    useEffect(() => {
+        if (!isAuthenticated || !token || !isDebateManager) {
+            navigate("/debate-manager/login");
+        }
+    }, [isAuthenticated, token, isDebateManager, navigate]);
+
+    useEffect(() => {
+        if (!token || !isAuthenticated || !isDebateManager) return;
+        refreshDebates();
+        refreshLiveStatus();
+    }, [token, isAuthenticated, isDebateManager]);
+
+    useEffect(() => {
+        if (!liveStatus?.isLive) return;
+        const interval = setInterval(() => {
+            refreshLiveStatus();
+            refreshHeatmap();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [liveStatus?.isLive]);
+
+    const refreshDebates = () => {
+        authFetch("http://localhost:5076/debate-manager/debates")
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch debates");
+                return res.json();
+            })
+            .then(setDebates)
+            .catch(console.error);
+    };
+
+    const refreshLiveStatus = () => {
+        authFetch("http://localhost:5076/debate-manager/live/status")
+            .then(res => res.json())
+            .then(setLiveStatus)
+            .catch(console.error);
+    };
+
+    const refreshHeatmap = () => {
+        authFetch("http://localhost:5076/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=5")
+            .then(res => res.json())
+            .then(setHeatmapData)
+            .catch(console.error);
+    };
+
+    const createDebate = () => {
+        const validQuestions = newDebate.questions.filter(q => q.trim());
+        if (!newDebate.title.trim() || validQuestions.length === 0) return;
+
+        authFetch("http://localhost:5076/debate-manager/debates", {
+            method: "POST",
+            body: JSON.stringify({
+                title: newDebate.title.trim(),
+                description: newDebate.description.trim(),
+                questions: validQuestions.map(q => q.trim()),
+                allowUserQuestions: newDebate.allowUserQuestions,
+                maxQuestionsPerUser: newDebate.maxQuestionsPerUser,
+                scheduledStartTime: newDebate.scheduledStartTime
+                    ? toUtcFromLocal(newDebate.scheduledStartTime)
+                    : null,
+            }),
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to create debate");
+                return res.json();
+            })
+            .then(() => {
+                setNewDebate({
+                    title: "",
+                    description: "",
+                    questions: [""],
+                    allowUserQuestions: false,
+                    maxQuestionsPerUser: 3,
+                    scheduledStartTime: "",
+                });
+                setIsCreating(false);
+                refreshDebates();
+            })
+            .catch(err => alert(err.message));
+    };
+
+    const startEditDebate = (debate) => {
+        authFetch(`http://localhost:5076/debate-manager/debates/${debate.id}`)
+            .then(res => res.json())
+            .then(fullDebate => {
+                const processedQuestions = (fullDebate.questions || []).map(q =>
+                    typeof q === "object" ? q.question || "" : q || ""
+                );
+                setEditDebate({
+                    title: fullDebate.title,
+                    description: fullDebate.description || "",
+                    questions: processedQuestions.length ? processedQuestions : [""],
+                    allowUserQuestions: fullDebate.allowUserQuestions,
+                    maxQuestionsPerUser: fullDebate.maxQuestionsPerUser || 3,
+                    scheduledStartTime: fullDebate.scheduledStartTime
+                        ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
+                        : "",
+                });
+                setEditingDebateId(debate.id);
+                setIsCreating(false);
+            })
+            .catch(err => alert(err.message));
+    };
+
+    const saveEditDebate = () => {
+        const validQuestions = editDebate.questions.filter(q => q.trim());
+        if (!editDebate.title.trim()) {
+            alert("Title is required.");
+            return;
+        }
+
+        if (validQuestions.length === 0) {
+            alert("At least one question is required.");
+            return;
+        }
+
+        // Check if this debate is currently live
+        const isCurrentDebateLive = liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
+
+        // Prepare the request body - include all fields regardless of live status
+        const requestBody = {
+            title: editDebate.title.trim(),
+            description: editDebate.description.trim(),
+            questions: validQuestions.map(q => q.trim()),
+            allowUserQuestions: editDebate.allowUserQuestions,
+            maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
+            scheduledStartTime: editDebate.scheduledStartTime
+                ? toUtcFromLocal(editDebate.scheduledStartTime)
+                : null,
+        };
+
+        authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
+            method: "PUT",
+            body: JSON.stringify(requestBody),
+        })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => {
+                        throw new Error(err.message || "Failed to save debate");
+                    });
+                }
+                return res.json();
+            })
+            .then(() => {
+                setEditDebate({
+                    title: "",
+                    description: "",
+                    questions: [""],
+                    allowUserQuestions: false,
+                    maxQuestionsPerUser: 3,
+                    scheduledStartTime: "",
+                });
+                setEditingDebateId(null);
+                refreshDebates();
+                // Show success message
+                alert("Debate updated successfully!");
+            })
+            .catch(err => alert(err.message));
+    };
+
+    const cancelEdit = () => {
+        setEditingDebateId(null);
+        setEditDebate({
+            title: "",
+            description: "",
+            questions: [""],
+            allowUserQuestions: false,
+            maxQuestionsPerUser: 3,
+            scheduledStartTime: "",
+        });
+    };
+
+    const goLive = (id) => {
+        authFetch(`http://localhost:5076/debate-manager/debates/${id}/go-live`, { method: "POST" })
+            .then(res => res.json())
+            .then(() => {
+                refreshLiveStatus();
+                refreshHeatmap();
+            })
+            .catch(err => alert(err.message));
+    };
+
+    // Updated `endLive` function to use the new endpoint
+    const endLive = () => {
+        const confirmationMessage = liveStatus.isActive
+            ? "Are you sure you want to end the current live debate?"
+            : "Are you sure you want to cancel the scheduled debate?";
+
+        if (!window.confirm(confirmationMessage)) return;
+
+        authFetch("http://localhost:5076/debate-manager/live/end", { method: "POST" })
+            .then(res => res.json())
+            .then(() => {
+                refreshLiveStatus();
+                setHeatmapData(null);
+            })
+            .catch(err => alert(err.message));
+    };
+
+    const deleteDebate = (id) => {
+        if (!window.confirm("Are you sure you want to delete this debate?")) return;
+        authFetch(`http://localhost:5076/debate-manager/debates/${id}`, { method: "DELETE" })
+            .then(res => res.json())
+            .then(() => refreshDebates())
+            .catch(console.error);
+    };
+
+    const addQuestion = () => setNewDebate(prev => ({ ...prev, questions: [...prev.questions, ""] }));
+    const removeQuestion = (i) => setNewDebate(prev => ({ ...prev, questions: prev.questions.filter((_, idx) => idx !== i) }));
+    const updateQuestion = (i, val) => setNewDebate(prev => ({ ...prev, questions: prev.questions.map((q, idx) => idx === i ? val : q) }));
+
+    const addEditQuestion = () => setEditDebate(prev => ({ ...prev, questions: [...prev.questions, ""] }));
+    const removeEditQuestion = (i) => setEditDebate(prev => ({ ...prev, questions: prev.questions.filter((_, idx) => idx !== i) }));
+    const updateEditQuestion = (i, val) => setEditDebate(prev => ({ ...prev, questions: prev.questions.map((q, idx) => idx === i ? val : q) }));
+
+    if (!isAuthenticated || !token || !isDebateManager) return null;
+
+    // Check if the debate being edited is currently live
+    const isEditingLiveDebate = editingDebateId && liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
+
+    return (
+        <div className="dashboard-container">
+            <div className="dashboard-header"><h1>Debate Manager Dashboard</h1></div>
+
+            {/* Live Status Section */}
+            <h2 className="section-title">Live Debate Status</h2>
+            <div className={`live-status ${liveStatus?.isActive ? "active" : ""}`}>
+                {liveStatus?.isLive ? (
+                    <div>
+                        <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
+                        {liveStatus.isPreviewable ? (
+                            <>
+                                <p style={{ color: "orange" }}>
+                                    Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}
+                                </p>
+                                <div className="table-actions" style={{ marginTop: "1rem" }}>
+                                    <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p><strong>Total Rounds:</strong> {liveStatus.debate.totalRounds}</p>
+                                <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
+                                <div className="table-actions" style={{ marginTop: "1rem" }}>
+                                    <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
+                                    <button onClick={endLive} className="table-button danger">End Live Debate</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                ) : <p style={{ color: "#9ca3af" }}>No debate is currently live.</p>}
+            </div>
+
+            {/* Create Form */}
+            <h2>My Debates</h2>
+            <button onClick={() => { setIsCreating(!isCreating); if (editingDebateId) cancelEdit(); }} className="table-button primary" style={{ marginBottom: "1rem" }}>
+                {isCreating ? "Cancel" : "+ New Debate"}
+            </button>
+
+            {/* Create Form */}
+            {isCreating && (
+                <div className="form-box">
+                    <h3>Create New Debate</h3>
+                    <input
+                        type="text"
+                        placeholder="Debate Title"
+                        value={newDebate.title}
+                        onChange={(e) =>
+                            setNewDebate((prev) => ({ ...prev, title: e.target.value }))
+                        }
+                        className="auth-input"
+                    />
+                    <textarea
+                        placeholder="Description"
+                        value={newDebate.description}
+                        onChange={(e) =>
+                            setNewDebate((prev) => ({ ...prev, description: e.target.value }))
+                        }
+                        className="auth-input"
+                    />
+
+                    {/* Settings */}
+                    <div className="settings">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={newDebate.allowUserQuestions}
+                                onChange={(e) =>
+                                    setNewDebate((prev) => ({
+                                        ...prev,
+                                        allowUserQuestions: e.target.checked,
+                                    }))
+                                }
+                            />
+                            Allow User Questions
+                        </label>
+                        <label>
+                            Max Per User:
+                            <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={newDebate.maxQuestionsPerUser}
+                                onChange={(e) =>
+                                    setNewDebate((prev) => ({
+                                        ...prev,
+                                        maxQuestionsPerUser: Number(e.target.value),
+                                    }))
+                                }
+                            />
+                        </label>
+                        <label>
+                            Scheduled Start:
+                            <input
+                                type="datetime-local"
+                                value={newDebate.scheduledStartTime}
+                                onChange={(e) =>
+                                    setNewDebate((prev) => ({
+                                        ...prev,
+                                        scheduledStartTime: e.target.value,
+                                    }))
+                                }
+                            />
+                        </label>
+                    </div>
+
+                    <h4>Questions</h4>
+                    <table className="questions-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Question</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {newDebate.questions.map((q, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>
+                                        <textarea
+                                            value={q}
+                                            onChange={(e) => updateQuestion(i, e.target.value)}
+                                            rows={2}
+                                            style={{ width: "100%", resize: "vertical", overflowWrap: "break-word" }}
+                                        />
+                                    </td>
+                                    <td>
+                                        {newDebate.questions.length > 1 && (
+                                            <button className="danger" onClick={() => removeQuestion(i)}>×</button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button onClick={addQuestion}>+ Add Question</button>
+                    <button
+                        onClick={createDebate}
+                        disabled={!newDebate.title.trim() || newDebate.questions.filter(q => q.trim()).length === 0}
+                    >
+                        Create Debate
+                    </button>
+                </div>
+            )}
+
+            {/* Edit Form */}
+            {editingDebateId && (
+                <div className="form-box">
+                    <h3>Edit Debate {isEditingLiveDebate && <span style={{ color: "orange" }}>(Live)</span>}</h3>
+
+                    {isEditingLiveDebate && (
+                        <div style={{ padding: "10px", backgroundColor: "#312f26ff", border: "1px solid #ffeaa7", borderRadius: "4px", marginBottom: "1rem" }}>
+                            <strong>Note:</strong> This debate is currently live. Changes will take effect immediately and may affect the ongoing debate experience.
+                        </div>
+                    )}
+
+                    <input
+                        type="text"
+                        value={editDebate.title}
+                        onChange={(e) =>
+                            setEditDebate((prev) => ({ ...prev, title: e.target.value }))
+                        }
+                        className="auth-input"
+                        placeholder="Debate Title"
+                    />
+                    <textarea
+                        value={editDebate.description}
+                        onChange={(e) =>
+                            setEditDebate((prev) => ({ ...prev, description: e.target.value }))
+                        }
+                        className="auth-input"
+                        placeholder="Description"
+                    />
+
+                    {/* Settings */}
+                    <div className="settings">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={editDebate.allowUserQuestions}
+                                onChange={(e) =>
+                                    setEditDebate((prev) => ({
+                                        ...prev,
+                                        allowUserQuestions: e.target.checked,
+                                    }))
+                                }
+                            />
+                            Allow User Questions
+                        </label>
+                        <label>
+                            Max Per User:
+                            <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={editDebate.maxQuestionsPerUser}
+                                onChange={(e) =>
+                                    setEditDebate((prev) => ({
+                                        ...prev,
+                                        maxQuestionsPerUser: Number(e.target.value),
+                                    }))
+                                }
+                            />
+                        </label>
+                        <label>
+                            Scheduled Start:
+                            <input
+                                type="datetime-local"
+                                value={editDebate.scheduledStartTime}
+                                onChange={(e) =>
+                                    setEditDebate((prev) => ({
+                                        ...prev,
+                                        scheduledStartTime: e.target.value,
+                                    }))
+                                }
+                            />
+                        </label>
+                    </div>
+
+                    {/* Questions Section - Show for all debates */}
+                    <h4>Questions</h4>
+                    <table className="questions-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Question</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {editDebate.questions.map((q, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>
+                                        <textarea
+                                            value={q}
+                                            onChange={(e) => updateEditQuestion(i, e.target.value)}
+                                            rows={2}
+                                            style={{ width: "100%", resize: "vertical", overflowWrap: "break-word" }}
+                                        />
+                                    </td>
+                                    <td>
+                                        {editDebate.questions.length > 1 && (
+                                            <button className="danger" onClick={() => removeEditQuestion(i)}>×</button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div style={{ marginTop: "1rem" }}>
+                        <button
+                            onClick={saveEditDebate}
+                            disabled={!editDebate.title.trim() || editDebate.questions.filter(q => q.trim()).length === 0}
+                        >
+                            Save Changes
+                        </button>
+                        <button onClick={addEditQuestion}>+ Add Question</button>
+                        <button className="secondary" onClick={cancelEdit} style={{ marginLeft: "0.5rem" }}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Debate List */}
+            <table className="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Questions</th>
+                        <th>Created</th>
+                        <th>Scheduled</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {debates.map(d => (
+                        <tr key={d.id}>
+                            <td>
+                                {d.title}
+                                {liveStatus?.isLive && liveStatus?.debate?.id === d.id && (
+                                    <span style={{ color: "orange", fontSize: "0.8em", marginLeft: "0.5rem" }}>
+                                        (LIVE)
+                                    </span>
+                                )}
+                            </td>
+                            <td>{d.questionCount}</td>
+                            <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+                            }</td>
+                            <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+                                : "Not Scheduled"}</td>
+                            <td>
+                                <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
+                                <button onClick={() => startEditDebate(d)}>Edit</button>
+                                <button onClick={() => deleteDebate(d.id)} disabled={liveStatus?.isLive && liveStatus?.debate?.id === d.id}>Delete</button>
+                                <button onClick={() => navigate(`/debate-manager/debates/${d.id}/user-questions`)}>User Questions</button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}

@@ -1,0 +1,217 @@
+/* === Modern Fonts Import === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+
+/* === Header / Navbar === */
+.header-container {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 1800px;
+    background: rgba(30, 32, 37, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(190, 48, 48, 0.4);
+    padding: 0.75rem 1rem;
+    border-radius: 9999px;
+    color: #fff;
+    font-family: "Inter", sans-serif;
+    /* Modern clean font */
+    font-weight: 400;
+    transition: background 0.3s, border 0.3s;
+}
+
+.header-container:hover {
+    background: rgba(30, 32, 37, 0.75);
+    border-color: rgba(190, 48, 48, 0.6);
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-family: "Poppins", sans-serif;
+    /* Bold modern logo font */
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: #fff;
+}
+
+.logo img {
+    max-height: 40px;
+    border-radius: 6px;
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    cursor: pointer;
+    color: #fff;
+}
+
+.lg-hidden {
+    display: block;
+}
+
+@media (min-width: 1024px) {
+    .lg-hidden {
+        display: none;
+    }
+}
+
+.main-nav {
+    position: absolute;
+    top: 60px;
+    right: 1rem;
+    min-width: 220px;
+    background: rgba(20, 20, 24, 0.95);
+    border-radius: 8px;
+    transform: translateX(150%);
+    transition: transform 0.3s ease-in-out;
+    padding: 1rem;
+    z-index: 50;
+}
+
+.main-nav.open {
+    transform: translateX(0);
+}
+
+.main-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.main-nav li {
+    margin-bottom: 0.75rem;
+}
+
+.main-nav li:last-child {
+    margin-bottom: 0;
+}
+
+.main-nav a {
+    text-decoration: none;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    transition: color 0.2s;
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+    color: #be3030;
+}
+
+.nav-link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-link-button:hover {
+    color: #be3030;
+    background: none;
+}
+
+.nav-link-button[style] {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.nav-link-button[style]:hover {
+    opacity: 1 !important;
+}
+
+/* Role labels (admin / debate-manager) */
+.main-nav span {
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+/* Desktop nav styles */
+@media (min-width: 1024px) {
+    .main-nav {
+        position: static;
+        transform: none;
+        background: transparent;
+        display: flex;
+        flex: 1;
+        justify-content: flex-end;
+        padding: 0;
+    }
+
+    .main-nav ul {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .main-nav li {
+        margin: 0;
+    }
+
+    .main-nav a,
+    .nav-link-button {
+        text-decoration: none;
+        color: #fff;
+    }
+
+    .main-nav a:hover,
+    .main-nav a.active,
+    .nav-link-button:hover {
+        color: #be3030;
+    }
+}
+
+/* === Restore Button (when header is hidden) === */
+.header-restore-btn {
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1100;
+    background: rgba(30, 32, 37, 0.6);
+    border: 1px solid rgba(190, 48, 48, 0.6);
+    color: #fff;
+    font-size: 0.9rem;
+    width: auto;
+    height: auto;
+    border-radius: 0%;
+    cursor: pointer;
+    opacity: 0.1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, background 0.2s, transform 0.2s;
+}
+
+.header-restore-btn:hover {
+    opacity: 1;
+    background: rgba(190, 48, 48, 0.9);
+    transform: scale(1.1);
+    background-color: rgba(190, 48, 48, 0.2);
+}

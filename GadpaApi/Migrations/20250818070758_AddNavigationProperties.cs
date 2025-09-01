@@ -5,7 +5,7 @@
 namespace GadpaApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddAppSettingsTable : Migration
+    public partial class AddNavigationProperties : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

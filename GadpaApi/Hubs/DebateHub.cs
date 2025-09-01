@@ -13,6 +13,8 @@ public class DebateHub : Hub
     private readonly ILogger<DebateHub> _logger;
     private readonly DebateTimerService _timerService;
     private static readonly Dictionary<int, HashSet<string>> _debateConnections = new();
+    private static readonly Dictionary<string, DateTime> _lastFireTime = new();
+    private static readonly Dictionary<string, int> _fireCount = new();
     private static readonly object _lock = new object();
 
     public DebateHub(AppDbContext db, ILogger<DebateHub> logger, DebateTimerService timerService)
@@ -46,15 +48,72 @@ public class DebateHub : Hub
                 return;
             }
 
-            // Simple rate limiting check (could be enhanced with proper rate limiting)
+            // Enhanced rate limiting: Connection-based (primary) + IP-based (secondary)
+            var connectionId = Context.ConnectionId;
+            var now = DateTime.UtcNow;
+            
+            // Check connection-based rate limiting (1 fire per second per connection)
+            bool isRateLimited = false;
+            lock (_lock)
+            {
+                if (_lastFireTime.TryGetValue(connectionId, out var lastFire))
+                {
+                    if ((now - lastFire).TotalSeconds < 1.0)
+                    {
+                        isRateLimited = true;
+                    }
+                }
+                
+                if (!isRateLimited)
+                {
+                    // Check connection fire count (max 5 fires per minute per connection)
+                    if (_fireCount.TryGetValue(connectionId, out var count))
+                    {
+                        if (count >= 5)
+                        {
+                            // Check if minute has passed
+                            if (_lastFireTime.TryGetValue($"{connectionId}:window", out var windowStart))
+                            {
+                                if ((now - windowStart).TotalMinutes < 1.0)
+                                {
+                                    isRateLimited = true;
+                                }
+                                else
+                                {
+                                    // Reset window
+                                    _fireCount[connectionId] = 0;
+                                    _lastFireTime[$"{connectionId}:window"] = now;
+                                }
+                            }
+                            else
+                            {
+                                _lastFireTime[$"{connectionId}:window"] = now;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _fireCount[connectionId] = 0;
+                        _lastFireTime[$"{connectionId}:window"] = now;
+                    }
+                }
+            }
+            
+            if (isRateLimited)
+            {
+                await Clients.Caller.SendAsync("Error", "Rate limited: Too many fire reactions");
+                return;
+            }
+
+            // Additional IP-based check as fallback (for shared connections)
             var recentFires = await _db.FireEvents
                 .Where(f => f.IpAddress == ipAddress && 
-                           f.Timestamp > DateTime.UtcNow.AddSeconds(-1))
+                           f.Timestamp > DateTime.UtcNow.AddSeconds(-0.5)) // Slightly faster for IP
                 .CountAsync();
 
             if (recentFires > 0)
             {
-                await Clients.Caller.SendAsync("Error", "Rate limited: Only 1 fire per second");
+                await Clients.Caller.SendAsync("Error", "Rate limited: IP-based protection");
                 return;
             }
 
@@ -81,6 +140,13 @@ public class DebateHub : Hub
                     .SumAsync(f => f.FireCount);
 
                 await transaction.CommitAsync();
+
+                // Update connection-based rate limiting counters
+                lock (_lock)
+                {
+                    _lastFireTime[connectionId] = now;
+                    _fireCount[connectionId] = _fireCount.GetValueOrDefault(connectionId, 0) + 1;
+                }
 
                 // Broadcast to all clients (after transaction committed)
                 await Clients.All.SendAsync("FireReaction", new
@@ -446,7 +512,7 @@ public class DebateHub : Hub
     {
         _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
         
-        // Remove from all debate rooms
+        // Remove from all debate rooms and cleanup rate limiting data
         lock (_lock)
         {
             var debatesToUpdate = new List<int>();
@@ -459,6 +525,11 @@ public class DebateHub : Hub
                         _debateConnections.Remove(kvp.Key);
                 }
             }
+            
+            // Cleanup rate limiting data for disconnected connection
+            _lastFireTime.Remove(Context.ConnectionId);
+            _lastFireTime.Remove($"{Context.ConnectionId}:window");
+            _fireCount.Remove(Context.ConnectionId);
             
             // Update viewer counts for affected debates
             foreach (var debateId in debatesToUpdate)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { API_CONFIG } from './config/api.js';
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
@@ -14,6 +15,7 @@ import LiveDebatePage from "./pages/LiveDebatePage.jsx";
 import DebatePage from "./pages/DebatePage.jsx";
 import { AuthProvider } from "./hooks/AuthContext.jsx";
 import UserQuestionsPage from "./pages/UserQuestionsPage.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 export default function App() {
   const [adminRegisterEnabled, setAdminRegisterEnabled] = useState(null);
@@ -71,45 +73,49 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      {showHeader && (
-        <Header
-          adminRegisterEnabled={adminRegisterEnabled}
-          debateManagerRegisterEnabled={debateManagerRegisterEnabled}
-          onHide={() => setShowHeader(false)}
-        />
-      )}
+    <ErrorBoundary>
+      <AuthProvider>
+        {showHeader && (
+          <Header
+            adminRegisterEnabled={adminRegisterEnabled}
+            debateManagerRegisterEnabled={debateManagerRegisterEnabled}
+            onHide={() => setShowHeader(false)}
+          />
+        )}
 
-      {/* Restore button - only visible when header is hidden */}
-      {!showHeader && (
-        <button
-          className="header-restore-btn"
-          onClick={() => setShowHeader(true)}
-        >
-          Show Header
-        </button>
-      )}
+        {/* Restore button - only visible when header is hidden */}
+        {!showHeader && (
+          <button
+            className="header-restore-btn"
+            onClick={() => setShowHeader(true)}
+          >
+            Show Header
+          </button>
+        )}
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/debate/:debateId" element={<DebatePage />} />
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/debate/:debateId" element={<DebatePage />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/register" element={<AdminRegister />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/register" element={<AdminRegister />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-        {/* Debate Manager Routes */}
-        <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
-        <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
-        <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
-        <Route path="/debate-manager/debates/:id/user-questions" element={<UserQuestionsPage />} />
-        <Route path="/debate-manager/user-questions" element={<Navigate to="/debate-manager/dashboard" replace />} />
-        <Route path="/debate-manager/live" element={<LiveDebatePage />} />
-        {/* Other */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AuthProvider>
+            {/* Debate Manager Routes */}
+            <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
+            <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
+            <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
+            <Route path="/debate-manager/debates/:id/user-questions" element={<UserQuestionsPage />} />
+            <Route path="/debate-manager/user-questions" element={<Navigate to="/debate-manager/dashboard" replace />} />
+            <Route path="/debate-manager/live" element={<LiveDebatePage />} />
+            {/* Other */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

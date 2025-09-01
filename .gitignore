@@ -33,3 +33,6 @@ appsettings.json
 # OS-specific files
 .DS_Store
 Thumbs.db
+LoadTests/reports/
+*.html
+*test-signalr*

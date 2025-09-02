@@ -308,6 +308,7 @@ export default function DebateManagerDashboard() {
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
                                 </div>
+                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         ) : (
                             <>
@@ -316,7 +317,9 @@ export default function DebateManagerDashboard() {
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
                                     <button onClick={endLive} className="table-button danger">End Live Debate</button>
+
                                 </div>
+                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         )}
                     </div>

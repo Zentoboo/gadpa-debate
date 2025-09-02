@@ -246,13 +246,27 @@ export default function DebateManagerDashboard() {
 
         if (!window.confirm(confirmationMessage)) return;
 
+        console.log("Attempting to end debate...");
+
         authFetch("http://localhost:5076/debate-manager/live/end", { method: "POST" })
-            .then(res => res.json())
-            .then(() => {
+            .then(async res => {
+                const responseData = await res.json();
+                console.log("End debate response:", res.status, responseData);
+
+                if (!res.ok) {
+                    throw new Error(responseData.message || `HTTP ${res.status}`);
+                }
+                return responseData;
+            })
+            .then((data) => {
+                console.log("Debate ended successfully:", data);
                 refreshLiveStatus();
                 setHeatmapData(null);
             })
-            .catch(err => alert(err.message));
+            .catch(err => {
+                console.error("Error ending debate:", err);
+                alert(`Failed to end debate: ${err.message}`);
+            });
     };
 
     const deleteDebate = (id) => {

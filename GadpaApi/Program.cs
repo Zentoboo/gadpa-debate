@@ -54,7 +54,7 @@ public class Program
         {
             Console.WriteLine("❌ .env file not found");
         }
-        
+
         var builder = WebApplication.CreateBuilder(args);
 
         // Configure Kestrel server for high concurrent connections
@@ -89,18 +89,18 @@ public class Program
         .AddJwtBearer(options =>
         {
             // Get JWT key from environment variable in production, fallback to config
-            var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+            var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
                          ?? builder.Configuration["Jwt:Key"];
-            
+
             Console.WriteLine($"🔑 Using JWT key (first 20 chars): {jwtKey?.Substring(0, Math.Min(20, jwtKey?.Length ?? 0))}...");
-            
+
             if (string.IsNullOrEmpty(jwtKey) || jwtKey.Contains("REPLACE_WITH"))
             {
                 throw new InvalidOperationException(
                     "JWT secret key must be set via JWT_SECRET_KEY environment variable in production. " +
                     "Generate a secure key with: openssl rand -base64 64");
             }
-            
+
             var key = Encoding.UTF8.GetBytes(jwtKey);
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -124,11 +124,11 @@ public class Program
             options.AddPolicy("ReactApp", b =>
             {
                 // Get allowed origins from environment variable or use development defaults
-                var allowedOrigins = Environment.GetEnvironmentVariable("FRONTEND_URLS")?.Split(',') 
+                var allowedOrigins = Environment.GetEnvironmentVariable("FRONTEND_URLS")?.Split(',')
                                    ?? new[] { "http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:3001" };
-                
+
                 Console.WriteLine($"🌐 CORS allowed origins: {string.Join(", ", allowedOrigins)}");
-                
+
                 b.WithOrigins(allowedOrigins)
                  .AllowAnyMethod()
                  .AllowAnyHeader()
@@ -139,11 +139,11 @@ public class Program
         // Token service and memory cache
         builder.Services.AddSingleton<TokenService>();
         builder.Services.AddMemoryCache();
-        
+
         // Health checks
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>();
-        
+
         // SignalR with optimized settings for 300+ concurrent users
         builder.Services.AddSignalR(options =>
         {
@@ -155,7 +155,7 @@ public class Program
             options.MaximumParallelInvocationsPerClient = 5; // Prevent client spam
             options.EnableDetailedErrors = false; // Disable for performance
         }).AddMessagePackProtocol(); // More efficient than JSON for high load
-        
+
         // Background timer service for live debate updates
         builder.Services.AddSingleton<GadpaDebateApi.Services.DebateTimerService>();
         builder.Services.AddHostedService(provider => provider.GetService<GadpaDebateApi.Services.DebateTimerService>()!);
@@ -184,7 +184,7 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAuthRateLimit();
-        
+
         // Health check endpoint
         app.MapHealthChecks("/health");
 
@@ -1115,12 +1115,15 @@ public class Program
             var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
             var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
                 .FirstOrDefaultAsync(ld => (ld.IsActive || ld.IsPreviewable) && ld.DebateManagerId == userId);
 
             if (liveDebate == null)
             {
                 return Results.NotFound(new { message = "No live or scheduled debate found to end." });
             }
+
+            liveDebate.Debate.ScheduledStartTime = null;
 
             db.LiveDebates.Remove(liveDebate);
             await db.SaveChangesAsync();

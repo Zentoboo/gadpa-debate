@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GadpaApi.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialCreateMSSql : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,11 +15,11 @@ namespace GadpaApi.Migrations
                 name: "AppSettings",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Key = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Key = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -30,9 +30,9 @@ namespace GadpaApi.Migrations
                 name: "BannedIps",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    IpAddress = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -43,16 +43,16 @@ namespace GadpaApi.Migrations
                 name: "Debates",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedByUserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ScheduledStartTime = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    AllowUserQuestions = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MaxQuestionsPerUser = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedByUserId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ScheduledStartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AllowUserQuestions = table.Column<bool>(type: "bit", nullable: false),
+                    MaxQuestionsPerUser = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -63,11 +63,11 @@ namespace GadpaApi.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Username = table.Column<string>(type: "TEXT", nullable: false),
-                    PasswordHash = table.Column<string>(type: "TEXT", nullable: false),
-                    Role = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -78,12 +78,12 @@ namespace GadpaApi.Migrations
                 name: "DebateQuestions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    DebateId = table.Column<int>(type: "INTEGER", nullable: false),
-                    RoundNumber = table.Column<int>(type: "INTEGER", nullable: false),
-                    Question = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DebateId = table.Column<int>(type: "int", nullable: false),
+                    RoundNumber = table.Column<int>(type: "int", nullable: false),
+                    Question = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -100,14 +100,14 @@ namespace GadpaApi.Migrations
                 name: "UserSubmittedQuestions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    DebateId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Question = table.Column<string>(type: "TEXT", nullable: false),
-                    IpAddress = table.Column<string>(type: "TEXT", nullable: false),
-                    SubmittedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    IsApproved = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsUsed = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DebateId = table.Column<int>(type: "int", nullable: false),
+                    Question = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    IsUsed = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -124,14 +124,14 @@ namespace GadpaApi.Migrations
                 name: "LiveDebates",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    DebateId = table.Column<int>(type: "INTEGER", nullable: false),
-                    DebateManagerId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CurrentRound = table.Column<int>(type: "INTEGER", nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsPreviewable = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DebateId = table.Column<int>(type: "int", nullable: false),
+                    DebateManagerId = table.Column<int>(type: "int", nullable: false),
+                    CurrentRound = table.Column<int>(type: "int", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsPreviewable = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -154,12 +154,12 @@ namespace GadpaApi.Migrations
                 name: "FireEvents",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    IpAddress = table.Column<string>(type: "TEXT", nullable: false),
-                    Timestamp = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    FireCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    LiveDebateId = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FireCount = table.Column<int>(type: "int", nullable: false),
+                    LiveDebateId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -67,17 +67,24 @@ public class Program
             options.Limits.MaxRequestBodySize = 1024 * 1024; // 1MB limit
         });
 
-        // EF Core + SQLite with connection pooling for concurrent access
+        // EF Core + Mssql with connection pooling for concurrent access
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            options.UseSqlite(connectionString, sqliteOptions =>
+            options.UseSqlServer(connectionString, sqlServerOptions =>
             {
-                sqliteOptions.CommandTimeout(30); // 30 second timeout for operations
+                sqlServerOptions.CommandTimeout(30);
+                sqlServerOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null
+                );
             });
+
             options.EnableServiceProviderCaching();
-            options.EnableSensitiveDataLogging(false); // Disable for performance
+            options.EnableSensitiveDataLogging(false);
         }, ServiceLifetime.Scoped);
+
 
         // JWT Authentication
         builder.Services.AddAuthentication(options =>

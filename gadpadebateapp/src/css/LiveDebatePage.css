@@ -316,17 +316,20 @@
 
 /* Loading Status */
 .loading-status {
-    background: rgba(79, 70, 229, 0.1);
-    border: 1px solid #4f46e5;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+
+    background: rgba(30, 32, 37, 0.75);
     border-radius: 8px;
-    padding: 0.5rem 1rem;
-    color: #4f46e5;
-    font-weight: 500;
-    font-size: 0.9rem;
-    text-align: center;
-    animation: fade-in 0.3s ease;
-    grid-column: 1 / -1;
-    margin-top: 1rem;
+    border: 1px solid rgba(190, 48, 48, 0.6);
+    padding: 0.7rem 1.5rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Status Message */

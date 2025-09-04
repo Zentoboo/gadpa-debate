@@ -124,7 +124,7 @@ export default function LiveDebatePage() {
 
         const interval = setInterval(() => {
             // Use cache busting every few refreshes to ensure we get fresh data
-            const shouldBustCache = Math.random() < 0.3; // 30% chance to bust cache
+            const shouldBustCache = Math.random() < 0.3;
             refreshLiveStatus(false, shouldBustCache);
         }, 30000);
 
@@ -343,7 +343,7 @@ export default function LiveDebatePage() {
                         }}
                         title="Refresh data to see latest changes"
                     >
-                        🔄 Refresh
+                        Refresh
                     </button>
                     <FireCountDisplay
                         token={token}
@@ -460,20 +460,21 @@ export default function LiveDebatePage() {
                                 "End"
                             )}
                         </button>
-
-                        {actionLoading && (
-                            <div className="loading-status">
-                                {loadingAction === "prev" && "Going to previous round..."}
-                                {loadingAction === "next" && "Going to next round..."}
-                                {loadingAction === "end" && "Ending debate..."}
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
 
+            {/* Floating Loading Status */}
+            {actionLoading && (
+                <div className="loading-status">
+                    {loadingAction === "prev" && "Going to previous round..."}
+                    {loadingAction === "next" && "Going to next round..."}
+                    {loadingAction === "end" && "Ending debate..."}
+                </div>
+            )}
+
             {/* Debug info */}
-            {process.env.NODE_ENV === 'development' && (
+            {/* {process.env.NODE_ENV === 'development' && (
                 <div style={{
                     position: 'fixed',
                     bottom: '10px',
@@ -495,7 +496,7 @@ export default function LiveDebatePage() {
                     <div>Details Questions: {debateDetails?.questions?.length || 0}</div>
                     <div>Status Questions: {liveStatus?.debate?.questions?.length || 0}</div>
                 </div>
-            )}
+            )} */}
         </div>
     );
 }

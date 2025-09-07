@@ -66,25 +66,12 @@ public class DebateTimerService : BackgroundService
                 hasViewers = _hasActiveViewers;
             }
 
-            using var scope = _serviceProvider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            // Always check for scheduled debates that need activation (low cost query with index)
-            var scheduledDebates = await db.Debates
-                .Where(d => d.ScheduledStartTime.HasValue && 
-                           d.ScheduledStartTime <= DateTime.UtcNow)
-                .Where(d => !db.LiveDebates.Any(ld => ld.DebateId == d.Id && ld.IsActive))
-                .Take(5) // Limit to prevent runaway queries
-                .ToListAsync();
-
-            foreach (var debate in scheduledDebates)
-            {
-                await ActivateScheduledDebate(db, debate);
-            }
-
             // Only do expensive live debate updates if there are active viewers
             if (hasViewers)
             {
+                using var scope = _serviceProvider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
                 var liveDebates = await db.LiveDebates
                     .Where(ld => ld.IsActive)
                     .Include(ld => ld.Debate)
@@ -93,7 +80,7 @@ public class DebateTimerService : BackgroundService
 
                 foreach (var liveDebate in liveDebates)
                 {
-                    await ProcessLiveDebate(db, liveDebate);
+                    await ProcessLiveDebate(liveDebate);
                 }
             }
         }
@@ -103,43 +90,7 @@ public class DebateTimerService : BackgroundService
         }
     }
 
-    private async Task ActivateScheduledDebate(AppDbContext db, Debate debate)
-    {
-        try
-        {
-            // Create new live debate for scheduled debate
-            var liveDebate = new LiveDebate
-            {
-                DebateId = debate.Id,
-                DebateManagerId = debate.CreatedByUserId, // Use creator as initial manager
-                CurrentRound = 1,
-                StartedAt = DateTime.UtcNow,
-                IsActive = true,
-                IsPreviewable = false,
-                Debate = debate // Set required navigation property
-            };
-
-            db.LiveDebates.Add(liveDebate);
-            await db.SaveChangesAsync();
-
-            // Broadcast that debate has started
-            await _hubContext.Clients.All.SendAsync("DebateStarted", new
-            {
-                debateId = debate.Id,
-                title = debate.Title,
-                currentRound = 1,
-                totalRounds = await db.DebateQuestions.Where(q => q.DebateId == debate.Id).CountAsync()
-            });
-
-            _logger.LogInformation("Scheduled debate {DebateId} activated automatically", debate.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error activating scheduled debate {DebateId}", debate.Id);
-        }
-    }
-
-    private async Task ProcessLiveDebate(AppDbContext db, LiveDebate liveDebate)
+    private async Task ProcessLiveDebate(LiveDebate liveDebate)
     {
         try
         {

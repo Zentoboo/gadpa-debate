@@ -15,6 +15,7 @@ namespace GadpaDebateApi.Services
         private readonly ILogger<ScheduledDebateService> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
         private Timer? _timer = null;
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         public ScheduledDebateService(ILogger<ScheduledDebateService> logger, IServiceScopeFactory scopeFactory)
         {
@@ -31,13 +32,21 @@ namespace GadpaDebateApi.Services
 
         private async void DoWork(object? state)
         {
-            _logger.LogInformation("Checking for scheduled debates to start.");
-            using var scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            // Prevent multiple instances from running simultaneously
+            if (!await _semaphore.WaitAsync(100))
+            {
+                _logger.LogDebug("Skipping scheduled debate check - previous check still running");
+                return;
+            }
 
             try
             {
+                _logger.LogDebug("Checking for scheduled debates to start.");
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
                 var now = DateTime.UtcNow;
+                int processedCount = 0;
 
                 // Find debates that should start now and have existing LiveDebate entries that are previewable
                 var debatesToActivate = await dbContext.LiveDebates
@@ -56,17 +65,40 @@ namespace GadpaDebateApi.Services
                     liveDebate.StartedAt = now; // Update the actual start time
 
                     _logger.LogInformation($"Auto-activating scheduled debate '{liveDebate.Debate.Title}' (ID: {liveDebate.Debate.Id}).");
+                    processedCount++;
                 }
 
                 // Handle standalone scheduled debates (not created via Go Live)
-                var standaloneDebatesToStart = await dbContext.Debates
-                    .Where(d => d.ScheduledStartTime.HasValue &&
-                                d.ScheduledStartTime.Value <= now &&
-                                !dbContext.LiveDebates.Any(ld => ld.DebateId == d.Id))
+                // Use a more robust query to prevent race conditions
+                var standaloneDebatesToStart = await dbContext.Database
+                    .SqlQueryRaw<int>(@"
+                        SELECT d.Id 
+                        FROM Debates d 
+                        WHERE d.ScheduledStartTime IS NOT NULL 
+                        AND d.ScheduledStartTime <= {0}
+                        AND NOT EXISTS (
+                            SELECT 1 FROM LiveDebates ld 
+                            WHERE ld.DebateId = d.Id
+                        )", now)
                     .ToListAsync();
 
-                foreach (var debate in standaloneDebatesToStart)
+                foreach (var debateId in standaloneDebatesToStart)
                 {
+                    // Double-check that no LiveDebate was created since our query
+                    var existingLive = await dbContext.LiveDebates
+                        .AnyAsync(ld => ld.DebateId == debateId);
+
+                    if (existingLive)
+                    {
+                        _logger.LogDebug($"Skipping debate {debateId} - LiveDebate already exists");
+                        continue;
+                    }
+
+                    var debate = await dbContext.Debates
+                        .FirstOrDefaultAsync(d => d.Id == debateId);
+
+                    if (debate == null) continue;
+
                     var liveDebate = new LiveDebate
                     {
                         DebateId = debate.Id,
@@ -77,19 +109,25 @@ namespace GadpaDebateApi.Services
                         StartedAt = now,
                         DebateManagerId = debate.CreatedByUserId
                     };
+
                     dbContext.LiveDebates.Add(liveDebate);
                     _logger.LogInformation($"Auto-starting standalone scheduled debate '{debate.Title}' (ID: {debate.Id}).");
+                    processedCount++;
                 }
 
-                if (debatesToActivate.Any() || standaloneDebatesToStart.Any())
+                if (processedCount > 0)
                 {
                     await dbContext.SaveChangesAsync();
-                    _logger.LogInformation($"Processed {debatesToActivate.Count + standaloneDebatesToStart.Count} scheduled debates.");
+                    _logger.LogInformation($"Processed {processedCount} scheduled debates.");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while running the scheduled debate task.");
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
@@ -103,6 +141,7 @@ namespace GadpaDebateApi.Services
         public void Dispose()
         {
             _timer?.Dispose();
+            _semaphore?.Dispose();
         }
     }
 }

@@ -1,30 +1,54 @@
-/* === Modern Fonts Import === */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inconsolata:wght@200..900&display=swap');
+
+:root {
+    --background-color: #131316;
+    --text-color: #e0e0e0;
+    --heading-color: #fff;
+    --accent-color: #10b981;
+    --accent-hover: #34d399;
+    --secondary-color: #9ca3af;
+    --border-color: rgba(190, 48, 48, 0.6);
+    --card-background: rgba(20, 20, 20, 0.9);
+
+    /* Header */
+    --header-background: rgba(30, 32, 37, 0.75);
+    --header-background-hover: rgba(30, 32, 37, 0.9);
+
+    /* Fonts */
+    --font-heading: 'Karla', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+    --font-code: 'Inconsolata', monospace;
+
+    /* Spacing & transitions */
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 3rem;
+    --transition-default: 0.2s ease;
+}
 
 /* === Header / Navbar === */
 .header-container {
     position: fixed;
-    top: 1rem;
+    top: var(--spacing-sm);
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
     width: 90%;
     max-width: 1800px;
-    background: rgba(30, 32, 37, 0.6);
+    background: var(--header-background);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(190, 48, 48, 0.4);
+    border: 1px solid var(--border-color);
     padding: 0.75rem 1rem;
     border-radius: 9999px;
-    color: #fff;
-    font-family: "Inter", sans-serif;
-    /* Modern clean font */
+    color: var(--text-color);
+    font-family: var(--font-body);
     font-weight: 400;
-    transition: background 0.3s, border 0.3s;
+    transition: background var(--transition-default), border var(--transition-default);
 }
 
 .header-container:hover {
-    background: rgba(30, 32, 37, 0.75);
-    border-color: rgba(190, 48, 48, 0.6);
+    background: var(--header-background-hover);
+    border-color: var(--border-color);
 }
 
 .header-inner {
@@ -36,14 +60,13 @@
 .logo {
     display: flex;
     align-items: center;
-    font-family: "Poppins", sans-serif;
-    /* Bold modern logo font */
+    font-family: var(--font-heading);
     font-weight: 700;
     font-size: 1.35rem;
     letter-spacing: -0.02em;
     gap: 0.75rem;
     text-decoration: none;
-    color: #fff;
+    color: var(--heading-color);
 }
 
 .logo img {
@@ -56,7 +79,7 @@
     border: none;
     font-size: 1.75rem;
     cursor: pointer;
-    color: #fff;
+    color: var(--text-color);
 }
 
 .lg-hidden {
@@ -74,11 +97,11 @@
     top: 60px;
     right: 1rem;
     min-width: 220px;
-    background: rgba(20, 20, 24, 0.95);
+    background: var(--card-background);
     border-radius: 8px;
     transform: translateX(150%);
-    transition: transform 0.3s ease-in-out;
-    padding: 1rem;
+    transition: transform var(--transition-default);
+    padding: var(--spacing-sm);
     z-index: 50;
 }
 
@@ -102,41 +125,41 @@
 
 .main-nav a {
     text-decoration: none;
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     font-size: 0.9rem;
     text-transform: lowercase;
     letter-spacing: 0.06em;
-    color: #fff;
-    transition: color 0.2s;
+    color: var(--text-color);
+    transition: color var(--transition-default);
 }
 
 .main-nav a:hover,
 .main-nav a.active {
-    color: #be3030;
+    color: var(--border-color);
 }
 
 .nav-link-button {
     background: none;
     border: none;
     padding: 0;
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     font-size: 0.9rem;
     text-transform: lowercase;
     letter-spacing: 0.06em;
-    color: #fff;
+    color: var(--text-color);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color var(--transition-default);
 }
 
 .nav-link-button:hover {
-    color: #be3030;
+    color: var(--border-color);
     background: none;
 }
 
 .nav-link-button[style] {
-    transition: opacity 0.2s ease-in-out;
+    transition: opacity var(--transition-default);
 }
 
 .nav-link-button[style]:hover {
@@ -145,11 +168,11 @@
 
 /* Role labels (admin / debate-manager) */
 .main-nav span {
-    font-family: "Poppins", sans-serif;
+    font-family: var(--font-code);
     font-weight: 600;
     letter-spacing: 0.08em;
     font-size: 0.8rem;
-    text-transform: uppercase;
+    text-transform: lowercase;
 }
 
 /* Desktop nav styles */
@@ -178,13 +201,13 @@
     .main-nav a,
     .nav-link-button {
         text-decoration: none;
-        color: #fff;
+        color: var(--text-color);
     }
 
     .main-nav a:hover,
     .main-nav a.active,
     .nav-link-button:hover {
-        color: #be3030;
+        color: var(--border-color);
     }
 }
 
@@ -194,9 +217,9 @@
     top: 0.75rem;
     right: 0.75rem;
     z-index: 1100;
-    background: rgba(30, 32, 37, 0.6);
-    border: 1px solid rgba(190, 48, 48, 0.6);
-    color: #fff;
+    background: var(--header-background);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     font-size: 0.9rem;
     width: auto;
     height: auto;
@@ -206,12 +229,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s, background 0.2s, transform 0.2s;
+    transition: opacity var(--transition-default), background var(--transition-default), transform var(--transition-default);
 }
 
 .header-restore-btn:hover {
     opacity: 1;
-    background: rgba(190, 48, 48, 0.9);
+    background: rgba(190, 48, 48, 0.2);
     transform: scale(1.1);
-    background-color: rgba(190, 48, 48, 0.2);
 }

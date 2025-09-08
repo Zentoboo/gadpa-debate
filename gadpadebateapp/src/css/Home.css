@@ -7,7 +7,7 @@
     --accent-color: #10b981;
     --accent-hover: #34d399;
     --secondary-color: #9ca3af;
-    --border-color: #333;
+    --border-color-debatetable: #333;
     --card-background: rgba(20, 20, 20, 0.9);
     --font-heading: 'Karla', sans-serif;
     --font-body: 'Open Sans', sans-serif;
@@ -120,7 +120,7 @@ section {
     width: 100%;
     border-collapse: collapse;
     background: var(--card-background);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color-debatetable);
     border-radius: 8px;
     overflow: hidden;
     min-width: 600px;
@@ -129,7 +129,7 @@ section {
 .debates-table th,
 .debates-table td {
     padding: var(--spacing-sm);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color-debatetable);
     text-align: left;
     vertical-align: middle;
 }
@@ -324,7 +324,7 @@ section {
     .debates-table tr {
         display: block;
         margin-bottom: 1.5rem;
-        border: 1px solid var(--border-color);
+        border: 1px solid var(--border-color-debatetable);
         border-radius: 8px;
         background: var(--card-background);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -334,7 +334,7 @@ section {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color-debatetable);
         padding: var(--spacing-sm);
         font-size: 0.9rem;
     }

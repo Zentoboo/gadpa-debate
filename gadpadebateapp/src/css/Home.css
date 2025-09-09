@@ -1,21 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inconsolata:wght@200..900&display=swap');
 
 :root {
+    /* Color Palette */
     --background-color: #131316;
     --text-color: #e0e0e0;
     --heading-color: #fff;
     --accent-color: #10b981;
     --accent-hover: #34d399;
     --secondary-color: #9ca3af;
-    --border-color-debatetable: #333;
+    --border-color: #333;
+    --border-color--red: rgba(190, 48, 48, 0.6);
     --card-background: rgba(20, 20, 20, 0.9);
+    --footer-background: #0f0f12;
+
+    /* Header Specific */
+    --header-background: rgba(30, 32, 37, 0.75);
+    --header-background-hover: rgba(30, 32, 37, 0.9);
+
+    /* Fonts */
     --font-heading: 'Karla', sans-serif;
     --font-body: 'Open Sans', sans-serif;
     --font-code: 'Inconsolata', monospace;
+
+    /* Spacing & Transitions */
     --spacing-sm: 1rem;
     --spacing-md: 2rem;
     --spacing-lg: 3rem;
     --transition-default: 0.2s ease;
+
+    /* New variables for card effect */
+    --mouse-x: 0px;
+    --mouse-y: 0px;
+
 }
 
 * {
@@ -49,9 +65,9 @@ section {
     min-height: 100vh;
 }
 
-/* ==================================== */
-/* === Title Section === */
-/* ==================================== */
+/* ==================================== /
+/ === Title Section === /
+/ ==================================== */
 .title {
     text-align: center;
     margin-bottom: var(--spacing-lg);
@@ -72,9 +88,9 @@ section {
     margin: 0;
 }
 
-/* ==================================== */
-/* === Debates Section === */
-/* ==================================== */
+/* ==================================== /
+/ === Debates Section === /
+/ ==================================== */
 .debates {
     width: 100%;
 }
@@ -105,9 +121,9 @@ section {
     padding: var(--spacing-lg);
 }
 
-/* ==================================== */
-/* === Debates Table === */
-/* ==================================== */
+/* ==================================== /
+/ === Debates Table === /
+/ ==================================== */
 .debates-table-container {
     width: 100%;
     overflow-x: auto;
@@ -178,6 +194,7 @@ section {
     50% {
         opacity: 0.5;
     }
+
 }
 
 .join-debate-btn {
@@ -197,9 +214,9 @@ section {
     background: var(--accent-hover);
 }
 
-/* ==================================== */
-/* === Content Sections === */
-/* ==================================== */
+/* ==================================== /
+/ === Content Sections  === /
+/ ==================================== */
 .content-section {
     text-align: center;
     max-width: 800px;
@@ -235,9 +252,9 @@ section {
     color: var(--accent-hover);
 }
 
-/* ==================================== */
-/* === Loading & Error States === */
-/* ==================================== */
+/* ==================================== /
+/ === Loading & Error States === /
+/ ==================================== */
 .loading-state,
 .error-state {
     text-align: center;
@@ -268,9 +285,187 @@ section {
     background: var(--accent-hover);
 }
 
-/* ==================================== */
-/* === Animations === */
-/* ==================================== */
+/* ==================================== /
+/ === About Page Layout === /
+/ ==================================== */
+.about-container {
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.header-section {
+    text-align: center;
+}
+
+.header-section .title {
+    border-bottom: 2px solid #374151;
+    padding-bottom: 1rem;
+}
+
+.header-section .subtitle {
+    margin: 0;
+}
+
+.content-section {
+    padding: 2rem;
+    margin-bottom: 1rem;
+}
+
+.content-section .section-heading {
+    color: var(--text-color);
+    font-size: 1.5rem;
+    margin: 0 0 1.5rem 0;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 0.75rem;
+}
+
+.content-section .section-text {
+    color: #e0e0e0;
+    line-height: 1.7;
+}
+
+.content-section .section-text p {
+    margin-bottom: 1.2rem;
+}
+
+.content-section .section-text p:last-child {
+    margin-bottom: 0;
+}
+
+/* ==================================== /
+/ === Card & Grid === /
+/ ==================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.card {
+    background-color: #111827;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.card-title {
+    color: #10b981;
+    font-size: 1.2rem;
+    margin: 0 0 0.75rem 0;
+    font-weight: 600;
+}
+
+.card p {
+    color: #9ca3af;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ==================================== /
+/ === Steps Specific Card Styles === /
+/ ==================================== */
+.step-card-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.step-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.step-number {
+    background: #10b981;
+    color: #fff;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 1.2rem;
+}
+
+/* ==================================== /
+/ === Call to Action === /
+/ ==================================== */
+.cta-section {
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin-top: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.cta-section h3 {
+    color: #fff;
+    font-size: 1.4rem;
+    margin: 0 0 1rem 0;
+}
+
+.cta-section p {
+    color: #9ca3af;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.home-button {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.9rem 2rem;
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    background-size: 200% 200%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 9999px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    transition: transform 0.25s ease;
+    animation: gradientFlow 6s ease infinite;
+}
+
+.home-button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.6);
+}
+
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+
+}
+
+/* ==================================== /
+/ === Animations === /
+/ ==================================== */
 .hidden {
     opacity: 0;
     transform: translateY(50px);
@@ -282,9 +477,9 @@ section {
     transform: translateY(0);
 }
 
-/* ==================================== */
-/* === Responsive Design === */
-/* ==================================== */
+/* ==================================== /
+/ === Responsive Design === /
+/ ==================================== */
 @media (max-width: 768px) {
     section {
         min-height: auto;
@@ -356,4 +551,104 @@ section {
     .debates-table .status-live {
         justify-content: flex-end;
     }
+
+}
+
+/* ==================================== /
+/ === Card Effect Styles === /
+/ ==================================== */
+.steps-section-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    position: relative;
+}
+
+.step-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.step-card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+
+}
+
+.step-card::before,
+.step-card::after {
+    border-radius: inherit;
+    content: "";
+    height: 100%;
+    left: 0px;
+    opacity: 0;
+    position: absolute;
+    top: 0px;
+    transition: opacity 500ms;
+    width: 100%;
+    pointer-events: none;
+}
+
+.step-card:hover::after {
+    opacity: 1;
+}
+
+.step-card::before {
+    background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y),
+            rgba(255, 255, 255, 0.06),
+            transparent 40%);
+    z-index: 3;
+}
+
+.step-card::after {
+    background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y),
+            rgba(255, 255, 255, 0.15),
+            transparent 35%);
+    z-index: 1;
+}
+
+.step-card .card-content {
+    background-color: var(--card-background);
+    border-radius: inherit;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    inset: 1px;
+    padding: 10px;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-card .step-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.step-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--heading-color);
+}
+
+.step-card p {
+    color: var(--secondary-color);
 }

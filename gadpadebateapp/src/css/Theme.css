@@ -1,4 +1,34 @@
-/* === Base (Background + Text) === */
+@import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inconsolata:wght@200..900&display=swap');
+
+:root {
+    /* Color Palette */
+    --background-color: #131316;
+    --text-color: #e0e0e0;
+    --heading-color: #fff;
+    --accent-color: #10b981;
+    --accent-hover: #34d399;
+    --secondary-color: #9ca3af;
+    --border-color: #333;
+    --border-color--red: rgba(190, 48, 48, 0.6);
+    --card-background: rgba(20, 20, 20, 0.9);
+    --footer-background: #0f0f12;
+
+    /* Header Specific */
+    --header-background: rgba(30, 32, 37, 0.75);
+    --header-background-hover: rgba(30, 32, 37, 0.9);
+
+    /* Fonts */
+    --font-heading: 'Karla', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+    --font-code: 'Inconsolata', monospace;
+
+    /* Spacing & Transitions */
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 3rem;
+    --transition-default: 0.2s ease;
+}
+
 html,
 body,
 #root {

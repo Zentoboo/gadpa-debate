@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from "react";
-import "../css/About.css";
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 // Fade-in wrapper component for scroll animations
-function FadeInSection({ children, className = "" }) {
+function FadeInSection({ children }) {
     const ref = useRef();
 
     useEffect(() => {
@@ -26,104 +26,97 @@ function FadeInSection({ children, className = "" }) {
     }, []);
 
     return (
-        <section ref={ref} className={`hidden ${className}`}>
+        <section ref={ref} className="hidden">
             {children}
         </section>
     );
 }
 
 export default function About() {
+    const location = useLocation();
+    const cardsContainerRef = useRef(null);
+
+    useEffect(() => {
+        const handleMouseMove = e => {
+            if (!cardsContainerRef.current) return;
+
+            const cards = cardsContainerRef.current.getElementsByClassName("step-card");
+            for (const card of cards) {
+                const rect = card.getBoundingClientRect(),
+                    x = e.clientX - rect.left,
+                    y = e.clientY - rect.top;
+
+                card.style.setProperty("--mouse-x", `${x}px`);
+                card.style.setProperty("--mouse-y", `${y}px`);
+            };
+        };
+
+        const container = cardsContainerRef.current;
+        if (container) {
+            container.addEventListener("mousemove", handleMouseMove);
+        }
+
+        return () => {
+            if (container) {
+                container.removeEventListener("mousemove", handleMouseMove);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        // Scroll to the top when the component mounts
+        window.scrollTo(0, 0);
+    }, [location.pathname]);
+
     return (
-        <div className="about-container">
+        <div>
             <section>
-                <div>
-                    <h1 className="about-title">About Public Debates</h1>
-                    <p className="about-subtitle">
-                        Learn about our debate platform and what makes it unique
+                <div className="header-section">
+                    <h1 className="title">About Public Debates</h1>
+                    <p className="subtitle">Learn about our debate platform and what makes it unique</p>
+                </div>
+                <div className="content-section">
+                    <h2>What is Gadpa Election 2025-2026?</h2>
+                    <p>
+                        The Gadpa Election 2025-2026 is a groundbreaking online platform dedicated to fostering
+                        healthy, respectful, and engaging public debates. We believe that open discussion is vital for
+                        a well-informed society, and our platform is designed to make it easy for users to connect,
+                        share their perspectives, and engage with others on important topics. Our core mission is to
+                        redefine online discourse by providing a space where diverse viewpoints can be expressed without
+                        fear of personal attacks or harassment.
                     </p>
                 </div>
-                <div className="about-section">
-                    <h2 className="section-heading">What is Gadpa Election 2025-2026?</h2>
-                    <div className="section-content">
-                        <p>
-                            The Gadpa Election 2025-2026 represents a pivotal moment in democratic participation,
-                            where public discourse and debate play a crucial role in shaping the future. Our platform
-                            serves as a digital town hall, enabling citizens to engage in meaningful discussions about
-                            the issues that matter most.
-                        </p>
-                        <p>
-                            During this election cycle, we facilitate live debates on key topics ranging from economic
-                            policy to social reform, environmental initiatives to technological advancement. Each debate
-                            is structured to promote constructive dialogue and help participants better understand
-                            different perspectives on complex issues.
-                        </p>
-                    </div>
-                </div>
             </section>
-
             <FadeInSection>
-                <div className="about-section">
-                    <h2 className="section-heading">Key Features</h2>
-                    <div className="section-content">
-                        <div className="feature-grid">
-                            <div className="feature-card">
-                                <h3 className="feature-title">Interactive Debates</h3>
-                                <p>
-                                    Engage in live, moderated debates with real-time Q&A sessions.
-                                </p>
+                <h2>How It Works</h2>
+                <div className="steps-section">
+                    <div className="steps-section-cards" ref={cardsContainerRef}>
+                        <div className="card step-card">
+                            <div className="step-number">1</div>
+                            <div className="step-content">
+                                <h4 className="card-title">Choose Your Side</h4>
+                                <p>Join a debate by selecting your preferred side of a public topic or election issue.</p>
                             </div>
-                            <div className="feature-card">
-                                <h3 className="feature-title">Transparent Process</h3>
-                                <p>
-                                    Access candidate profiles, debate transcripts, and voting information.
-                                </p>
+                        </div>
+                        <div className="card step-card">
+                            <div className="step-number">2</div>
+                            <div className="step-content">
+                                <h4 className="card-title">Participate & Engage</h4>
+                                <p>Contribute to the Heat by participating actively in the discussion rounds.</p>
                             </div>
-                            <div className="feature-card">
-                                <h3 className="feature-title">Community Driven</h3>
-                                <p>
-                                    Shape the conversation by suggesting topics and participating in polls.
-                                </p>
+                        </div>
+                        <div className="card step-card">
+                            <div className="step-number">3</div>
+                            <div className="step-content">
+                                <h4 className="card-title">Watch the Heat Rise</h4>
+                                <p>See real-time visualizations of community engagement and debate intensity.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </FadeInSection>
-
             <FadeInSection>
-                <div className="about-section">
-                    <h2 className="section-heading">How It Works</h2>
-                    <div className="section-content">
-                        <div className="steps-container">
-                            <div className="step-item">
-                                <div className="step-number">1</div>
-                                <div className="step-content">
-                                    <h4>Find a Debate</h4>
-                                    <p>Browse available debates on the home page and join one that interests you.</p>
-                                </div>
-                            </div>
-
-                            <div className="step-item">
-                                <div className="step-number">2</div>
-                                <div className="step-content">
-                                    <h4>Participate & Engage</h4>
-                                    <p>Contribute to the Heat by participating actively in the discussion rounds.</p>
-                                </div>
-                            </div>
-
-                            <div className="step-item">
-                                <div className="step-number">3</div>
-                                <div className="step-content">
-                                    <h4>Watch the Heat Rise</h4>
-                                    <p>See real-time visualizations of community engagement and debate intensity.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </FadeInSection>
-
-            <FadeInSection>
-                <div className="about-cta">
+                <div className="cta-section">
                     <h3>Ready to Join the Conversation?</h3>
                     <p>
                         Head back to the home page to see what debates are currently live and join the discussion.

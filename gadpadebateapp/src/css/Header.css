@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inconsolata:wght@200..900&display=swap');
-
 :root {
     --background-color: #131316;
     --text-color: #e0e0e0;
@@ -7,7 +5,7 @@
     --accent-color: #10b981;
     --accent-hover: #34d399;
     --secondary-color: #9ca3af;
-    --border-color: rgba(190, 48, 48, 0.6);
+    --border-color-red: rgba(190, 48, 48, 0.6);
     --card-background: rgba(20, 20, 20, 0.9);
 
     /* Header */
@@ -37,7 +35,7 @@
     max-width: 1800px;
     background: var(--header-background);
     backdrop-filter: blur(8px);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color-red);
     padding: 0.75rem 1rem;
     border-radius: 9999px;
     color: var(--text-color);
@@ -48,7 +46,7 @@
 
 .header-container:hover {
     background: var(--header-background-hover);
-    border-color: var(--border-color);
+    border-color: var(--border-color-red);
 }
 
 .header-inner {
@@ -136,7 +134,7 @@
 
 .main-nav a:hover,
 .main-nav a.active {
-    color: var(--border-color);
+    color: var(--border-color-red);
 }
 
 .nav-link-button {
@@ -154,7 +152,7 @@
 }
 
 .nav-link-button:hover {
-    color: var(--border-color);
+    color: var(--border-color-red);
     background: none;
 }
 
@@ -207,7 +205,7 @@
     .main-nav a:hover,
     .main-nav a.active,
     .nav-link-button:hover {
-        color: var(--border-color);
+        color: var(--border-color-red);
     }
 }
 
@@ -218,7 +216,7 @@
     right: 0.75rem;
     z-index: 1100;
     background: var(--header-background);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color-red);
     color: var(--text-color);
     font-size: 0.9rem;
     width: auto;

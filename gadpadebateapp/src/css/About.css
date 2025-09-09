@@ -47,7 +47,7 @@
 }
 
 .section-content {
-    color: #ccc;
+    color: #e0e0e0;
     line-height: 1.7;
 }
 
@@ -65,7 +65,7 @@
 
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
     margin: 2rem 0;
 }
@@ -73,26 +73,25 @@
 .feature-card {
     background: #111827;
     border: 1px solid #374151;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 1.5rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .feature-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-color: #4b5563;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
 .feature-title {
-    color: #fff;
-    font-size: 1.1rem;
+    color: #10b981;
+    font-size: 1.2rem;
     margin: 0 0 0.75rem 0;
     font-weight: 600;
 }
 
 .feature-card p {
-    color: #d1d5db;
+    color: #9ca3af;
     font-size: 0.95rem;
     line-height: 1.6;
     margin: 0;
@@ -116,32 +115,38 @@
     padding: 1rem;
     background: #111827;
     border: 1px solid #374151;
-    border-radius: 6px;
+    border-radius: 8px;
+    transition: transform 0.25s ease;
+}
+
+.step-item:hover {
+    transform: translateX(5px);
 }
 
 .step-number {
-    background: #3b82f6;
+    background: #10b981;
     color: #fff;
-    width: 2rem;
-    height: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
     flex-shrink: 0;
+    font-size: 1.2rem;
 }
 
 .step-content h4 {
     color: #fff;
-    font-size: 1rem;
+    font-size: 1.1rem;
     margin: 0 0 0.5rem 0;
     font-weight: 600;
 }
 
 .step-content p {
-    color: #d1d5db;
-    font-size: 0.9rem;
+    color: #9ca3af;
+    font-size: 0.95rem;
     line-height: 1.5;
     margin: 0;
 }
@@ -151,12 +156,13 @@
 /* ==================================== */
 
 .about-cta {
-    background: #1f2937;
-    border: 2px solid #3b82f6;
-    border-radius: 8px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid #10b981;
+    border-radius: 12px;
     padding: 2rem;
     text-align: center;
     margin-top: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .about-cta h3 {
@@ -166,19 +172,18 @@
 }
 
 .about-cta p {
-    color: #d1d5db;
+    color: #9ca3af;
     font-size: 1.1rem;
     line-height: 1.6;
     margin: 0;
 }
 
-/* home link */
 .home-button {
     display: inline-block;
     margin-top: 1.5rem;
     padding: 0.9rem 2rem;
-    background: linear-gradient(270deg, #ef4444, #f97316, #facc15, #ef4444);
-    background-size: 600% 600%;
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    background-size: 200% 200%;
     color: #fff;
     font-weight: 700;
     font-size: 1.1rem;
@@ -195,10 +200,19 @@
 }
 
 @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
+
 /* ==================================== */
 /* === Responsive Design === */
 /* ==================================== */
@@ -215,10 +229,6 @@
 
     .about-section {
         padding: 1.5rem;
-    }
-
-    .section-heading {
-        font-size: 1.3rem;
     }
 
     .feature-grid {
@@ -241,20 +251,16 @@
     }
 }
 
-@media (max-width: 480px) {
-    .about-container {
-        padding: 0.75rem;
-    }
+/* ==================================== */
+/* === Animations === */
+/* ==================================== */
+.hidden {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 1s ease, transform 1s ease;
+}
 
-    .about-title {
-        font-size: 1.5rem;
-    }
-
-    .about-section {
-        padding: 1rem;
-    }
-
-    .feature-card {
-        padding: 1rem;
-    }
+.show {
+    opacity: 1;
+    transform: translateY(0);
 }

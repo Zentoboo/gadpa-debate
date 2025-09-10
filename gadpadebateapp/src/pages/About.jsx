@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import BackgroundPulse from "../components/BackgroundPulse";
 
 // Fade-in wrapper component for scroll animations
 function FadeInSection({ children }) {
@@ -70,6 +71,7 @@ export default function About() {
 
     return (
         <div>
+            <BackgroundPulse/>
             <section>
                 <div className="header-section">
                     <h1 className="title">About Public Debates</h1>

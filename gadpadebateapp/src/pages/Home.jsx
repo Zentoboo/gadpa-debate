@@ -172,7 +172,7 @@ function Home() {
           <p>Indonesian Student Election Management System</p>
         </div>
 
-        <div className="debates">
+        <div className="debates" style={{maxWidth: "1200px"}}>
           <h2>Debates</h2>
           {!liveStatus.isLive ? (
             <NoDebates />

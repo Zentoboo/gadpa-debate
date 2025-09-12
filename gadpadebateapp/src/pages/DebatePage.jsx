@@ -203,14 +203,20 @@ export default function DebatePage() {
     };
 
     if (loading) {
-        return <div className="debate-page-container"><p>Loading debate...</p></div>;
+        return (
+            <div className="debate-page-container loading-container">
+                <p className="loading-text">Loading debate...</p>
+            </div>
+        );
     }
 
     if (error) {
         return (
             <div className="debate-page-container">
-                <p className="error-message">{error}</p>
-                <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                <div className="status-section fade-in">
+                    <p className="error-message">{error}</p>
+                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                </div>
             </div>
         );
     }
@@ -218,8 +224,11 @@ export default function DebatePage() {
     if (!debate) {
         return (
             <div className="debate-page-container">
-                <p>Debate not found or is no longer live.</p>
-                <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                <div className="status-section fade-in">
+                    <h1 className="status-title">Debate Not Found</h1>
+                    <p className="status-message">The debate may have ended or does not exist.</p>
+                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                </div>
             </div>
         );
     }
@@ -229,123 +238,141 @@ export default function DebatePage() {
 
     const hasReachedQuestionLimit = userQuestionsCount >= (debate.maxQuestionsPerUser || 3);
     const canSubmitQuestions = debate.allowUserQuestions && debate.isLive && !showCountdown && !hasReachedQuestionLimit;
+    const isSuccess = questionMessage.toLowerCase().includes('successfully');
 
     return (
-        <div className="debate-page-container">
-            <div className="debate-details">
-                <h1 className="debate-title">{debate.title}</h1>
-                <p className="debate-description">{debate.description}</p>
-            </div>
+        <main>
+            {/* === SECTION 1: Debate Info, Current Question, and Fire Support === */}
+            <section>
+                <div className="debate-header">
+                    <div className="debate-details">
+                        <h1 className="debate-title">{debate.title}</h1>
+                        <p className="debate-description">{debate.description}</p>
+                    </div>
 
-            {showCountdown ? (
-                <div className="fire-card">
-                    <h1 className="card-title">Debate is scheduled to begin soon!</h1>
-                    <p className="card-total">
-                        {debate.scheduledStartTime ? `Starts in: ${countdown}` : "Starting soon..."}
-                    </p>
-                    <p className="card-message">
-                        {countdown === "Starting now!" ?
-                            "The debate should be starting now! Refreshing..." :
-                            "Please check back when the countdown ends."
-                        }
-                    </p>
-                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
-                </div>
-            ) : debate.isLive ? (
-                <>
                     <div className="debate-info">
-                        <p className="debate-round">Round {debate.currentRound} out of {debate.totalRounds}</p>
+                        Round {debate.currentRound} out of {debate.totalRounds}
                     </div>
-                    {debate.currentQuestion && (
-                        <p className="debate-question">{debate.currentQuestion}</p>
-                    )}
-                    <div className={`fire-card ${isShaking ? "shake" : ""}`}>
-                        <h1 className="card-title">🔥 Show your support 🔥</h1>
-                        <p className="card-total">Total fires: {total}</p>
-                        <div className="fire-btn-wrapper">
-                            <button onClick={sendFire} className="fire-button">
-                                DETONATE
-                            </button>
-                            <div className="fire-animations">
-                                {fires.map((fire) => (
-                                    <span
-                                        key={fire.id}
-                                        className="fire-emoji"
-                                        style={{
-                                            left: `${fire.x}px`,
-                                            top: `${fire.y}px`,
-                                        }}
-                                    >
-                                        🔥
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                        {bursts.map((burst) => (
-                            <span key={burst.id} className="burst-emoji">
-                                💢
-                            </span>
-                        ))}
-                        {message && <p className="card-message">{message}</p>}
-                    </div>
+                </div>
 
-                    {/* Question submission section */}
-                    {debate.allowUserQuestions && (
-                        <div className="question-submission-card">
-                            <div className="question-header">
-                                <h3 className="card-title">Submit Question</h3>
-                                {(questionMessage || hasReachedQuestionLimit) && (
-                                    <span
-                                        className={`question-status ${questionMessage.includes('successfully') ? 'success' : 'error'}`}
-                                    >
-                                        {hasReachedQuestionLimit
-                                            ? `Max reached (${debate.maxQuestionsPerUser})`
-                                            : questionMessage}
-                                    </span>
-                                )}
+                {debate.isLive && !showCountdown ? (
+                    <>
+                        {/* Current Question Section */}
+                        {debate.currentQuestion && (
+                            <div className="current-question-section fade-in">
+                                <div className="question-label">Current Question</div>
+                                <p className="current-question">{debate.currentQuestion}</p>
                             </div>
-                            <div className="question-form">
-                                <textarea
-                                    value={userQuestion}
-                                    onChange={(e) => setUserQuestion(e.target.value)}
-                                    placeholder="Ask your question here..."
-                                    maxLength={500}
-                                    disabled={!canSubmitQuestions || questionSubmitting}
-                                    className="question-textarea"
-                                    rows={2}
-                                />
-                                <div className="question-form-footer">
-                                    <div className="question-info">
-                                        <span className="char-count">
-                                            {userQuestion.length}/500
+                        )}
+
+                        {/* Fire Interaction Section */}
+                        <div className={`fire-section fade-in ${isShaking ? "shake" : ""}`}>
+                            <h2 className="fire-title">🔥 Show Your Support 🔥</h2>
+                            <div className="fire-total">Total fires: {total}</div>
+                            <div className="fire-btn-wrapper">
+                                <button onClick={sendFire} className="fire-button">
+                                    DETONATE
+                                </button>
+                                <div className="fire-animations">
+                                    {fires.map((fire) => (
+                                        <span
+                                            key={fire.id}
+                                            className="fire-emoji"
+                                            style={{
+                                                left: `${fire.x}px`,
+                                                top: `${fire.y}px`,
+                                            }}
+                                        >
+                                            🔥
                                         </span>
-                                        <span className="questions-count">
-                                            {userQuestionsCount}/{debate.maxQuestionsPerUser} used
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={submitQuestion}
-                                        disabled={
-                                            !canSubmitQuestions ||
-                                            questionSubmitting ||
-                                            userQuestion.trim().length < 5
-                                        }
-                                        className="submit-question-btn"
-                                    >
-                                        {questionSubmitting ? "Submitting..." : "Submit"}
-                                    </button>
+                                    ))}
                                 </div>
                             </div>
+                            {bursts.map((burst) => (
+                                <span key={burst.id} className="burst-emoji">
+                                    💢
+                                </span>
+                            ))}
+                            {message && <p className="fire-message">{message}</p>}
                         </div>
-                    )}
-                </>
-            ) : (
-                <div className="fire-card">
-                    <h1 className="card-title">This debate is not currently live</h1>
-                    <p className="card-message">The debate may have ended or hasn't started yet.</p>
-                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
-                </div>
+                    </>
+                ) : (
+                    <>
+                        {/* Countdown or Not Live State Sections */}
+                        <div className="status-section fade-in">
+                            <h1 className="status-title">
+                                {showCountdown ? "Debate Starting Soon!" : "Debate Not Currently Live"}
+                            </h1>
+                            {showCountdown && (
+                                <>
+                                    <div className="countdown-display">{countdown}</div>
+                                    <p className="status-message">
+                                        {countdown === "Starting now!" ?
+                                            "The debate should be starting now! Refreshing..." :
+                                            "Please check back when the countdown ends. The debate will begin automatically."
+                                        }
+                                    </p>
+                                </>
+                            )}
+                            {!showCountdown && (
+                                <p className="status-message">The debate may have ended or hasn't started yet. Check the schedule for upcoming debates.</p>
+                            )}
+                            <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                        </div>
+                    </>
+                )}
+            </section>
+
+            {/* === SECTION 2: User Question Submission === */}
+            {debate.allowUserQuestions && (
+                <section>
+                    <div className="question-submission-section fade-in">
+                        <h3 className="question-section-title">Submit Your Question</h3>
+                        <div className="question-header">
+                            <span
+                                className={`question-status ${isSuccess ? 'success' : 'error'}`}
+                                style={{ display: (questionMessage || hasReachedQuestionLimit) ? 'inline-block' : 'none' }}
+                            >
+                                {hasReachedQuestionLimit
+                                    ? `Max reached (${debate.maxQuestionsPerUser})`
+                                    : questionMessage}
+                            </span>
+                        </div>
+                        <div className="question-form">
+                            <textarea
+                                value={userQuestion}
+                                onChange={(e) => setUserQuestion(e.target.value)}
+                                placeholder="Ask your question here..."
+                                maxLength={500}
+                                disabled={!canSubmitQuestions || questionSubmitting}
+                                className="question-textarea"
+                                rows={4}
+                            />
+                            <div className="question-form-footer">
+                                <div className="question-info">
+                                    <span className="char-count">
+                                        {userQuestion.length}/500
+                                    </span>
+                                    <span className="questions-count">
+                                        {userQuestionsCount}/{debate.maxQuestionsPerUser || 3} questions used
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={submitQuestion}
+                                    disabled={
+                                        !canSubmitQuestions ||
+                                        questionSubmitting ||
+                                        userQuestion.trim().length < 5
+                                    }
+                                    className="submit-question-btn"
+                                >
+                                    {questionSubmitting ? "Submitting..." : "Submit"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             )}
-        </div>
+        </main>
     );
 }

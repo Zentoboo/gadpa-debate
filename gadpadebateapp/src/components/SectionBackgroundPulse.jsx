@@ -20,14 +20,15 @@ export default function SectionBackgroundPulse() {
         <div
             ref={pulseRef}
             style={{
-                position: "absolute", // stays inside parent
+                position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
                 height: "100%",
                 background: "radial-gradient(circle at center, rgba(255,255,255,0.12), transparent 70%)",
                 opacity: 0.05,
-                zIndex: 0, // behind text
+                zIndex: 0,
+                pointerEvents: "none"
             }}
         />
     );

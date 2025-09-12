@@ -183,6 +183,7 @@ function Home() {
             />
           )}
         </div>
+        <div style={{height: "20vh"}}></div>
       </section>
 
       {/* About Section */}

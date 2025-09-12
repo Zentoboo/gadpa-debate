@@ -24,6 +24,13 @@
     margin-top: var(--spacing-lg);
     border-top: 1px solid var(--border-color);
     font-family: var(--font-body);
+    position: relative;
+    z-index: 1; 
+}
+
+.app-main {
+  position: relative;
+  z-index: 1;
 }
 
 .footer-container {

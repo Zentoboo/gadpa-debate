@@ -10,6 +10,7 @@ export default function UserQuestionsPage() {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [notification, setNotification] = useState(null);
 
     const authFetch = (url, options = {}) =>
         fetch(url, {
@@ -53,8 +54,23 @@ export default function UserQuestionsPage() {
         authFetch(
             `http://localhost:5076/debate-manager/debates/${id}/user-questions/${qid}/add-to-rounds`,
             { method: "POST" }
-        ).then(() => fetchQuestions());
+        )
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to add to rounds");
+                return res.json();
+            })
+            .then(data => {
+                setNotification(data.message || "Question added to rounds!");
+                fetchQuestions();
+                setTimeout(() => setNotification(null), 3000);
+            })
+            .catch(err => {
+                setNotification(err.message);
+                setTimeout(() => setNotification(null), 3000);
+            });
     };
+
+
 
     if (loading) return <p>Loading...</p>;
     if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
@@ -76,7 +92,6 @@ export default function UserQuestionsPage() {
                         <th>Question</th>
                         <th>Submitted At</th>
                         <th>Status</th>
-                        <th>Used?</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -96,7 +111,6 @@ export default function UserQuestionsPage() {
                                     })}
                                 </td>
                                 <td>{q.isApproved ? "Approved" : "Pending"}</td>
-                                <td>{q.isUsed ? "Yes" : "No"}</td>
                                 <td>
                                     {!q.isApproved && (
                                         <button
@@ -114,7 +128,7 @@ export default function UserQuestionsPage() {
                                             Disapprove
                                         </button>
                                     )}
-                                    {q.isApproved && !q.isUsed && (
+                                    {q.isApproved && (
                                         <button
                                             onClick={() => addToRounds(q.id)}
                                             className="table-button primary"
@@ -128,6 +142,12 @@ export default function UserQuestionsPage() {
                     )}
                 </tbody>
             </table>
+            
+            {notification && (
+                <div className="floating-notification">
+                    {notification}
+                </div>
+            )}
         </div>
     );
 }

@@ -6,6 +6,8 @@
     padding: 1.5rem;
     max-width: 1200px;
     margin: 0 auto;
+    min-height: 100vh;
+    padding-top: 100px;
 }
 
 .dashboard-header {
@@ -261,4 +263,40 @@
 
 .form-box button.danger:hover {
     background: #b91c1c;
+}
+
+/* floating notification */
+.floating-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4caf50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    animation: fadeInOut 3s ease forwards;
+}
+
+/* Smooth fade in and out */
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 }

@@ -571,6 +571,18 @@ public class Program
             return Results.Ok(new { count });
         });
 
+        app.MapGet("/debate/{debateId}/candidates", async (AppDbContext db, int debateId) =>
+        {
+            var candidates = await db.Candidates
+                .Where(c => c.DebateId == debateId)
+                .Select(c => new { c.Id, c.CandidateNumber, c.Name, c.ImageUrl, c.VoteCount })
+                .OrderBy(c => c.CandidateNumber)
+                .ToListAsync();
+
+            return Results.Ok(candidates);
+        });
+
+
         // ===========================
         // ===== ADMIN ROUTES ========
         // ===========================
@@ -1007,7 +1019,6 @@ public class Program
                     usq.Question,
                     usq.SubmittedAt,
                     usq.IsApproved,
-                    usq.IsUsed,
                     ipAddress = usq.IpAddress // Consider if you want to show this or hash it
                 })
                 .ToListAsync();
@@ -1053,13 +1064,9 @@ public class Program
             if (!userQuestion.IsApproved)
                 return Results.BadRequest(new { message = "Question must be approved first." });
 
-            if (userQuestion.IsUsed)
-                return Results.BadRequest(new { message = "Question has already been added to debate rounds." });
 
-            // Get the next round number
             var nextRoundNumber = debate.Questions.Any() ? debate.Questions.Max(q => q.RoundNumber) + 1 : 1;
 
-            // Add as new debate question
             var debateQuestion = new DebateQuestion
             {
                 DebateId = debateId,
@@ -1068,11 +1075,60 @@ public class Program
             };
 
             db.DebateQuestions.Add(debateQuestion);
-            userQuestion.IsUsed = true;
-
             await db.SaveChangesAsync();
 
             return Results.Ok(new { message = $"Question added to round {nextRoundNumber}." });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+
+        //candidates stuff
+        //add candidate
+        app.MapPost("/debate-manager/debates/{debateId:int}/candidates", async (HttpContext context, AppDbContext db, int debateId, Candidate candidate) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+            if (debate == null) return Results.NotFound(new { message = "Debate not found or not yours." });
+
+            candidate.DebateId = debateId;
+            db.Candidates.Add(candidate);
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/debate-manager/debates/{debateId}/candidates/{candidate.Id}", candidate);
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+        //update candidate
+        app.MapPut("/debate-manager/debates/{debateId:int}/candidates/{candidateId:int}", async (HttpContext context, AppDbContext db, int debateId, int candidateId, Candidate updated) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+            if (debate == null) return Results.NotFound();
+
+            var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Id == candidateId && c.DebateId == debateId);
+            if (candidate == null) return Results.NotFound();
+
+            candidate.Name = updated.Name.Trim();
+            candidate.CandidateNumber = updated.CandidateNumber;
+            candidate.ImageUrl = updated.ImageUrl ?? candidate.ImageUrl;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(candidate);
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        //delete candidate
+        app.MapDelete("/debate-manager/debates/{debateId:int}/candidates/{candidateId:int}", async (HttpContext context, AppDbContext db, int debateId, int candidateId) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
+            if (debate == null) return Results.NotFound();
+
+            var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Id == candidateId && c.DebateId == debateId);
+            if (candidate == null) return Results.NotFound();
+
+            db.Candidates.Remove(candidate);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { message = "Candidate removed successfully." });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Start live debate

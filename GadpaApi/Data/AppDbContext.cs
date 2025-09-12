@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<DebateQuestion> DebateQuestions => Set<DebateQuestion>();
     public DbSet<LiveDebate> LiveDebates => Set<LiveDebate>();
     public DbSet<UserSubmittedQuestion> UserSubmittedQuestions => Set<UserSubmittedQuestion>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +79,13 @@ public class AppDbContext : DbContext
             .HasForeignKey(usq => usq.DebateId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Add relationship for Debate to Candidate
+        modelBuilder.Entity<Debate>()
+            .HasMany(d => d.Candidates)
+            .WithOne(c => c.Debate)
+            .HasForeignKey(c => c.DebateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         base.OnModelCreating(modelBuilder);
     }
 }
@@ -129,8 +137,12 @@ public class Debate
     public bool AllowUserQuestions { get; set; } = false;
     public int MaxQuestionsPerUser { get; set; } = 3;
 
+    // Voting settings
+    public bool AllowVoting { get; set; } = false;
+
     public List<DebateQuestion> Questions { get; set; } = new();
     public List<UserSubmittedQuestion> UserSubmittedQuestions { get; set; } = new();
+    public List<Candidate> Candidates { get; set; } = new();
 }
 
 public class DebateQuestion
@@ -150,7 +162,6 @@ public class UserSubmittedQuestion
     public string IpAddress { get; set; } = string.Empty;
     public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
     public bool IsApproved { get; set; } = false;
-    public bool IsUsed { get; set; } = false; // Track if question has been added to debate rounds
 
     [ForeignKey("DebateId")]
     public required Debate Debate { get; set; }
@@ -165,6 +176,19 @@ public class LiveDebate
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
     public bool IsPreviewable { get; set; } = false;
+
+    [ForeignKey("DebateId")]
+    public required Debate Debate { get; set; }
+}
+
+public class Candidate
+{
+    public int Id { get; set; }
+    public int DebateId { get; set; }
+    public int CandidateNumber { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string ImageUrl { get; set; } = string.Empty;
+    public int VoteCount { get; set; } = 0;
 
     [ForeignKey("DebateId")]
     public required Debate Debate { get; set; }

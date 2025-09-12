@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import BackgroundPulse from "../components/SectionBackgroundPulse";
+import HeroTitle from "../components/HeroTitle";
 import "../css/Home.css";
 
 // Fade-in wrapper component for scroll animations
@@ -167,12 +168,10 @@ function Home() {
       {/* Hero Section */}
       <section className="hero-section" style={{ position: "relative", overflow: "hidden" }}>
         <BackgroundPulse />
-        <div className="title" style={{ position: "relative", zIndex: 1 }}>
-          <h1>GADPA Election 2025/2026</h1>
-          <p>Indonesian Student Election Management System</p>
-        </div>
+        <HeroTitle />
+        {/* <p>Indonesian Student Election Management System</p> */}
 
-        <div className="debates" style={{maxWidth: "1200px"}}>
+        <div className="debates" style={{ maxWidth: "1200px" }}>
           <h2>Debates</h2>
           {!liveStatus.isLive ? (
             <NoDebates />
@@ -183,7 +182,7 @@ function Home() {
             />
           )}
         </div>
-        <div style={{height: "20vh"}}></div>
+        <div style={{ height: "20vh" }}></div>
       </section>
 
       {/* About Section */}

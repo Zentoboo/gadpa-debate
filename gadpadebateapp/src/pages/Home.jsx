@@ -2,37 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import BackgroundPulse from "../components/SectionBackgroundPulse";
 import HeroTitle from "../components/HeroTitle";
+import FadeInSection from "../components/FadeInSection";
 import "../css/Home.css";
-
-// Fade-in wrapper component for scroll animations
-function FadeInSection({ children, className = "" }) {
-  const ref = useRef();
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("show");
-        } else {
-          el.classList.remove("show");
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section ref={ref} className={`hidden ${className}`}>
-      {children}
-    </section>
-  );
-}
 
 // Loading component
 function LoadingState() {
@@ -168,10 +139,10 @@ function Home() {
       {/* Hero Section */}
       <section className="hero-section" style={{ position: "relative", overflow: "hidden" }}>
         <BackgroundPulse />
-        <HeroTitle />
         {/* <p>Indonesian Student Election Management System</p> */}
 
         <div className="debates" style={{ maxWidth: "1200px" }}>
+          <HeroTitle />
           <h2>Debates</h2>
           {!liveStatus.isLive ? (
             <NoDebates />

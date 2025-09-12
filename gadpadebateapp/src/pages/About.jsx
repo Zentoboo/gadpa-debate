@@ -2,36 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import BackgroundPulse from "../components/BackgroundPulse";
-
-// Fade-in wrapper component for scroll animations
-function FadeInSection({ children }) {
-    const ref = useRef();
-
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    el.classList.add("show");
-                } else {
-                    el.classList.remove("show");
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, []);
-
-    return (
-        <section ref={ref} className="hidden">
-            {children}
-        </section>
-    );
-}
+import FadeInSection from "../components/FadeInSection";
 
 export default function About() {
     const location = useLocation();

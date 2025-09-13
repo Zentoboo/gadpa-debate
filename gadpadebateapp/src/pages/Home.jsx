@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import BackgroundPulse from "../components/SectionBackgroundPulse";
+import GadpaBreathInOut from "../components/GadpaBreathInOut";
 import HeroTitle from "../components/HeroTitle";
 import FadeInSection from "../components/FadeInSection";
 import "../css/Home.css";
@@ -138,7 +138,7 @@ function Home() {
     <main>
       {/* Hero Section */}
       <section className="hero-section" style={{ position: "relative", overflow: "hidden" }}>
-        <BackgroundPulse />
+        <GadpaBreathInOut />
         {/* <p>Indonesian Student Election Management System</p> */}
 
         <div className="debates" style={{ maxWidth: "1200px" }}>

@@ -9,27 +9,34 @@ function HeroTitle() {
         const targets = containerRef.current.querySelectorAll(".herotitle-inner");
         if (!targets.length) return;
 
+        const duration = 0.8;
+        const pause = 0.75;
         const tl = gsap.timeline({ repeat: 0 });
 
-        // Animate each title
         targets.forEach((target, index) => {
             tl.fromTo(
                 target,
-                { y: 30, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.5 }
+                { y: 40, opacity: 0 },
+                { y: 0, opacity: 1, duration, ease: "power2.out" }
             );
 
             if (index < targets.length - 1) {
-                tl.to(target, { y: -30, opacity: 0, duration: 0.5, delay: 0.75 });
+                tl.to(target, {
+                    y: -40,
+                    opacity: 0,
+                    duration,
+                    delay: pause,
+                    ease: "power2.in"
+                });
+            } else {
+                tl.fromTo(
+                    subtitleRef.current,
+                    { y: 20, opacity: 0 },
+                    { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" },
+                    "<"
+                );
             }
         });
-
-        // Animate subtitle AFTER all titles
-        tl.fromTo(
-            subtitleRef.current,
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }
-        );
 
         return () => tl.kill();
     }, []);

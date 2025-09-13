@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
 import "../css/Dashboard.css";
 
@@ -59,12 +59,6 @@ export default function DebateManagerDashboard() {
         });
 
     useEffect(() => {
-        if (!isAuthenticated || !token || !isDebateManager) {
-            navigate("/debate-manager/login");
-        }
-    }, [isAuthenticated, token, isDebateManager, navigate]);
-
-    useEffect(() => {
         if (!token || !isAuthenticated || !isDebateManager) return;
         refreshDebates();
         refreshLiveStatus();
@@ -114,7 +108,6 @@ export default function DebateManagerDashboard() {
                 description: newDebate.description.trim(),
                 questions: validQuestions.map(q => q.trim()),
                 allowUserQuestions: newDebate.allowUserQuestions,
-                allowVoting: newDebate.allowVoting,
                 maxQuestionsPerUser: newDebate.maxQuestionsPerUser,
                 scheduledStartTime: newDebate.scheduledStartTime
                     ? toUtcFromLocal(newDebate.scheduledStartTime)
@@ -154,7 +147,6 @@ export default function DebateManagerDashboard() {
                     description: fullDebate.description || "",
                     questions: processedQuestions.length ? processedQuestions : [""],
                     allowUserQuestions: fullDebate.allowUserQuestions,
-                    allowVoting: fullDebate.allowVoting,
                     maxQuestionsPerUser: fullDebate.maxQuestionsPerUser || 3,
                     scheduledStartTime: fullDebate.scheduledStartTime
                         ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
@@ -184,7 +176,6 @@ export default function DebateManagerDashboard() {
             description: editDebate.description.trim(),
             questions: validQuestions.map(q => q.trim()),
             allowUserQuestions: editDebate.allowUserQuestions,
-            allowVoting: editDebate.allowVoting,
             maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
             scheduledStartTime: editDebate.scheduledStartTime
                 ? toUtcFromLocal(editDebate.scheduledStartTime)
@@ -210,7 +201,6 @@ export default function DebateManagerDashboard() {
                     description: "",
                     questions: [""],
                     allowUserQuestions: false,
-                    allowVoting: false,
                     maxQuestionsPerUser: 3,
                     scheduledStartTime: "",
                     candidates: [],
@@ -229,7 +219,6 @@ export default function DebateManagerDashboard() {
             description: "",
             questions: [""],
             allowUserQuestions: false,
-            allowVoting: false,
             maxQuestionsPerUser: 3,
             scheduledStartTime: "",
             candidates: [],
@@ -332,9 +321,12 @@ export default function DebateManagerDashboard() {
         }));
     };
 
-    if (!isAuthenticated || !token || !isDebateManager) return null;
-
-    const isEditingLiveDebate = editingDebateId && liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
+    if (isAuthenticated === null || isDebateManager === null) {
+        return <p>Checking authentication...</p>;
+    }
+    if (!isAuthenticated || !token || !isDebateManager) {
+        return <Navigate to="/debate-manager/login" replace />;
+    }
 
     return (
         <div className="dashboard-container">
@@ -494,7 +486,7 @@ export default function DebateManagerDashboard() {
                         </tbody>
                     </table>
                     <button onClick={handleAddCandidate}>+ Add Candidate</button>
-
+                    <div></div>
                     <button onClick={createDebate} className="auth-button" style={{ marginTop: "1rem" }}>
                         Create Debate
                     </button>
@@ -620,7 +612,7 @@ export default function DebateManagerDashboard() {
                         </tbody>
                     </table>
                     <button onClick={handleAddEditCandidate}>+ Add Candidate</button>
-
+                    <div></div>
                     <button onClick={saveEditDebate} className="auth-button" style={{ marginTop: "1rem" }}>
                         Save Changes
                     </button>

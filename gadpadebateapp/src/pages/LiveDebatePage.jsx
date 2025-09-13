@@ -7,7 +7,7 @@ import Timer from "../components/Timer";
 import HeatmapChart from "../components/HeatmapChart";
 
 export default function LiveDebatePage() {
-    const { token, isAuthenticated, isDebateManager } = useAuth();
+    const { token, isAuthenticated, isDebateManager, loading } = useAuth();
     const navigate = useNavigate();
 
     const [liveStatus, setLiveStatus] = useState(null);
@@ -34,10 +34,11 @@ export default function LiveDebatePage() {
 
     // Redirect if not authenticated or not a debate manager
     useEffect(() => {
+        if (loading) return;
         if (!isAuthenticated || !isDebateManager) {
             navigate("/debate-manager/login");
         }
-    }, [isAuthenticated, isDebateManager, navigate]);
+    }, [loading, isAuthenticated, isDebateManager, navigate]);
 
     // Fetch detailed debate information - ENHANCED with cache busting
     const fetchDebateDetails = useCallback(async (debateId, bustCache = false) => {
@@ -115,9 +116,10 @@ export default function LiveDebatePage() {
 
     // Initial load
     useEffect(() => {
+        if (loading) return;
         if (!token || !isAuthenticated || !isDebateManager) return;
         refreshLiveStatus(true);
-    }, [token, isAuthenticated, isDebateManager, refreshLiveStatus]);
+    }, [loading, token, isAuthenticated, isDebateManager, refreshLiveStatus]);
 
     // Auto-refresh live status every 30 seconds - ENHANCED
     useEffect(() => {
@@ -323,6 +325,7 @@ export default function LiveDebatePage() {
     const totalRounds = getTotalRounds();
     const debateTitle = debateDetails?.title || liveStatus.debate?.title || "Live Debate";
 
+    if (loading) return <p>Checking authentication...</p>;
     return (
         <div className="live-debate-container">
             <div className="live-debate-header">

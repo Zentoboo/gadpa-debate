@@ -4,11 +4,10 @@ import { useAuth } from "../hooks/AuthContext";
 import "../css/Dashboard.css";
 
 export default function UserQuestionsPage() {
-    const { token, isAuthenticated, isDebateManager } = useAuth();
+    const { token, isAuthenticated, isDebateManager, loading } = useAuth();
     const { id } = useParams();
     const navigate = useNavigate();
     const [questions, setQuestions] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [notification, setNotification] = useState(null);
 
@@ -23,15 +22,15 @@ export default function UserQuestionsPage() {
         });
 
     useEffect(() => {
+        if (loading) return;
         if (!isAuthenticated || !isDebateManager) {
             navigate("/debate-manager/login");
         } else {
             fetchQuestions();
         }
-    }, [isAuthenticated, isDebateManager, id]);
+    }, [loading, isAuthenticated, isDebateManager, id, navigate]);
 
     const fetchQuestions = () => {
-        setLoading(true);
         setError(null);
         authFetch(`http://localhost:5076/debate-manager/debates/${id}/user-questions`)
             .then(res => {
@@ -39,8 +38,7 @@ export default function UserQuestionsPage() {
                 return res.json();
             })
             .then(setQuestions)
-            .catch(err => setError(err.message))
-            .finally(() => setLoading(false));
+            .catch(err => setError(err.message));
     };
 
     const approveQuestion = (qid, approve) => {
@@ -71,8 +69,7 @@ export default function UserQuestionsPage() {
     };
 
 
-
-    if (loading) return <p>Loading...</p>;
+    if (loading) return <p>Checking authentication...</p>;
     if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
 
     return (
@@ -142,7 +139,7 @@ export default function UserQuestionsPage() {
                     )}
                 </tbody>
             </table>
-            
+
             {notification && (
                 <div className="floating-notification">
                     {notification}

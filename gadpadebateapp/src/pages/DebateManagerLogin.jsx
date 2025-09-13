@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
 import "../css/AuthForms.css";
 
@@ -29,16 +29,7 @@ export default function DebateManagerLogin() {
     }, []);
 
     if (isDebateManager) {
-        return (
-            <div className="auth-container">
-                <div className="auth-card">
-                    <h1 className="auth-title">You are already signed in ✅</h1>
-                    <button onClick={() => navigate("/debate-manager/dashboard")} className="auth-button">
-                        Go to Dashboard
-                    </button>
-                </div>
-            </div>
-        );
+        return <Navigate to="/debate-manager/dashboard" replace />;
     }
 
     const handleLogin = (e) => {

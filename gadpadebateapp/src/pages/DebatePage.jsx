@@ -323,7 +323,24 @@ export default function DebatePage() {
                 )}
             </section>
 
-            {/* === SECTION 2: User Question Submission === */}
+            {/* === SECTION 2: Candidates Display === */}
+            {debate?.candidates?.length > 0 && (
+                <section>
+                    <div className="candidates-section fade-in">
+                        <h3 className="candidates-section-title">Candidates</h3>
+                        <ul className="candidates-list">
+                            {debate.candidates.map((candidate, index) => (
+                                <li key={index} className="candidate-item">
+                                    <span className="candidate-name">{candidate.name}</span>
+                                    <span className="candidate-votes">Votes: {candidate.voteCount}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </section>
+            )}
+
+            {/* === SECTION 3: User Question Submission === */}
             {debate.allowUserQuestions && (
                 <section>
                     <div className="question-submission-section fade-in">

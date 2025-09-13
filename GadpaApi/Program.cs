@@ -38,12 +38,14 @@ public record UpdateDebateRequest(
     DateTime? ScheduledStartTime = null,
     List<CandidateDto>? Candidates = null
 );
-
+public record UpdateCandidateVoteRequest(
+    string CandidateName,
+    int VoteCount
+);
 public record CandidateDto(
     string Name,
     string ImageUrl = ""
 );
-
 public record ChangeRoundRequest(int RoundNumber);
 public record SubmitQuestionRequest(string Question);
 public class Program
@@ -1374,6 +1376,49 @@ public class Program
 
             var totalFires = await db.FireEvents.Where(e => e.LiveDebateId == liveDebate.Id).SumAsync(e => e.FireCount);
             return Results.Ok(new { buckets, total = totalFires });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // update a candidate's vote count
+        app.MapPost("/debate-manager/live/{liveDebateId}/candidates/update-votes", async (
+            HttpContext context,
+            string liveDebateId,
+            UpdateCandidateVoteRequest request,
+            AppDbContext db,
+            IHubContext<DebateHub> debateHub) =>
+        {
+            if (!context.User.IsInRole("DebateManager"))
+            {
+                return Results.Forbid();
+            }
+
+            if (!int.TryParse(liveDebateId, out var liveDebateIdInt))
+            {
+                return Results.BadRequest("Invalid liveDebateId.");
+            }
+
+            var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Candidates)
+                .FirstOrDefaultAsync(ld => ld.Id == liveDebateIdInt);
+
+            if (liveDebate == null)
+            {
+                return Results.NotFound("Debate not found.");
+            }
+
+            var candidate = liveDebate.Debate.Candidates.FirstOrDefault(c => c.Name.Equals(request.CandidateName, StringComparison.OrdinalIgnoreCase));
+            if (candidate == null)
+            {
+                return Results.NotFound("Candidate not found.");
+            }
+
+            candidate.VoteCount = request.VoteCount;
+            await db.SaveChangesAsync();
+
+            await debateHub.Clients.All.SendAsync("ReceiveCandidateUpdate", candidate);
+
+            return Results.Ok(candidate);
+
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Map SignalR Hub for real-time features

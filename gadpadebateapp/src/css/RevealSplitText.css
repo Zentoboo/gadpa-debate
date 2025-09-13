@@ -1,0 +1,14 @@
+.reveal-text {
+    visibility: hidden;
+    line-height: 1.4;
+    font-size: 1.6rem;
+    max-width: 500px;
+    font-family: var(--font-code), sans-serif;
+    text-transform: lowercase;
+}
+
+.line {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+}

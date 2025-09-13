@@ -12,6 +12,7 @@
     --border-color--red: rgba(190, 48, 48, 0.6);
     --card-background: rgba(20, 20, 20, 0.9);
     --footer-background: #0f0f12;
+    --border-color-debatetable: rgba(100, 100, 100, 0.5);
 
     /* Header Specific */
     --header-background: rgba(30, 32, 37, 0.75);
@@ -67,7 +68,7 @@ section {
 }
 
 .hero-section {
-    min-height: 150vh;
+    min-height: 120vh;
 }
 
 /* ==================================== /

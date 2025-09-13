@@ -4,6 +4,7 @@ import GadpaBreathInOut from "../components/GadpaBreathInOut";
 import HeroTitle from "../components/HeroTitle";
 import FadeInSection from "../components/FadeInSection";
 import "../css/Home.css";
+import RevealSplitText from "../components/RevealSplitText";
 
 // Loading component
 function LoadingState() {
@@ -153,7 +154,46 @@ function Home() {
             />
           )}
         </div>
-        <div style={{ height: "20vh" }}></div>
+      </section>
+
+      <section
+        style={{
+          display: "grid",
+          placeItems: "center"
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "4rem",
+            width: "100%",
+            maxWidth: "1200px",
+            alignItems: "start",
+          }}
+        >
+          {/* Left column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "left" }}>
+            <RevealSplitText tag="h2">Purpose</RevealSplitText>
+            <RevealSplitText tag="p">
+              Participate in real-time debate sessions with interactive features.
+              Engage with candidates, ask questions, and make informed decisions
+              during the electoral process. Our platform ensures transparency and
+              democratic participation for all Indonesian students.
+            </RevealSplitText>
+          </div>
+
+          {/* Right column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "right" }}>
+            <RevealSplitText tag="h2">Features</RevealSplitText>
+            <RevealSplitText tag="p">
+              Experience live streaming debates, real-time Q&amp;A sessions,
+              candidate profiles, voting mechanisms, and comprehensive election
+              results. All designed to foster transparent democratic engagement
+              within the Indonesian student community.
+            </RevealSplitText>
+          </div>
+        </div>
       </section>
 
       {/* About Section */}
@@ -169,32 +209,6 @@ function Home() {
           <Link to="/about" className="info-link">
             Learn More →
           </Link>
-        </div>
-      </FadeInSection>
-
-      {/* Purpose Section */}
-      <FadeInSection className="content-section">
-        <div>
-          <h2>Purpose</h2>
-          <p>
-            Participate in real-time debate sessions with interactive features.
-            Engage with candidates, ask questions, and make informed decisions
-            during the electoral process. Our platform ensures transparency
-            and democratic participation for all Indonesian students.
-          </p>
-        </div>
-      </FadeInSection>
-
-      {/* Features Section */}
-      <FadeInSection className="content-section">
-        <div>
-          <h2>Features</h2>
-          <p>
-            Experience live streaming debates, real-time Q&A sessions, candidate
-            profiles, voting mechanisms, and comprehensive election results.
-            All designed to foster transparent democratic engagement within
-            the Indonesian student community.
-          </p>
         </div>
       </FadeInSection>
     </main>

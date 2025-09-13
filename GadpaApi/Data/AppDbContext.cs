@@ -136,10 +136,6 @@ public class Debate
     // User question submission settings
     public bool AllowUserQuestions { get; set; } = false;
     public int MaxQuestionsPerUser { get; set; } = 3;
-
-    // Voting settings
-    public bool AllowVoting { get; set; } = false;
-
     public List<DebateQuestion> Questions { get; set; } = new();
     public List<UserSubmittedQuestion> UserSubmittedQuestions { get; set; } = new();
     public List<Candidate> Candidates { get; set; } = new();

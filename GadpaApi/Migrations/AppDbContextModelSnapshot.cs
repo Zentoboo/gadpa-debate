@@ -106,9 +106,6 @@ namespace GadpaApi.Migrations
                     b.Property<bool>("AllowUserQuestions")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("AllowVoting")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 

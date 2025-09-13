@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GadpaApi.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreateMSSql : Migration
+    public partial class InitialCreateMsSql : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -75,6 +75,29 @@ namespace GadpaApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Candidates",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DebateId = table.Column<int>(type: "int", nullable: false),
+                    CandidateNumber = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    VoteCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Candidates", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Candidates_Debates_DebateId",
+                        column: x => x.DebateId,
+                        principalTable: "Debates",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DebateQuestions",
                 columns: table => new
                 {
@@ -106,8 +129,7 @@ namespace GadpaApi.Migrations
                     Question = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
-                    IsUsed = table.Column<bool>(type: "bit", nullable: false)
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -173,6 +195,11 @@ namespace GadpaApi.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Candidates_DebateId",
+                table: "Candidates",
+                column: "DebateId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DebateQuestions_DebateId",
                 table: "DebateQuestions",
                 column: "DebateId");
@@ -206,6 +233,9 @@ namespace GadpaApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "BannedIps");
+
+            migrationBuilder.DropTable(
+                name: "Candidates");
 
             migrationBuilder.DropTable(
                 name: "DebateQuestions");

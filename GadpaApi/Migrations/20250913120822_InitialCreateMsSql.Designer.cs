@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GadpaApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250912192647_CandidatesStuffs")]
-    partial class CandidatesStuffs
+    [Migration("20250913120822_InitialCreateMsSql")]
+    partial class InitialCreateMsSql
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -107,9 +107,6 @@ namespace GadpaApi.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowUserQuestions")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AllowVoting")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("CreatedAt")

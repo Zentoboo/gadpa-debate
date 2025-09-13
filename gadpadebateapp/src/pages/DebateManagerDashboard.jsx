@@ -35,6 +35,7 @@ export default function DebateManagerDashboard() {
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
+        candidates: [],
     });
 
     const [editDebate, setEditDebate] = useState({
@@ -44,6 +45,7 @@ export default function DebateManagerDashboard() {
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
+        candidates: [],
     });
 
     const authFetch = (url, options = {}) =>
@@ -112,10 +114,12 @@ export default function DebateManagerDashboard() {
                 description: newDebate.description.trim(),
                 questions: validQuestions.map(q => q.trim()),
                 allowUserQuestions: newDebate.allowUserQuestions,
+                allowVoting: newDebate.allowVoting,
                 maxQuestionsPerUser: newDebate.maxQuestionsPerUser,
                 scheduledStartTime: newDebate.scheduledStartTime
                     ? toUtcFromLocal(newDebate.scheduledStartTime)
                     : null,
+                candidates: newDebate.candidates,
             }),
         })
             .then(res => {
@@ -130,6 +134,7 @@ export default function DebateManagerDashboard() {
                     allowUserQuestions: false,
                     maxQuestionsPerUser: 3,
                     scheduledStartTime: "",
+                    candidates: [],
                 });
                 setIsCreating(false);
                 refreshDebates();
@@ -149,10 +154,12 @@ export default function DebateManagerDashboard() {
                     description: fullDebate.description || "",
                     questions: processedQuestions.length ? processedQuestions : [""],
                     allowUserQuestions: fullDebate.allowUserQuestions,
+                    allowVoting: fullDebate.allowVoting,
                     maxQuestionsPerUser: fullDebate.maxQuestionsPerUser || 3,
                     scheduledStartTime: fullDebate.scheduledStartTime
                         ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
                         : "",
+                    candidates: fullDebate.candidates || [],
                 });
                 setEditingDebateId(debate.id);
                 setIsCreating(false);
@@ -172,19 +179,17 @@ export default function DebateManagerDashboard() {
             return;
         }
 
-        // Check if this debate is currently live
-        const isCurrentDebateLive = liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
-
-        // Prepare the request body - include all fields regardless of live status
         const requestBody = {
             title: editDebate.title.trim(),
             description: editDebate.description.trim(),
             questions: validQuestions.map(q => q.trim()),
             allowUserQuestions: editDebate.allowUserQuestions,
+            allowVoting: editDebate.allowVoting,
             maxQuestionsPerUser: editDebate.maxQuestionsPerUser,
             scheduledStartTime: editDebate.scheduledStartTime
                 ? toUtcFromLocal(editDebate.scheduledStartTime)
                 : null,
+            candidates: editDebate.candidates,
         };
 
         authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
@@ -205,12 +210,13 @@ export default function DebateManagerDashboard() {
                     description: "",
                     questions: [""],
                     allowUserQuestions: false,
+                    allowVoting: false,
                     maxQuestionsPerUser: 3,
                     scheduledStartTime: "",
+                    candidates: [],
                 });
                 setEditingDebateId(null);
                 refreshDebates();
-                // Show success message
                 alert("Debate updated successfully!");
             })
             .catch(err => alert(err.message));
@@ -223,8 +229,10 @@ export default function DebateManagerDashboard() {
             description: "",
             questions: [""],
             allowUserQuestions: false,
+            allowVoting: false,
             maxQuestionsPerUser: 3,
             scheduledStartTime: "",
+            candidates: [],
         });
     };
 
@@ -238,7 +246,6 @@ export default function DebateManagerDashboard() {
             .catch(err => alert(err.message));
     };
 
-    // Updated `endLive` function to use the new endpoint
     const endLive = () => {
         const confirmationMessage = liveStatus.isActive
             ? "Are you sure you want to end the current live debate?"
@@ -246,25 +253,19 @@ export default function DebateManagerDashboard() {
 
         if (!window.confirm(confirmationMessage)) return;
 
-        console.log("Attempting to end debate...");
-
         authFetch("http://localhost:5076/debate-manager/live/end", { method: "POST" })
             .then(async res => {
                 const responseData = await res.json();
-                console.log("End debate response:", res.status, responseData);
-
                 if (!res.ok) {
                     throw new Error(responseData.message || `HTTP ${res.status}`);
                 }
                 return responseData;
             })
-            .then((data) => {
-                console.log("Debate ended successfully:", data);
+            .then(() => {
                 refreshLiveStatus();
                 setHeatmapData(null);
             })
             .catch(err => {
-                console.error("Error ending debate:", err);
                 alert(`Failed to end debate: ${err.message}`);
             });
     };
@@ -285,9 +286,54 @@ export default function DebateManagerDashboard() {
     const removeEditQuestion = (i) => setEditDebate(prev => ({ ...prev, questions: prev.questions.filter((_, idx) => idx !== i) }));
     const updateEditQuestion = (i, val) => setEditDebate(prev => ({ ...prev, questions: prev.questions.map((q, idx) => idx === i ? val : q) }));
 
+    // Handlers for new debate candidates
+    const handleAddCandidate = () => {
+        setNewDebate(prev => ({
+            ...prev,
+            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+        }));
+    };
+
+    const handleUpdateCandidate = (index, field, value) => {
+        setNewDebate(prev => {
+            const updatedCandidates = [...prev.candidates];
+            updatedCandidates[index][field] = value;
+            return { ...prev, candidates: updatedCandidates };
+        });
+    };
+
+    const handleRemoveCandidate = (index) => {
+        setNewDebate(prev => ({
+            ...prev,
+            candidates: prev.candidates.filter((_, i) => i !== index)
+        }));
+    };
+
+    // Handlers for edit debate candidates
+    const handleAddEditCandidate = () => {
+        setEditDebate(prev => ({
+            ...prev,
+            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+        }));
+    };
+
+    const handleUpdateEditCandidate = (index, field, value) => {
+        setEditDebate(prev => {
+            const updatedCandidates = [...prev.candidates];
+            updatedCandidates[index][field] = value;
+            return { ...prev, candidates: updatedCandidates };
+        });
+    };
+
+    const handleRemoveEditCandidate = (index) => {
+        setEditDebate(prev => ({
+            ...prev,
+            candidates: prev.candidates.filter((_, i) => i !== index)
+        }));
+    };
+
     if (!isAuthenticated || !token || !isDebateManager) return null;
 
-    // Check if the debate being edited is currently live
     const isEditingLiveDebate = editingDebateId && liveStatus?.isLive && liveStatus?.debate?.id === editingDebateId;
 
     return (
@@ -302,9 +348,7 @@ export default function DebateManagerDashboard() {
                         <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
                         {liveStatus.isPreviewable ? (
                             <>
-                                <p style={{ color: "orange" }}>
-                                    Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}
-                                </p>
+                                <p style={{ color: "orange" }}> Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()} </p>
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
                                 </div>
@@ -317,7 +361,6 @@ export default function DebateManagerDashboard() {
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
                                     <button onClick={endLive} className="table-button danger">End Live Debate</button>
-
                                 </div>
                                 <p>ending a debate nulls the schedule automatically.</p>
                             </>
@@ -340,34 +383,23 @@ export default function DebateManagerDashboard() {
                         type="text"
                         placeholder="Debate Title"
                         value={newDebate.title}
-                        onChange={(e) =>
-                            setNewDebate((prev) => ({ ...prev, title: e.target.value }))
-                        }
+                        onChange={(e) => setNewDebate((prev) => ({ ...prev, title: e.target.value }))}
                         className="auth-input"
                     />
                     <textarea
                         placeholder="Description"
                         value={newDebate.description}
-                        onChange={(e) =>
-                            setNewDebate((prev) => ({ ...prev, description: e.target.value }))
-                        }
+                        onChange={(e) => setNewDebate((prev) => ({ ...prev, description: e.target.value }))}
                         className="auth-input"
                     />
-
                     {/* Settings */}
                     <div className="settings">
                         <label>
                             <input
                                 type="checkbox"
                                 checked={newDebate.allowUserQuestions}
-                                onChange={(e) =>
-                                    setNewDebate((prev) => ({
-                                        ...prev,
-                                        allowUserQuestions: e.target.checked,
-                                    }))
-                                }
-                            />
-                            Allow User Questions
+                                onChange={(e) => setNewDebate((prev) => ({ ...prev, allowUserQuestions: e.target.checked }))}
+                            /> Allow User Questions
                         </label>
                         <label>
                             Max Per User:
@@ -376,12 +408,7 @@ export default function DebateManagerDashboard() {
                                 min="1"
                                 max="20"
                                 value={newDebate.maxQuestionsPerUser}
-                                onChange={(e) =>
-                                    setNewDebate((prev) => ({
-                                        ...prev,
-                                        maxQuestionsPerUser: Number(e.target.value),
-                                    }))
-                                }
+                                onChange={(e) => setNewDebate((prev) => ({ ...prev, maxQuestionsPerUser: Number(e.target.value) }))}
                             />
                         </label>
                         <label>
@@ -389,16 +416,10 @@ export default function DebateManagerDashboard() {
                             <input
                                 type="datetime-local"
                                 value={newDebate.scheduledStartTime}
-                                onChange={(e) =>
-                                    setNewDebate((prev) => ({
-                                        ...prev,
-                                        scheduledStartTime: e.target.value,
-                                    }))
-                                }
+                                onChange={(e) => setNewDebate((prev) => ({ ...prev, scheduledStartTime: e.target.value }))}
                             />
                         </label>
                     </div>
-
                     <h4>Questions</h4>
                     <table className="questions-table">
                         <thead>
@@ -430,10 +451,51 @@ export default function DebateManagerDashboard() {
                         </tbody>
                     </table>
                     <button onClick={addQuestion}>+ Add Question</button>
-                    <button
-                        onClick={createDebate}
-                        disabled={!newDebate.title.trim() || newDebate.questions.filter(q => q.trim()).length === 0}
-                    >
+
+                    <h4>Candidates</h4>
+                    <table className="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Image URL</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {newDebate.candidates.map((c, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={c.name}
+                                            onChange={(e) => handleUpdateCandidate(i, "name", e.target.value)}
+                                            className="auth-input"
+                                            placeholder="Candidate Name"
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={c.imageUrl}
+                                            onChange={(e) => handleUpdateCandidate(i, "imageUrl", e.target.value)}
+                                            className="auth-input"
+                                            placeholder="Image URL"
+                                        />
+                                    </td>
+                                    <td>
+                                        <button className="danger" onClick={() => handleRemoveCandidate(i)}>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button onClick={handleAddCandidate}>+ Add Candidate</button>
+
+                    <button onClick={createDebate} className="auth-button" style={{ marginTop: "1rem" }}>
                         Create Debate
                     </button>
                 </div>
@@ -442,46 +504,28 @@ export default function DebateManagerDashboard() {
             {/* Edit Form */}
             {editingDebateId && (
                 <div className="form-box">
-                    <h3>Edit Debate {isEditingLiveDebate && <span style={{ color: "orange" }}>(Live)</span>}</h3>
-
-                    {isEditingLiveDebate && (
-                        <div style={{ padding: "10px", backgroundColor: "#312f26ff", border: "1px solid #ffeaa7", borderRadius: "4px", marginBottom: "1rem" }}>
-                            <strong>Note:</strong> This debate is currently live. Changes will take effect immediately and may affect the ongoing debate experience.
-                        </div>
-                    )}
-
+                    <h3>Edit Debate</h3>
                     <input
                         type="text"
-                        value={editDebate.title}
-                        onChange={(e) =>
-                            setEditDebate((prev) => ({ ...prev, title: e.target.value }))
-                        }
-                        className="auth-input"
                         placeholder="Debate Title"
+                        value={editDebate.title}
+                        onChange={(e) => setEditDebate((prev) => ({ ...prev, title: e.target.value }))}
+                        className="auth-input"
                     />
                     <textarea
-                        value={editDebate.description}
-                        onChange={(e) =>
-                            setEditDebate((prev) => ({ ...prev, description: e.target.value }))
-                        }
-                        className="auth-input"
                         placeholder="Description"
+                        value={editDebate.description}
+                        onChange={(e) => setEditDebate((prev) => ({ ...prev, description: e.target.value }))}
+                        className="auth-input"
                     />
-
                     {/* Settings */}
                     <div className="settings">
                         <label>
                             <input
                                 type="checkbox"
                                 checked={editDebate.allowUserQuestions}
-                                onChange={(e) =>
-                                    setEditDebate((prev) => ({
-                                        ...prev,
-                                        allowUserQuestions: e.target.checked,
-                                    }))
-                                }
-                            />
-                            Allow User Questions
+                                onChange={(e) => setEditDebate((prev) => ({ ...prev, allowUserQuestions: e.target.checked }))}
+                            /> Allow User Questions
                         </label>
                         <label>
                             Max Per User:
@@ -490,12 +534,7 @@ export default function DebateManagerDashboard() {
                                 min="1"
                                 max="20"
                                 value={editDebate.maxQuestionsPerUser}
-                                onChange={(e) =>
-                                    setEditDebate((prev) => ({
-                                        ...prev,
-                                        maxQuestionsPerUser: Number(e.target.value),
-                                    }))
-                                }
+                                onChange={(e) => setEditDebate((prev) => ({ ...prev, maxQuestionsPerUser: Number(e.target.value) }))}
                             />
                         </label>
                         <label>
@@ -503,17 +542,10 @@ export default function DebateManagerDashboard() {
                             <input
                                 type="datetime-local"
                                 value={editDebate.scheduledStartTime}
-                                onChange={(e) =>
-                                    setEditDebate((prev) => ({
-                                        ...prev,
-                                        scheduledStartTime: e.target.value,
-                                    }))
-                                }
+                                onChange={(e) => setEditDebate((prev) => ({ ...prev, scheduledStartTime: e.target.value }))}
                             />
                         </label>
                     </div>
-
-                    {/* Questions Section - Show for all debates */}
                     <h4>Questions</h4>
                     <table className="questions-table">
                         <thead>
@@ -544,59 +576,104 @@ export default function DebateManagerDashboard() {
                             ))}
                         </tbody>
                     </table>
+                    <button onClick={addEditQuestion}>+ Add Question</button>
 
-                    <div style={{ marginTop: "1rem" }}>
-                        <button
-                            onClick={saveEditDebate}
-                            disabled={!editDebate.title.trim() || editDebate.questions.filter(q => q.trim()).length === 0}
-                        >
-                            Save Changes
-                        </button>
-                        <button onClick={addEditQuestion}>+ Add Question</button>
-                        <button className="secondary" onClick={cancelEdit} style={{ marginLeft: "0.5rem" }}>
-                            Cancel
-                        </button>
-                    </div>
+                    <h4>Candidates</h4>
+                    <table className="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Image URL</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {editDebate.candidates.map((c, i) => (
+                                <tr key={i}>
+                                    <td>{i + 1}</td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={c.name}
+                                            onChange={(e) => handleUpdateEditCandidate(i, "name", e.target.value)}
+                                            className="auth-input"
+                                            placeholder="Candidate Name"
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={c.imageUrl}
+                                            onChange={(e) => handleUpdateEditCandidate(i, "imageUrl", e.target.value)}
+                                            className="auth-input"
+                                            placeholder="Image URL"
+                                        />
+                                    </td>
+                                    <td>
+                                        <button className="danger" onClick={() => handleRemoveEditCandidate(i)}>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button onClick={handleAddEditCandidate}>+ Add Candidate</button>
+
+                    <button onClick={saveEditDebate} className="auth-button" style={{ marginTop: "1rem" }}>
+                        Save Changes
+                    </button>
+                    <button onClick={cancelEdit} className="auth-button danger" style={{ marginLeft: "1rem" }}>
+                        Cancel
+                    </button>
                 </div>
             )}
 
-            {/* Debate List */}
-            <table className="dashboard-table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Questions</th>
-                        <th>Created</th>
-                        <th>Scheduled</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {debates.map(d => (
-                        <tr key={d.id}>
-                            <td>
-                                {d.title}
-                                {liveStatus?.isLive && liveStatus?.debate?.id === d.id && (
-                                    <span style={{ color: "orange", fontSize: "0.8em", marginLeft: "0.5rem" }}>
-                                        (LIVE)
-                                    </span>
-                                )}
-                            </td>
-                            <td>{d.questionCount}</td>
-                            <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
-                            }</td>
-                            <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
-                                : "Not Scheduled"}</td>
-                            <td>
-                                <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
-                                <button onClick={() => startEditDebate(d)}>Edit</button>
-                                <button onClick={() => deleteDebate(d.id)} disabled={liveStatus?.isLive && liveStatus?.debate?.id === d.id}>Delete</button>
-                                <button onClick={() => navigate(`/debate-manager/debates/${d.id}/user-questions`)}>User Questions</button>
-                            </td>
+            {/* Debates Table */}
+            <h2 className="section-title">All Debates</h2>
+            <div className="table-container">
+                <table className="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Questions</th>
+                            <th>Created</th>
+                            <th>Scheduled Start</th>
+                            <th>Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {debates.length > 0 ? (
+                            debates.map(d => (
+                                <tr key={d.id}>
+                                    <td>
+                                        {d.title}
+                                        {liveStatus?.isLive && liveStatus?.debate?.id === d.id && (
+                                            <span style={{ color: "orange", fontSize: "0.8em", marginLeft: "0.5rem" }}>
+                                                (LIVE)
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td>{d.questionCount}</td>
+                                    <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}</td>
+                                    <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "Not Scheduled"}</td>
+                                    <td>
+                                        <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
+                                        <button onClick={() => startEditDebate(d)}>Edit</button>
+                                        <button onClick={() => deleteDebate(d.id)} disabled={liveStatus?.isLive && liveStatus?.debate?.id === d.id}>Delete</button>
+                                        <button onClick={() => navigate(`/debate-manager/debates/${d.id}/user-questions`)}>User Questions</button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="5" style={{ textAlign: "center", color: "#666" }}>No debates found.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

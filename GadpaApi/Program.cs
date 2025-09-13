@@ -25,7 +25,8 @@ public record CreateDebateRequest(
     List<string> Questions,
     bool AllowUserQuestions = false,
     int MaxQuestionsPerUser = 3,
-    DateTime? ScheduledStartTime = null
+    DateTime? ScheduledStartTime = null,
+    List<CandidateDto>? Candidates = null
 );
 
 public record UpdateDebateRequest(
@@ -34,7 +35,13 @@ public record UpdateDebateRequest(
     List<string> Questions,
     bool? AllowUserQuestions = null,
     int? MaxQuestionsPerUser = null,
-    DateTime? ScheduledStartTime = null
+    DateTime? ScheduledStartTime = null,
+    List<CandidateDto>? Candidates = null
+);
+
+public record CandidateDto(
+    string Name,
+    string ImageUrl = ""
 );
 
 public record ChangeRoundRequest(int RoundNumber);
@@ -230,8 +237,10 @@ public class Program
             {
                 return Results.Ok(new { isLive = false });
             }
+
             var debate = await db.Debates
                 .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .Include(d => d.Candidates.OrderBy(c => c.CandidateNumber))
                 .FirstOrDefaultAsync(d => d.Id == liveDebate.DebateId);
 
             if (debate == null)
@@ -257,16 +266,24 @@ public class Program
                     totalRounds = debate.Questions.Count,
                     currentQuestion = !countdown ? currentQuestion?.Question : null,
                     questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                    candidates = debate.Candidates.Select(c => new
+                    {
+                        id = c.Id,
+                        candidateNumber = c.CandidateNumber,
+                        name = c.Name,
+                        imageUrl = c.ImageUrl,
+                        voteCount = c.VoteCount
+                    }),
                     allowUserQuestions = debate.AllowUserQuestions && !countdown
                 }
             });
-
         });
 
         app.MapGet("/debate/{debateId}", async (AppDbContext db, int debateId) =>
         {
             var debate = await db.Debates
                 .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .Include(d => d.Candidates.OrderBy(c => c.CandidateNumber))
                 .FirstOrDefaultAsync(d => d.Id == debateId);
 
             if (debate == null)
@@ -293,10 +310,17 @@ public class Program
                 totalRounds = debate.Questions.Count,
                 currentQuestion = (isLive && !countdown && liveDebateStatus != null) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
                 questions = debate.Questions.Select(q => new { round = q.RoundNumber, question = q.Question }),
+                candidates = debate.Candidates.Select(c => new
+                {
+                    id = c.Id,
+                    candidateNumber = c.CandidateNumber,
+                    name = c.Name,
+                    imageUrl = c.ImageUrl,
+                    voteCount = c.VoteCount
+                }),
                 allowUserQuestions = allowUserQuestions && !countdown,
                 maxQuestionsPerUser = debate.MaxQuestionsPerUser
             });
-
         });
 
         // Submit a question from user (public endpoint)
@@ -830,6 +854,7 @@ public class Program
                     d.MaxQuestionsPerUser,
                     d.ScheduledStartTime,
                     questionCount = d.Questions.Count,
+                    candidateCount = d.Candidates.Count,
                     userSubmittedCount = d.UserSubmittedQuestions.Count,
                     Questions = d.Questions
                         .OrderBy(q => q.RoundNumber)
@@ -838,6 +863,16 @@ public class Program
                             q.Id,
                             q.Question,
                             q.RoundNumber
+                        })
+                        .ToList(),
+                    Candidates = d.Candidates
+                        .OrderBy(c => c.CandidateNumber)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Name,
+                            c.ImageUrl,
+                            c.CandidateNumber
                         })
                         .ToList()
                 })
@@ -859,6 +894,14 @@ public class Program
 
             if (request.MaxQuestionsPerUser < 1 || request.MaxQuestionsPerUser > 20)
                 return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+
+            // Validate candidates if provided
+            if (request.Candidates != null && request.Candidates.Any())
+            {
+                var invalidCandidates = request.Candidates.Where(c => string.IsNullOrWhiteSpace(c.Name)).ToList();
+                if (invalidCandidates.Any())
+                    return Results.BadRequest(new { message = "All candidates must have a name." });
+            }
 
             var debate = new Debate
             {
@@ -882,6 +925,23 @@ public class Program
             }).ToList();
 
             db.DebateQuestions.AddRange(questions);
+
+            // Add candidates if provided
+            if (request.Candidates != null && request.Candidates.Any())
+            {
+                var candidates = request.Candidates.Select((c, index) => new Candidate
+                {
+                    DebateId = debate.Id,
+                    CandidateNumber = index + 1,
+                    Name = c.Name.Trim(),
+                    ImageUrl = c.ImageUrl?.Trim() ?? "",
+                    VoteCount = 0,
+                    Debate = debate
+                }).ToList();
+
+                db.Candidates.AddRange(candidates);
+            }
+
             await db.SaveChangesAsync();
 
             return Results.Created($"/debate-manager/debates/{debate.Id}", new { debate.Id, debate.Title });
@@ -894,6 +954,7 @@ public class Program
 
             var debate = await db.Debates
                 .Include(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .Include(d => d.Candidates.OrderBy(c => c.CandidateNumber))
                 .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
 
             if (debate == null)
@@ -908,79 +969,117 @@ public class Program
                 debate.UpdatedAt,
                 debate.AllowUserQuestions,
                 debate.MaxQuestionsPerUser,
-                questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question })
+                debate.ScheduledStartTime,
+                questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question }),
+                candidates = debate.Candidates.Select(c => new
+                {
+                    c.Id,
+                    c.CandidateNumber,
+                    c.Name,
+                    c.ImageUrl,
+                    c.VoteCount
+                })
             });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Update debate
         app.MapPut("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id, UpdateDebateRequest request) =>
-{
-    var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-    var debate = await db.Debates
-        .Include(d => d.Questions)
-        .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
-
-    if (debate == null)
-        return Results.NotFound();
-
-    // Check if debate is currently live (for informational purposes)
-    var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
-
-    // Allow updating all fields, even during live debates
-    if (!string.IsNullOrWhiteSpace(request.Title))
-        debate.Title = request.Title.Trim();
-
-    if (request.Description != null)
-        debate.Description = request.Description.Trim();
-
-    debate.UpdatedAt = DateTime.UtcNow;
-
-    // Update user question settings if provided
-    if (request.AllowUserQuestions.HasValue)
-        debate.AllowUserQuestions = request.AllowUserQuestions.Value;
-
-    if (request.MaxQuestionsPerUser.HasValue)
-    {
-        if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
-            return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
-        debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
-    }
-
-    // Update scheduled start time if provided
-    if (request.ScheduledStartTime.HasValue)
-        debate.ScheduledStartTime = request.ScheduledStartTime.Value;
-
-    // Update questions if provided
-    if (request.Questions != null && request.Questions.Count > 0)
-    {
-        // Validate questions
-        var validQuestions = request.Questions.Where(q => !string.IsNullOrWhiteSpace(q)).ToList();
-        if (validQuestions.Count == 0)
-            return Results.BadRequest(new { message = "At least one valid question is required." });
-
-        // Remove existing questions
-        db.DebateQuestions.RemoveRange(debate.Questions);
-
-        // Add new questions
-        var newQuestions = validQuestions.Select((q, index) => new DebateQuestion
         {
-            DebateId = debate.Id,
-            RoundNumber = index + 1,
-            Question = q.Trim()
-        }).ToList();
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-        db.DebateQuestions.AddRange(newQuestions);
-    }
+            var debate = await db.Debates
+                .Include(d => d.Questions)
+                .Include(d => d.Candidates)
+                .FirstOrDefaultAsync(d => d.Id == id && d.CreatedByUserId == userId);
 
-    await db.SaveChangesAsync();
+            if (debate == null)
+                return Results.NotFound();
 
-    var responseMessage = isLive
-        ? "Live debate updated successfully. Changes are now active."
-        : "Debate updated successfully.";
+            // Check if debate is currently live (for informational purposes)
+            var isLive = await db.LiveDebates.AnyAsync(ld => ld.DebateId == id && ld.IsActive);
 
-    return Results.Ok(new { message = responseMessage });
-}).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+            // Allow updating all fields, even during live debates
+            if (!string.IsNullOrWhiteSpace(request.Title))
+                debate.Title = request.Title.Trim();
+
+            if (request.Description != null)
+                debate.Description = request.Description.Trim();
+
+            debate.UpdatedAt = DateTime.UtcNow;
+
+            // Update user question settings if provided
+            if (request.AllowUserQuestions.HasValue)
+                debate.AllowUserQuestions = request.AllowUserQuestions.Value;
+
+            if (request.MaxQuestionsPerUser.HasValue)
+            {
+                if (request.MaxQuestionsPerUser.Value < 1 || request.MaxQuestionsPerUser.Value > 20)
+                    return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
+                debate.MaxQuestionsPerUser = request.MaxQuestionsPerUser.Value;
+            }
+
+            // Update scheduled start time if provided
+            if (request.ScheduledStartTime.HasValue)
+                debate.ScheduledStartTime = request.ScheduledStartTime.Value;
+
+            // Update questions if provided
+            if (request.Questions != null && request.Questions.Count > 0)
+            {
+                // Validate questions
+                var validQuestions = request.Questions.Where(q => !string.IsNullOrWhiteSpace(q)).ToList();
+                if (validQuestions.Count == 0)
+                    return Results.BadRequest(new { message = "At least one valid question is required." });
+
+                // Remove existing questions
+                db.DebateQuestions.RemoveRange(debate.Questions);
+
+                // Add new questions
+                var newQuestions = validQuestions.Select((q, index) => new DebateQuestion
+                {
+                    DebateId = debate.Id,
+                    RoundNumber = index + 1,
+                    Question = q.Trim()
+                }).ToList();
+
+                db.DebateQuestions.AddRange(newQuestions);
+            }
+
+            // Update candidates if provided
+            if (request.Candidates != null)
+            {
+                // Validate candidates
+                var invalidCandidates = request.Candidates.Where(c => string.IsNullOrWhiteSpace(c.Name)).ToList();
+                if (invalidCandidates.Any())
+                    return Results.BadRequest(new { message = "All candidates must have a name." });
+
+                // Remove existing candidates
+                db.Candidates.RemoveRange(debate.Candidates);
+
+                // Add new candidates
+                if (request.Candidates.Any())
+                {
+                    var newCandidates = request.Candidates.Select((c, index) => new Candidate
+                    {
+                        DebateId = debate.Id,
+                        CandidateNumber = index + 1,
+                        Name = c.Name.Trim(),
+                        ImageUrl = c.ImageUrl?.Trim() ?? "",
+                        VoteCount = 0,
+                        Debate = debate
+                    }).ToList();
+
+                    db.Candidates.AddRange(newCandidates);
+                }
+            }
+
+            await db.SaveChangesAsync();
+
+            var responseMessage = isLive
+                ? "Live debate updated successfully. Changes are now active."
+                : "Debate updated successfully.";
+
+            return Results.Ok(new { message = responseMessage });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Delete debate
         app.MapDelete("/debate-manager/debates/{id:int}", async (HttpContext context, AppDbContext db, int id) =>
@@ -1078,57 +1177,6 @@ public class Program
             await db.SaveChangesAsync();
 
             return Results.Ok(new { message = $"Question added to round {nextRoundNumber}." });
-        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-
-
-        //candidates stuff
-        //add candidate
-        app.MapPost("/debate-manager/debates/{debateId:int}/candidates", async (HttpContext context, AppDbContext db, int debateId, Candidate candidate) =>
-        {
-            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
-            if (debate == null) return Results.NotFound(new { message = "Debate not found or not yours." });
-
-            candidate.DebateId = debateId;
-            db.Candidates.Add(candidate);
-            await db.SaveChangesAsync();
-
-            return Results.Created($"/debate-manager/debates/{debateId}/candidates/{candidate.Id}", candidate);
-        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-        //update candidate
-        app.MapPut("/debate-manager/debates/{debateId:int}/candidates/{candidateId:int}", async (HttpContext context, AppDbContext db, int debateId, int candidateId, Candidate updated) =>
-        {
-            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
-            if (debate == null) return Results.NotFound();
-
-            var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Id == candidateId && c.DebateId == debateId);
-            if (candidate == null) return Results.NotFound();
-
-            candidate.Name = updated.Name.Trim();
-            candidate.CandidateNumber = updated.CandidateNumber;
-            candidate.ImageUrl = updated.ImageUrl ?? candidate.ImageUrl;
-
-            await db.SaveChangesAsync();
-            return Results.Ok(candidate);
-        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-
-        //delete candidate
-        app.MapDelete("/debate-manager/debates/{debateId:int}/candidates/{candidateId:int}", async (HttpContext context, AppDbContext db, int debateId, int candidateId) =>
-        {
-            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId && d.CreatedByUserId == userId);
-            if (debate == null) return Results.NotFound();
-
-            var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Id == candidateId && c.DebateId == debateId);
-            if (candidate == null) return Results.NotFound();
-
-            db.Candidates.Remove(candidate);
-            await db.SaveChangesAsync();
-            return Results.Ok(new { message = "Candidate removed successfully." });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
         // Start live debate

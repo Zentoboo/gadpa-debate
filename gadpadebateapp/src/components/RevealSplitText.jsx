@@ -9,7 +9,7 @@ export default function RevealSplitText({
     children,
     className = "",
     tag: Tag = "h2",
-    style = {}   // ✅ accept style as a prop
+    style = {}
 }) {
     const textRef = useRef(null);
 

@@ -346,14 +346,6 @@ section {
 /* ==================================== /
 / === About Page Layout === /
 / ==================================== */
-.about-container {
-    padding: 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
 
 .header-section {
     text-align: center;
@@ -704,4 +696,54 @@ section {
 
 .step-card p {
     color: var(--secondary-color);
+}
+
+
+/* Parent container for the two divs */
+/* Shared wrapper for consistent horizontal padding */
+.content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Purpose + Features */
+.purpose-features-container {
+    display: flex;
+    flex-direction: column;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+    align-items: stretch;
+}
+
+/* About */
+.about-container {
+    display: flex;
+    flex-direction: column;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+    text-align: left;
+    align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+    .purpose-features-container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .purpose-container {
+        text-align: left;
+    }
+
+    .features-container {
+        text-align: right;
+    }
+
+    .about-container {
+        text-align: center;
+        align-items: center;
+    }
 }

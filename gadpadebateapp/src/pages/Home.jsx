@@ -155,62 +155,51 @@ function Home() {
           )}
         </div>
       </section>
+      <section style={{ padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+        {/* Top: Purpose + Features */}
+        <div style={{ backgroundColor: "#150000", width: "100%" }}>
+          <div className="purpose-features-container content-wrapper">
+            {/* Left: Purpose */}
+            <div className="purpose-container">
+              <RevealSplitText tag="h2">Purpose</RevealSplitText>
+              <RevealSplitText tag="p">
+                To enrich the quality and retention rate of GADPA Election 2025–2026.
+                To foster transparent, inclusive, and interactive participation among
+                Indonesian students. To strengthen democratic values and informed
+                decision-making within the student body.
+              </RevealSplitText>
+            </div>
 
-      <section
-        style={{
-          display: "grid",
-          placeItems: "center"
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "4rem",
-            width: "100%",
-            maxWidth: "1200px",
-            alignItems: "start",
-          }}
-        >
-          {/* Left column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "left" }}>
-            <RevealSplitText tag="h2">Purpose</RevealSplitText>
-            <RevealSplitText tag="p">
-              Participate in real-time debate sessions with interactive features.
-              Engage with candidates, ask questions, and make informed decisions
-              during the electoral process. Our platform ensures transparency and
-              democratic participation for all Indonesian students.
-            </RevealSplitText>
+            {/* Right: Features */}
+            <div className="features-container">
+              <RevealSplitText tag="h2">Features</RevealSplitText>
+              <RevealSplitText tag="p">
+                Real-time reactions and dynamic heatmaps allow the audience’s
+                engagement to be visualized instantly, creating a more interactive
+                atmosphere. Students can actively shape the debate by submitting their
+                own questions for candidates. The platform also ensures transparent
+                vote counting, which will be presented clearly through the projector.
+              </RevealSplitText>
+            </div>
           </div>
+        </div>
 
-          {/* Right column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "right" }}>
-            <RevealSplitText tag="h2">Features</RevealSplitText>
+        {/* Bottom: About */}
+        <div style={{ backgroundColor: "#001200", width: "100%" }}>
+          <div className="about-container content-wrapper">
+            <RevealSplitText tag="h2">About</RevealSplitText>
             <RevealSplitText tag="p">
-              Experience live streaming debates, real-time Q&amp;A sessions,
-              candidate profiles, voting mechanisms, and comprehensive election
-              results. All designed to foster transparent democratic engagement
-              within the Indonesian student community.
+              Gabungan Asosiasi dan Diaspora Pelajar Indonesia (GADPA) election
+              management system for Kongres PPI XMUM 2025/2026. This platform enables
+              democratic participation through transparent and interactive debate
+              sessions.
             </RevealSplitText>
+            <Link to="/about" className="info-link">
+              Learn More →
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* About Section */}
-      <FadeInSection className="content-section">
-        <div>
-          <h2>About</h2>
-          <p>
-            Gabungan Asosiasi dan Diaspora Pelajar Indonesia (GADPA) election
-            management system for Kongres PPI XMUM 2025/2026. This platform
-            enables democratic participation through transparent and interactive
-            debate sessions.
-          </p>
-          <Link to="/about" className="info-link">
-            Learn More →
-          </Link>
-        </div>
-      </FadeInSection>
     </main>
   );
 }

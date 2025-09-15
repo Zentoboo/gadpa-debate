@@ -41,11 +41,18 @@ public record UpdateDebateRequest(
 public record UpdateCandidateVoteRequest(
     string CandidateName,
     int VoteCount
-);
+)
+{
+    public bool IsValid() => !string.IsNullOrWhiteSpace(CandidateName) && VoteCount >= 0;
+}
+
 public record CandidateDto(
     string Name,
     string ImageUrl = ""
-);
+)
+{
+    public bool IsValid() => !string.IsNullOrWhiteSpace(Name);
+}
 public record ChangeRoundRequest(int RoundNumber);
 public record SubmitQuestionRequest(string Question);
 public class Program
@@ -1378,49 +1385,175 @@ public class Program
             return Results.Ok(new { buckets, total = totalFires });
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
 
+        // Get current live debate with full details including candidates (for debate managers)
+        app.MapGet("/debate-manager/live/current-with-candidates", async (HttpContext context, AppDbContext db) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Questions.OrderBy(q => q.RoundNumber))
+                .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Candidates.OrderBy(c => c.CandidateNumber))
+                .FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && (ld.IsActive || ld.IsPreviewable));
+
+            if (liveDebate == null)
+            {
+                return Results.Ok(new { isLive = false });
+            }
+
+            // Get current question
+            var currentQuestion = liveDebate.Debate.Questions
+                .FirstOrDefault(q => q.RoundNumber == liveDebate.CurrentRound);
+
+            // Get total fire count for this live debate
+            var totalFires = await db.FireEvents
+                .Where(fe => fe.LiveDebateId == liveDebate.Id)
+                .SumAsync(fe => fe.FireCount);
+
+            // Determine if countdown is active
+            bool countdown = liveDebate.Debate.ScheduledStartTime.HasValue &&
+                            DateTime.UtcNow < liveDebate.Debate.ScheduledStartTime.Value;
+
+            return Results.Ok(new
+            {
+                isLive = true,
+                isActive = liveDebate.IsActive,
+                isPreviewable = liveDebate.IsPreviewable,
+                countdown = countdown,
+                liveDebateId = liveDebate.Id,
+                debate = new
+                {
+                    id = liveDebate.Debate.Id,
+                    title = liveDebate.Debate.Title,
+                    description = liveDebate.Debate.Description,
+                    totalRounds = liveDebate.Debate.Questions.Count,
+                    scheduledStartTime = liveDebate.Debate.ScheduledStartTime,
+                    allowUserQuestions = liveDebate.Debate.AllowUserQuestions,
+                    maxQuestionsPerUser = liveDebate.Debate.MaxQuestionsPerUser,
+                    questions = liveDebate.Debate.Questions.Select(q => new
+                    {
+                        id = q.Id,
+                        round = q.RoundNumber,
+                        question = q.Question
+                    }).ToList(),
+                    candidates = liveDebate.Debate.Candidates.Select(c => new
+                    {
+                        id = c.Id,
+                        candidateNumber = c.CandidateNumber,
+                        name = c.Name,
+                        imageUrl = c.ImageUrl,
+                        voteCount = c.VoteCount
+                    }).ToList()
+                },
+                currentRound = liveDebate.CurrentRound,
+                currentQuestion = currentQuestion?.Question,
+                totalFires = totalFires,
+                startedAt = liveDebate.StartedAt,
+                debateManagerId = liveDebate.DebateManagerId
+            });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
+        // Get candidates for a specific live debate (can be used by both debate managers and public)
+        app.MapGet("/debate-manager/live/candidates", async (HttpContext context, AppDbContext db) =>
+        {
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var liveDebate = await db.LiveDebates
+                .Include(ld => ld.Debate)
+                    .ThenInclude(d => d.Candidates.OrderBy(c => c.CandidateNumber))
+                .FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && (ld.IsActive || ld.IsPreviewable));
+
+            if (liveDebate == null)
+            {
+                return Results.NotFound(new { message = "No active live debate found." });
+            }
+
+            var candidates = liveDebate.Debate.Candidates.Select(c => new
+            {
+                id = c.Id,
+                candidateNumber = c.CandidateNumber,
+                name = c.Name,
+                imageUrl = c.ImageUrl,
+                voteCount = c.VoteCount
+            }).ToList();
+
+            return Results.Ok(new
+            {
+                debateId = liveDebate.DebateId,
+                liveDebateId = liveDebate.Id,
+                candidates = candidates
+            });
+        }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
+
         // update a candidate's vote count
-        app.MapPost("/debate-manager/live/{liveDebateId}/candidates/update-votes", async (
+        app.MapPost("/debate-manager/live/candidates/update-votes", async (
             HttpContext context,
-            string liveDebateId,
             UpdateCandidateVoteRequest request,
             AppDbContext db,
             IHubContext<DebateHub> debateHub) =>
         {
-            if (!context.User.IsInRole("DebateManager"))
+            if (!request.IsValid())
             {
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Invalid request. Candidate name is required and vote count must be non-negative." });
             }
 
-            if (!int.TryParse(liveDebateId, out var liveDebateIdInt))
-            {
-                return Results.BadRequest("Invalid liveDebateId.");
-            }
+            var userId = int.Parse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
+            // Find the debate manager's currently active live debate
             var liveDebate = await db.LiveDebates
                 .Include(ld => ld.Debate)
                     .ThenInclude(d => d.Candidates)
-                .FirstOrDefaultAsync(ld => ld.Id == liveDebateIdInt);
+                .FirstOrDefaultAsync(ld => ld.DebateManagerId == userId && ld.IsActive);
 
             if (liveDebate == null)
             {
-                return Results.NotFound("Debate not found.");
+                return Results.NotFound(new { message = "No active live debate found for this debate manager." });
             }
 
-            var candidate = liveDebate.Debate.Candidates.FirstOrDefault(c => c.Name.Equals(request.CandidateName, StringComparison.OrdinalIgnoreCase));
+            // Find the candidate by name in the current live debate
+            var candidate = liveDebate.Debate.Candidates
+                .FirstOrDefault(c => c.Name.Equals(request.CandidateName, StringComparison.OrdinalIgnoreCase));
+
             if (candidate == null)
             {
-                return Results.NotFound("Candidate not found.");
+                return Results.NotFound(new { message = $"Candidate '{request.CandidateName}' not found in current live debate." });
+            }
+
+            // Validate vote count
+            if (request.VoteCount < 0)
+            {
+                return Results.BadRequest(new { message = "Vote count cannot be negative." });
             }
 
             candidate.VoteCount = request.VoteCount;
             await db.SaveChangesAsync();
 
-            await debateHub.Clients.All.SendAsync("ReceiveCandidateUpdate", candidate);
+            // Broadcast the update to all connected clients
+            await debateHub.Clients.All.SendAsync("ReceiveCandidateUpdate", new
+            {
+                candidateId = candidate.Id,
+                candidateNumber = candidate.CandidateNumber,
+                name = candidate.Name,
+                imageUrl = candidate.ImageUrl,
+                voteCount = candidate.VoteCount,
+                debateId = liveDebate.DebateId
+            });
 
-            return Results.Ok(candidate);
+            return Results.Ok(new
+            {
+                message = $"Updated vote count for {candidate.Name} to {request.VoteCount}",
+                candidate = new
+                {
+                    id = candidate.Id,
+                    candidateNumber = candidate.CandidateNumber,
+                    name = candidate.Name,
+                    imageUrl = candidate.ImageUrl,
+                    voteCount = candidate.VoteCount
+                }
+            });
 
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-
         // Map SignalR Hub for real-time features
         app.MapHub<GadpaDebateApi.Hubs.DebateHub>("/debateHub");
 

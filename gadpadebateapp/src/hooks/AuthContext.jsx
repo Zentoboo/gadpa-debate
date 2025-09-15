@@ -1,3 +1,4 @@
+// src/hooks/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
@@ -9,16 +10,18 @@ export function AuthProvider({ children }) {
     const [isAuthenticated, setIsAuthenticated] = useState(!!token);
     const [isDebateManager, setIsDebateManager] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const logoutTimerRef = useRef(null);
 
-    // Logout logic
+    // --- logout function ---
     const logout = () => {
         localStorage.removeItem("token");
         setToken(null);
         setIsAuthenticated(false);
         setIsDebateManager(false);
         setIsAdmin(false);
+        setLoading(false);
 
         if (logoutTimerRef.current) {
             clearTimeout(logoutTimerRef.current);
@@ -26,7 +29,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Schedule auto logout based on JWT expiry
+    // --- auto logout when token expires ---
     const scheduleLogout = (exp) => {
         const expiryTime = exp * 1000;
         const timeout = expiryTime - Date.now();
@@ -40,15 +43,14 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Build Axios instance that reacts to token changes
+    // --- Axios instance ---
     const api = axios.create({
         baseURL: "http://localhost:5076",
         headers: { "Content-Type": "application/json" },
     });
 
-    // Add interceptors for auth
+    // --- attach interceptors ---
     useEffect(() => {
-        // Request interceptor → attach token
         const requestInterceptor = api.interceptors.request.use((config) => {
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
@@ -56,7 +58,6 @@ export function AuthProvider({ children }) {
             return config;
         });
 
-        // Response interceptor → auto logout on 401
         const responseInterceptor = api.interceptors.response.use(
             (res) => res,
             (err) => {
@@ -73,7 +74,7 @@ export function AuthProvider({ children }) {
         };
     }, [token]);
 
-    // Token decode + role setup
+    // --- decode token and set roles ---
     useEffect(() => {
         if (token) {
             try {
@@ -95,9 +96,12 @@ export function AuthProvider({ children }) {
             } catch (error) {
                 console.error("Failed to decode token:", error);
                 logout();
+            } finally {
+                setLoading(false);
             }
         } else {
             logout();
+            setLoading(false);
         }
     }, [token]);
 
@@ -116,6 +120,7 @@ export function AuthProvider({ children }) {
                 login,
                 logout,
                 api,
+                loading,
             }}
         >
             {children}

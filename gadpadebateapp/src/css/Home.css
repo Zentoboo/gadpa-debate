@@ -64,7 +64,6 @@ section {
     display: grid;
     align-items: center;
     place-items: center;
-    min-height: 100vh;
 }
 
 .hero-section {

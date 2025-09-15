@@ -157,7 +157,7 @@ function Home() {
       </section>
       <section style={{ padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
         {/* Top: Purpose + Features */}
-        <div style={{ backgroundColor: "#150000", width: "100%" }}>
+        <div style={{ backgroundColor: "rgba(21, 0, 0, 0.5)", width: "100%" }}>
           <div className="purpose-features-container content-wrapper">
             {/* Left: Purpose */}
             <div className="purpose-container">
@@ -185,14 +185,12 @@ function Home() {
         </div>
 
         {/* Bottom: About */}
-        <div style={{ backgroundColor: "#001200", width: "100%" }}>
+        <div style={{ backgroundColor: "rgba(0, 18, 0, 0.5)", width: "100%" }}>
           <div className="about-container content-wrapper">
             <RevealSplitText tag="h2">About</RevealSplitText>
             <RevealSplitText tag="p">
-              Gabungan Asosiasi dan Diaspora Pelajar Indonesia (GADPA) election
-              management system for Kongres PPI XMUM 2025/2026. This platform enables
-              democratic participation through transparent and interactive debate
-              sessions.
+              The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM). 
+              As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
             </RevealSplitText>
             <Link to="/about" className="info-link">
               Learn More →

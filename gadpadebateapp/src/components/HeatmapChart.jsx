@@ -98,9 +98,9 @@ function HeatmapChart({
       case "overlay":
         return "100%";
       case "full":
-        return 400;
+        return 380;
       default:
-        return 400;
+        return 380;
     }
   };
 

@@ -351,7 +351,8 @@ export default function DebateManagerDashboard() {
                                 <p><strong>Total Rounds:</strong> {liveStatus.debate.totalRounds}</p>
                                 <p><strong>Total Fires:</strong> {liveStatus.totalFires}</p>
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
-                                    <button onClick={() => navigate("/debate-manager/live")} className="table-button primary">Open Live Control →</button>
+                                    <button onClick={() => navigate("/debate-manager/debate")} className="table-button primary">Debate →</button>
+                                    <button onClick={() => navigate("/debate-manager/vote")} className="table-button primary">Voting →</button>
                                     <button onClick={endLive} className="table-button danger">End Live Debate</button>
                                 </div>
                                 <p>ending a debate nulls the schedule automatically.</p>

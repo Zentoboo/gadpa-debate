@@ -1,12 +1,12 @@
 import React from "react";
-import { FaGithub, FaEnvelope, FaTwitter, FaInstagram } from "react-icons/fa";
+import { FaLinkedin, FaYoutube, FaInstagram } from "react-icons/fa";
 import "../css/Footer.css";
 import logo from "../assets/gadpa-logo.png";
 
 export default function Footer() {
     const currentYear = new Date().getFullYear();
 
-    // Social media links - you can update these with actual URLs
+    // Social media links
     const socialLinks = [
         {
             icon: FaInstagram,
@@ -15,16 +15,16 @@ export default function Footer() {
             ariaLabel: "Come and follow us on Instagram"
         },
         {
-            icon: FaGithub,
-            href: "https://github.com/gadpa-election",
-            label: "GitHub",
-            ariaLabel: "Visit our GitHub repository"
+            icon: FaYoutube,
+            href: "https://www.youtube.com/channel/UCocSzqq8vP5GRHG4SAxbD8Q",
+            label: "YouTube",
+            ariaLabel: "See our Youtube vids"
         },
         {
-            icon: FaTwitter,
-            href: "https://twitter.com/gadpa_xmum",
-            label: "Twitter",
-            ariaLabel: "Follow us on Twitter"
+            icon: FaLinkedin,
+            href: "https://www.linkedin.com/company/gadpa-xmum/",
+            label: "LinkedIn",
+            ariaLabel: "See and Follow our LinkedIn profile"
         }
     ];
 

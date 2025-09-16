@@ -42,7 +42,7 @@ export default function About() {
 
     return (
         <div>
-            <BackgroundPulse/>
+            <BackgroundPulse />
             <section>
                 <div className="header-section">
                     <h1 className="title">About Public Debates</h1>
@@ -57,6 +57,10 @@ export default function About() {
                         share their perspectives, and engage with others on important topics. Our core mission is to
                         redefine online discourse by providing a space where diverse viewpoints can be expressed without
                         fear of personal attacks or harassment.
+                    </p>
+                    <h2>What is Gadpa?</h2>
+                    <p>
+                        The Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is an Indonesian Student Association under the Indonesian Students Association of Malaysia (PPI Malaysia) and is one of the registered International Students Community under Xiamen University Malaysia's Extra- Curricular Activities Department (ECA) with International Student Ambassadors (ISA) category. PPI Xiamen University Malaysia was founded in 2019 with the aim of promoting and introducing Indonesian culture and traditions to students at Xiamen University Malaysia. Apart from that, PPI Xiamen University Malaysia is also a platform for students to develop their talents and abilities in order to improve their quality when they enter the workforce. In 2024, GADPA XMUM after we change category from clubs and societies. We are focusing on the Indonesian Students Community at Xiamen University Malaysia.
                     </p>
                 </div>
             </section>

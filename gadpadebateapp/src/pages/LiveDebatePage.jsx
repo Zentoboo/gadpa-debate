@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import "../css/LiveDebatePage.css";
 import FireCountDisplay from "../components/FireCountDisplay";
 import Timer from "../components/Timer";

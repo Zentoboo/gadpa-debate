@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/gadpa-logo.png";
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import "../css/Header.css";
 
 export default function Header({ adminRegisterEnabled, debateManagerRegisterEnabled, onHide }) {

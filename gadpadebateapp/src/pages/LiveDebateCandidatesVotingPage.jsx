@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
 import "../css/Dashboard.css";
+import "../css/LiveDebatePage.css";
 
 export default function LiveDebateCandidatesVotingPage() {
     const { token, isAuthenticated, isDebateManager, loading } = useAuth();
@@ -11,7 +12,6 @@ export default function LiveDebateCandidatesVotingPage() {
     const [error, setError] = useState(null);
     const [notification, setNotification] = useState(null);
     const [updating, setUpdating] = useState(null);
-    const [voteInputs, setVoteInputs] = useState({});
 
     const authFetch = (url, options = {}) =>
         fetch(url, {
@@ -51,13 +51,6 @@ export default function LiveDebateCandidatesVotingPage() {
                 }
                 setDebateData(data);
                 setCandidates(data.debate.candidates);
-
-                // Initialize vote inputs with current vote counts
-                const initialInputs = {};
-                data.debate.candidates.forEach(candidate => {
-                    initialInputs[candidate.id] = candidate.voteCount.toString();
-                });
-                setVoteInputs(initialInputs);
             })
             .catch(err => setError(err.message));
     };
@@ -100,148 +93,125 @@ export default function LiveDebateCandidatesVotingPage() {
         }
     };
 
-    const handleVoteInputChange = (candidateId, value) => {
-        setVoteInputs(prev => ({
-            ...prev,
-            [candidateId]: value
-        }));
-    };
-
-    const handleUpdateVote = (candidate) => {
-        const newVoteCount = parseInt(voteInputs[candidate.id]);
-        if (isNaN(newVoteCount) || newVoteCount < 0) {
-            setNotification("Please enter a valid non-negative number");
-            setTimeout(() => setNotification(null), 3000);
-            return;
-        }
+    const handleIncrementVote = (candidate) => {
+        const newVoteCount = candidate.voteCount + 1;
         updateVoteCount(candidate.name, newVoteCount);
     };
 
-    const handleKeyPress = (e, candidate) => {
-        if (e.key === 'Enter') {
-            handleUpdateVote(candidate);
-        }
+    const handleDecrementVote = (candidate) => {
+        const newVoteCount = Math.max(0, candidate.voteCount - 1);
+        updateVoteCount(candidate.name, newVoteCount);
     };
 
     if (loading) return <p>Checking authentication...</p>;
+
     if (error) return (
-        <div className="dashboard-container">
-            <h1>Live Debate Candidates</h1>
-            <p className="text-error">Error: {error}</p>
-            <button
-                onClick={() => navigate("/debate-manager/dashboard")}
-                className="table-button secondary"
-            >
-                ← Back to Dashboard
-            </button>
+        <div className="status-message-container">
+            <h1>Live Debate Candidates Voting</h1>
+            <div className="error-message">
+                <p>Error: {error}</p>
+                <button
+                    onClick={() => navigate("/debate-manager/dashboard")}
+                    className="control-button secondary"
+                >
+                    ← Back to Dashboard
+                </button>
+            </div>
         </div>
     );
 
     return (
-        <div className="dashboard-container">
-            <h1 className="dashboard-title">Live Debate Candidates</h1>
-
-            {debateData && (
-                <div className={`live-status ${debateData.isActive ? "active" : ""}`}>
-                    <h2 className="section-title">{debateData.debate.title}</h2>
-                    <p><strong>Status:</strong> <span className={debateData.isActive ? "text-success" : ""}>{debateData.isActive ? "Active" : "Preview Mode"}</span></p>
-                    <p><strong>Current Round:</strong> {debateData.currentRound} of {debateData.debate.totalRounds}</p>
-                    {debateData.currentQuestion && (
-                        <p><strong>Current Question:</strong> {debateData.currentQuestion}</p>
-                    )}
-                    <p><strong>Total Fires:</strong> {debateData.totalFires}</p>
+        <div className="live-debate-container">
+            {/* Header Section*/}
+            <div className="live-debate-header">
+                <h2 className="live-debate-title">
+                    {debateData?.debate?.title || "Live Debate"}
+                </h2>
+                <div className="live-debate-header-right">
+                    <div className="header-stats">
+                        <span className="live-debate-subtitle">
+                            Total Fires: {debateData?.totalFires || 0} 🔥
+                        </span>
+                        <span className="live-debate-subtitle">
+                            Total Votes: {candidates.reduce((sum, candidate) => sum + candidate.voteCount, 0)} 📩
+                        </span>
+                    </div>
                 </div>
-            )}
+            </div>
 
-            <button
-                onClick={() => navigate("/debate-manager/dashboard")}
-                className="table-button secondary"
-            >
-                ← Back to Dashboard
-            </button>
-
-            <table className="dashboard-table" style={{ marginTop: "1rem" }}>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Image</th>
-                        <th>Candidate Name</th>
-                        <th>Current Votes</th>
-                        <th>Update Votes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+            {/* Candidates Grid */}
+            <div className="candidates-voting-section">
+                <h3 className="section-title">Candidate Votes</h3>
+                <div className="candidates-grid">
                     {candidates.length === 0 ? (
-                        <tr>
-                            <td colSpan="6" style={{ textAlign: "center" }}>No candidates found for this debate.</td>
-                        </tr>
+                        <div className="no-candidates-message">
+                            <p>No candidates found for this debate.</p>
+                        </div>
                     ) : (
                         candidates.map((candidate) => (
-                            <tr key={candidate.id}>
-                                <td>{candidate.candidateNumber}</td>
-                                <td>
-                                    {candidate.imageUrl ? (
-                                        <img
-                                            src={candidate.imageUrl}
-                                            alt={candidate.name}
-                                            style={{
-                                                width: "50px",
-                                                height: "50px",
-                                                objectFit: "cover",
-                                                borderRadius: "50%"
-                                            }}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            width: "50px",
-                                            height: "50px",
-                                            backgroundColor: "#ddd",
-                                            borderRadius: "50%",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "12px",
-                                            color: "#333"
-                                        }}>
-                                            No Image
-                                        </div>
-                                    )}
-                                </td>
-                                <td><strong>{candidate.name}</strong></td>
-                                <td style={{ textAlign: "center", fontSize: "1.2em", fontWeight: "bold" }}>
-                                    {candidate.voteCount}
-                                </td>
-                                <td>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={voteInputs[candidate.id] || ""}
-                                        onChange={(e) => handleVoteInputChange(candidate.id, e.target.value)}
-                                        onKeyPress={(e) => handleKeyPress(e, candidate)}
-                                        className="auth-input"
-                                        style={{ width: "80px", textAlign: "center" }}
-                                        disabled={updating === candidate.name}
-                                    />
-                                </td>
-                                <td>
-                                    <button
-                                        onClick={() => handleUpdateVote(candidate)}
-                                        className="table-button primary"
-                                        disabled={updating === candidate.name}
-                                    >
-                                        {updating === candidate.name ? "Updating..." : "Update"}
-                                    </button>
-                                </td>
-                            </tr>
+                            <div key={candidate.id} className="candidate-voting-card">
+                                <div className="candidate-info">
+                                    <div className="candidate-image-container">
+                                        {candidate.imageUrl ? (
+                                            <img
+                                                src={candidate.imageUrl}
+                                                alt={candidate.name}
+                                                className="candidate-image"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="candidate-image-placeholder">
+                                                #{candidate.candidateNumber}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="candidate-details">
+                                        <h4 className="candidate-name">{candidate.name}</h4>
+                                        <span className="candidate-number">Candidate #{candidate.candidateNumber}</span>
+                                    </div>
+                                </div>
+
+                                <div className="vote-control-section">
+                                    <div className="vote-display">
+                                        <span className="vote-count">{candidate.voteCount}</span>
+                                        <span className="vote-label">votes</span>
+                                    </div>
+
+                                    <div className="vote-controls">
+                                        <button
+                                            onClick={() => handleDecrementVote(candidate)}
+                                            disabled={updating === candidate.name || candidate.voteCount <= 0}
+                                            className="vote-button decrement"
+                                            title="Decrease votes"
+                                        >
+                                            -
+                                        </button>
+                                        <button
+                                            onClick={() => handleIncrementVote(candidate)}
+                                            disabled={updating === candidate.name}
+                                            className="vote-button increment"
+                                            title="Increase votes"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {updating === candidate.name && (
+                                    <div className="updating-indicator">
+                                        <span className="updating-spinner"></span>
+                                        Updating...
+                                    </div>
+                                )}
+                            </div>
                         ))
                     )}
-                </tbody>
-            </table>
+                </div>
+            </div>
 
+            {/* Floating Notification */}
             {notification && (
                 <div className="floating-notification">
                     {notification}

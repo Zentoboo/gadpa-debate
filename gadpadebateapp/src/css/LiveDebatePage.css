@@ -40,6 +40,12 @@
     border-bottom: 1px solid var(--border-color);
 }
 
+.header-stats {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
 .live-debate-title {
     font-size: 2rem;
     color: var(--text-white);
@@ -743,5 +749,233 @@
     .mode-button {
         min-width: auto;
         width: 100%;
+    }
+}
+
+.candidates-voting-section {
+    padding: 20px 0;
+}
+
+.section-title {
+    font-size: 1.8em;
+    margin-bottom: 30px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.candidate-voting-card {
+    background: var(--card-background);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.candidate-voting-card:hover {
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8);
+    border-color: var(--primary-blue);
+}
+
+.candidate-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+.candidate-image-container {
+    flex-shrink: 0;
+}
+
+.candidate-image {
+    width: 300px;
+    height: 300px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 3px solid var(--primary-blue);
+}
+
+.candidate-image-placeholder {
+    width: 300px;
+    height: 300px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-white);
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.candidate-details {
+    flex: 1;
+    text-align: center;
+}
+
+.candidate-name {
+    font-size: 1.4em;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: var(--text-white);
+}
+
+.candidate-number {
+    color: var(--text-dark);
+    font-size: 0.9em;
+}
+
+.vote-control-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+.vote-display {
+    text-align: center;
+}
+
+.vote-count {
+    display: block;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: var(--primary-blue);
+    line-height: 1;
+}
+
+.vote-label {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-dark);
+    margin-top: 5px;
+}
+
+.vote-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.vote-button {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.8em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vote-button:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+.vote-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.vote-button.increment {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: var(--text-white);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.vote-button.decrement {
+    background: linear-gradient(135deg, var(--danger-red), var(--warning-red));
+    color: var(--text-white);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+.vote-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.updating-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: var(--text-white);
+    padding: 15px 25px;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    z-index: 10;
+}
+
+.updating-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--text-white);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.no-candidates-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 2px dashed var(--border-color);
+}
+
+.no-candidates-message p {
+    font-size: 1.2em;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .candidates-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .live-debate-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .header-info-group {
+        align-items: center;
     }
 }

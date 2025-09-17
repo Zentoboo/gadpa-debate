@@ -12,7 +12,7 @@ import DebateManagerRegister from "../pages/DebateManagerRegister.jsx";
 import DebateManagerDashboard from "../pages/DebateManagerDashboard.jsx";
 import NotFound from "../pages/NotFound.jsx";
 import LiveDebatePage from "../pages/LiveDebatePage.jsx";
-import LiveDebateCandidatesVotingPage from "../pages/LiveDebateCandidatesVotingPage.jsx";
+import LiveVoteCountPage from "../pages/LiveVoteCountPage.jsx";
 import DebatePage from "../pages/DebatePage.jsx";
 import UserQuestionsPage from "../pages/UserQuestionsPage.jsx";
 
@@ -49,7 +49,7 @@ export default function Router({
                     element={<Navigate to="/debate-manager/dashboard" replace />}
                 />
                 <Route path="/debate-manager/debate" element={<LiveDebatePage />} />
-                <Route path="/debate-manager/vote" element={<LiveDebateCandidatesVotingPage />} />
+                <Route path="/debate-manager/vote" element={<LiveVoteCountPage />} />
 
                 {/* Other */}
                 <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../css/Dashboard.css";
@@ -36,6 +36,54 @@ export default function LiveDebateCandidatesVotingPage() {
             fetchLiveDebateData();
         }
     }, [loading, isAuthenticated, isDebateManager, navigate]);
+
+    const videoRef = useRef(null);
+    const [stream, setStream] = useState(null);
+    const [devices, setDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState("");
+    const [showCameraSection, setShowCameraSection] = useState(true);
+
+
+    const startCamera = async (deviceId) => {
+        try {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: deviceId ? { deviceId: { exact: deviceId } } : true,
+                audio: false
+            };
+
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (videoRef.current) {
+                videoRef.current.srcObject = newStream;
+            }
+            setStream(newStream);
+        } catch (err) {
+            console.error("Error accessing camera:", err);
+        }
+    };
+
+    const stopCamera = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+            if (videoRef.current) videoRef.current.srcObject = null;
+        }
+    };
+
+    useEffect(() => {
+        navigator.mediaDevices.enumerateDevices()
+            .then(deviceInfos => {
+                const videoInputs = deviceInfos.filter(d => d.kind === "videoinput");
+                setDevices(videoInputs);
+                if (videoInputs.length > 0) {
+                    setSelectedDevice(videoInputs[0].deviceId);
+                }
+            })
+            .catch(err => console.error("Error listing devices:", err));
+    }, []);
 
     const fetchLiveDebateData = () => {
         setError(null);
@@ -135,9 +183,56 @@ export default function LiveDebateCandidatesVotingPage() {
                         <span className="live-debate-subtitle">
                             Total Votes: {candidates.reduce((sum, candidate) => sum + candidate.voteCount, 0)} 📩
                         </span>
+
+                        {/* Collapse/Expand Camera Button */}
+                        <button
+                            onClick={() => setShowCameraSection(prev => !prev)}
+                            className="toggle-button"
+                            style={{ marginLeft: "1rem" }}
+                        >
+                            {showCameraSection ? "Hide Camera" : "Show Camera"}
+                        </button>
                     </div>
                 </div>
             </div>
+
+
+            {/* Camera Section */}
+            {showCameraSection && (
+                <div className="camera-section">
+                    <h3 className="section-title">Live Camera Preview</h3>
+
+                    {/* Video Preview */}
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{ width: "100%", maxWidth: "800px", borderRadius: "8px" }}
+                    />
+
+                    {/* Controls */}
+                    <div style={{ marginTop: "10px", justifyContent: "center", display: "flex", gap: "1rem" }}>
+                        <button onClick={() => startCamera(selectedDevice)} disabled={!!stream}>
+                            Start Camera
+                        </button>
+                        <button onClick={stopCamera} disabled={!stream}>
+                            Stop Camera
+                        </button>
+                        {devices.length > 1 && (
+                            <select
+                                value={selectedDevice}
+                                onChange={(e) => setSelectedDevice(e.target.value)}
+                            >
+                                {devices.map((device, idx) => (
+                                    <option key={device.deviceId} value={device.deviceId}>
+                                        {device.label || `Camera ${idx + 1}`}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Candidates Grid */}
             <div className="candidates-voting-section">

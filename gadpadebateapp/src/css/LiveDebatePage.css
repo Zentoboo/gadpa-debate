@@ -18,6 +18,7 @@
 
 /* Base Styles */
 .live-debate-container {
+    margin-top: 8vh;
     display: flex;
     flex-direction: column;
     min-height: 100vh;

@@ -13,6 +13,9 @@ export default function LiveDebateCandidatesVotingPage() {
     const [notification, setNotification] = useState(null);
     const [updating, setUpdating] = useState(null);
 
+    // NEW: toggle between "candidates" (default) and "camera" mode
+    const [viewMode, setViewMode] = useState("candidates");
+
     const authFetch = (url, options = {}) =>
         fetch(url, {
             ...options,
@@ -24,15 +27,10 @@ export default function LiveDebateCandidatesVotingPage() {
         });
 
     useEffect(() => {
-        console.log('Auth state:', { loading, isAuthenticated, isDebateManager });
-
         if (loading) return;
-
         if (!isAuthenticated || !isDebateManager) {
-            console.log('Redirecting to login');
             navigate("/debate-manager/login");
         } else {
-            console.log('Fetching live debate data');
             fetchLiveDebateData();
         }
     }, [loading, isAuthenticated, isDebateManager, navigate]);
@@ -41,18 +39,14 @@ export default function LiveDebateCandidatesVotingPage() {
     const [stream, setStream] = useState(null);
     const [devices, setDevices] = useState([]);
     const [selectedDevice, setSelectedDevice] = useState("");
-    const [showCameraSection, setShowCameraSection] = useState(true);
-
 
     const startCamera = async (deviceId) => {
         try {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
+            if (stream) stream.getTracks().forEach(track => track.stop());
 
             const constraints = {
                 video: deviceId ? { deviceId: { exact: deviceId } } : true,
-                audio: false
+                audio: false,
             };
 
             const newStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -111,7 +105,7 @@ export default function LiveDebateCandidatesVotingPage() {
                 {
                     method: "POST",
                     body: JSON.stringify({
-                        candidateName: candidateName,
+                        candidateName,
                         voteCount: newVoteCount
                     })
                 }
@@ -122,16 +116,13 @@ export default function LiveDebateCandidatesVotingPage() {
                 throw new Error(errorData.message || "Failed to update vote count");
             }
 
-            const data = await response.json();
-            setNotification(`Successfully updated ${candidateName}'s vote count to ${newVoteCount}`);
-
-            // Update the candidates list with new vote count
             setCandidates(prev => prev.map(candidate =>
                 candidate.name === candidateName
                     ? { ...candidate, voteCount: newVoteCount }
                     : candidate
             ));
 
+            setNotification(`Successfully updated ${candidateName}'s vote count to ${newVoteCount}`);
             setTimeout(() => setNotification(null), 3000);
         } catch (err) {
             setNotification(`Error: ${err.message}`);
@@ -142,13 +133,11 @@ export default function LiveDebateCandidatesVotingPage() {
     };
 
     const handleIncrementVote = (candidate) => {
-        const newVoteCount = candidate.voteCount + 1;
-        updateVoteCount(candidate.name, newVoteCount);
+        updateVoteCount(candidate.name, candidate.voteCount + 1);
     };
 
     const handleDecrementVote = (candidate) => {
-        const newVoteCount = Math.max(0, candidate.voteCount - 1);
-        updateVoteCount(candidate.name, newVoteCount);
+        updateVoteCount(candidate.name, Math.max(0, candidate.voteCount - 1));
     };
 
     if (loading) return <p>Checking authentication...</p>;
@@ -170,7 +159,7 @@ export default function LiveDebateCandidatesVotingPage() {
 
     return (
         <div className="live-debate-container">
-            {/* Header Section*/}
+            {/* Header Section */}
             <div className="live-debate-header">
                 <h2 className="live-debate-title">
                     {debateData?.debate?.title || "Live Debate"}
@@ -181,137 +170,146 @@ export default function LiveDebateCandidatesVotingPage() {
                             Total Fires: {debateData?.totalFires || 0} 🔥
                         </span>
                         <span className="live-debate-subtitle">
-                            Total Votes: {candidates.reduce((sum, candidate) => sum + candidate.voteCount, 0)} 📩
+                            Total Votes: {candidates.reduce((sum, c) => sum + c.voteCount, 0)} 📩
                         </span>
 
-                        {/* Collapse/Expand Camera Button */}
+                        {/* Switch Mode Button */}
                         <button
-                            onClick={() => setShowCameraSection(prev => !prev)}
+                            onClick={() =>
+                                setViewMode(prev => prev === "candidates" ? "camera" : "candidates")
+                            }
                             className="toggle-button"
                             style={{ marginLeft: "1rem" }}
                         >
-                            {showCameraSection ? "Hide Camera" : "Show Camera"}
+                            {viewMode === "candidates" ? "Switch to Camera Mode" : "Switch to Full Candidates Mode"}
                         </button>
                     </div>
                 </div>
             </div>
 
+            {/* MAIN CONTENT */}
+            {viewMode === "candidates" ? (
+                // === FULL CANDIDATES MODE ===
+                <div className="candidates-voting-section">
+                    <div className="candidates-grid">
+                        {candidates.length === 0 ? (
+                            <p>No candidates found.</p>
+                        ) : (
+                            candidates.map(candidate => (
+                                <div key={candidate.id} className="candidate-voting-card">
+                                    <div className="candidate-info">
+                                        <div className="candidate-image-container">
+                                            {candidate.imageUrl ? (
+                                                <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image" />
+                                            ) : (
+                                                <div className="candidate-image-placeholder">
+                                                    #{candidate.candidateNumber}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="candidate-details">
+                                            <h4 className="candidate-name">{candidate.name}</h4>
+                                            <span className="candidate-number">Candidate #{candidate.candidateNumber}</span>
+                                        </div>
+                                    </div>
 
-            {/* Camera Section */}
-            {showCameraSection && (
-                <div className="camera-section">
-                    <h3 className="section-title">Live Camera Preview</h3>
-
-                    {/* Video Preview */}
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        style={{ width: "100%", maxWidth: "800px", borderRadius: "8px" }}
-                    />
-
-                    {/* Controls */}
-                    <div style={{ marginTop: "10px", justifyContent: "center", display: "flex", gap: "1rem" }}>
-                        <button onClick={() => startCamera(selectedDevice)} disabled={!!stream}>
-                            Start Camera
-                        </button>
-                        <button onClick={stopCamera} disabled={!stream}>
-                            Stop Camera
-                        </button>
-                        {devices.length > 1 && (
-                            <select
-                                value={selectedDevice}
-                                onChange={(e) => setSelectedDevice(e.target.value)}
-                            >
-                                {devices.map((device, idx) => (
-                                    <option key={device.deviceId} value={device.deviceId}>
-                                        {device.label || `Camera ${idx + 1}`}
-                                    </option>
-                                ))}
-                            </select>
+                                    <div className="vote-control-section">
+                                        <div className="vote-display">
+                                            <span className="vote-count">{candidate.voteCount}</span>
+                                            <span className="vote-label">votes</span>
+                                        </div>
+                                        <div className="vote-controls">
+                                            <button
+                                                onClick={() => handleDecrementVote(candidate)}
+                                                disabled={updating === candidate.name || candidate.voteCount <= 0}
+                                                className="vote-button decrement"
+                                            >-</button>
+                                            <button
+                                                onClick={() => handleIncrementVote(candidate)}
+                                                disabled={updating === candidate.name}
+                                                className="vote-button increment"
+                                            >+</button>
+                                        </div>
+                                    </div>
+                                    {updating === candidate.name && <div className="updating-indicator">Updating...</div>}
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>
-            )}
-
-            {/* Candidates Grid */}
-            <div className="candidates-voting-section">
-                <h3 className="section-title">Candidate Votes</h3>
-                <div className="candidates-grid">
-                    {candidates.length === 0 ? (
-                        <div className="no-candidates-message">
-                            <p>No candidates found for this debate.</p>
+            ) : (
+                // === CAMERA MODE ===
+                <div className="camera-candidates-grid">
+                    {/* Camera */}
+                    <div className="camera-section">
+                        <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxWidth: "800px", borderRadius: "8px" }} />
+                        <div style={{ marginTop: "10px", display: "flex", justifyContent: "center", gap: "1rem" }}>
+                            <button onClick={() => startCamera(selectedDevice)} disabled={!!stream}>Start Camera</button>
+                            <button onClick={stopCamera} disabled={!stream}>Stop Camera</button>
+                            {devices.length > 1 && (
+                                <select value={selectedDevice} onChange={(e) => setSelectedDevice(e.target.value)}>
+                                    {devices.map((device, idx) => (
+                                        <option key={device.deviceId} value={device.deviceId}>
+                                            {device.label || `Camera ${idx + 1}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
-                    ) : (
-                        candidates.map((candidate) => (
-                            <div key={candidate.id} className="candidate-voting-card">
-                                <div className="candidate-info">
-                                    <div className="candidate-image-container">
-                                        {candidate.imageUrl ? (
-                                            <img
-                                                src={candidate.imageUrl}
-                                                alt={candidate.name}
-                                                className="candidate-image"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="candidate-image-placeholder">
-                                                #{candidate.candidateNumber}
+                    </div>
+
+                    {/* Candidates */}
+                    <div className="candidates-voting-section">
+                        <div className="candidates-grid-tight">
+                            {candidates.length === 0 ? (
+                                <p>No candidates found.</p>
+                            ) : (
+                                candidates.map(candidate => (
+                                    <div key={candidate.id} className="candidate-voting-card">
+                                        <div className="candidate-info">
+                                            <div className="candidate-image-container">
+                                                {candidate.imageUrl ? (
+                                                    <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image" />
+                                                ) : (
+                                                    <div className="candidate-image-placeholder">
+                                                        #{candidate.candidateNumber}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="candidate-details">
-                                        <h4 className="candidate-name">{candidate.name}</h4>
-                                        <span className="candidate-number">Candidate #{candidate.candidateNumber}</span>
-                                    </div>
-                                </div>
+                                            <div className="candidate-details">
+                                                <h4 className="candidate-name">{candidate.name}</h4>
+                                                <span className="candidate-number">Candidate #{candidate.candidateNumber}</span>
+                                            </div>
+                                        </div>
 
-                                <div className="vote-control-section">
-                                    <div className="vote-display">
-                                        <span className="vote-count">{candidate.voteCount}</span>
-                                        <span className="vote-label">votes</span>
+                                        <div className="vote-control-section">
+                                            <div className="vote-display">
+                                                <span className="vote-count">{candidate.voteCount}</span>
+                                                <span className="vote-label">votes</span>
+                                            </div>
+                                            <div className="vote-controls">
+                                                <button
+                                                    onClick={() => handleDecrementVote(candidate)}
+                                                    disabled={updating === candidate.name || candidate.voteCount <= 0}
+                                                    className="vote-button decrement"
+                                                >-</button>
+                                                <button
+                                                    onClick={() => handleIncrementVote(candidate)}
+                                                    disabled={updating === candidate.name}
+                                                    className="vote-button increment"
+                                                >+</button>
+                                            </div>
+                                        </div>
+                                        {updating === candidate.name && <div className="updating-indicator">Updating...</div>}
                                     </div>
-
-                                    <div className="vote-controls">
-                                        <button
-                                            onClick={() => handleDecrementVote(candidate)}
-                                            disabled={updating === candidate.name || candidate.voteCount <= 0}
-                                            className="vote-button decrement"
-                                            title="Decrease votes"
-                                        >
-                                            -
-                                        </button>
-                                        <button
-                                            onClick={() => handleIncrementVote(candidate)}
-                                            disabled={updating === candidate.name}
-                                            className="vote-button increment"
-                                            title="Increase votes"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {updating === candidate.name && (
-                                    <div className="updating-indicator">
-                                        <span className="updating-spinner"></span>
-                                        Updating...
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-
-            {/* Floating Notification */}
-            {notification && (
-                <div className="floating-notification">
-                    {notification}
+                                ))
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
+
+            {notification && <div className="floating-notification">{notification}</div>}
         </div>
     );
 }

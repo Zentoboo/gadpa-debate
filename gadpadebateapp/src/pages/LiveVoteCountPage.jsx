@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../css/Dashboard.css";
 import "../css/LiveDebatePage.css";
@@ -309,7 +310,14 @@ export default function LiveDebateCandidatesVotingPage() {
                 </div>
             )}
 
-            {notification && <div className="floating-notification">{notification}</div>}
+            {notification &&
+                createPortal(
+                    <div className="floating-notification">
+                        {notification}
+                    </div>,
+                    document.body
+                )
+            }
         </div>
     );
 }

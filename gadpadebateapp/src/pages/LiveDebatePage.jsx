@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../css/LiveDebatePage.css";
 import FireCountDisplay from "../components/FireCountDisplay";
@@ -469,54 +470,61 @@ export default function LiveDebatePage() {
             </div>
 
             {/* Floating Loading Status */}
-            {actionLoading && (
-                <div className="loading-status">
-                    {loadingAction === "prev" && "Going to previous round..."}
-                    {loadingAction === "next" && "Going to next round..."}
-                    {loadingAction === "end" && "Ending debate..."}
-                </div>
-            )}
+            {actionLoading &&
+                createPortal(
+                    <div className="loading-status">
+                        {loadingAction === "prev" && "Going to previous round..."}
+                        {loadingAction === "next" && "Going to next round..."}
+                        {loadingAction === "end" && "Ending debate..."}
+                    </div>,
+                    document.body
+                )
+            }
 
             {/* Floating Jump-to-Round Button */}
-            <button
-                onClick={() => setShowQuestionList(true)}
-                className="floating-question-list-btn"
-                title="Jump to specific question"
-            >
-                📜
-            </button>
-            {showQuestionList && (
-                <div className="question-list-overlay">
-                    <div className="question-list-modal">
-                        <h3>Select a Round</h3>
-                        <div className="question-list-items-container">
-                            {debateDetails?.questions?.map((q, index) => (
-                                <button
-                                    key={q.round}
-                                    onClick={() => {
-                                        changeRound(q.round);
-                                        setShowQuestionList(false);
-                                    }}
-                                    disabled={actionLoading}
-                                    className={`question-list-item ${liveStatus?.currentRound === q.round ? "active" : ""
-                                        }`}
-                                >
-                                    <span className="round-number">Round {q.round}:</span>{" "}
-                                    {q.question.length > 60
-                                        ? q.question.slice(0, 60) + "..."
-                                        : q.question}
-                                </button>
-                            ))}
-                        </div>
-                        <button
-                            onClick={() => setShowQuestionList(false)}
-                            className="close-question-list"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
+            {createPortal(
+                <button
+                    onClick={() => setShowQuestionList(true)}
+                    className="floating-question-list-btn"
+                    title="Jump to specific question"
+                >
+                    📜
+                </button>,
+                document.body
             )}
+
+            {showQuestionList &&
+                createPortal(
+                    <div className="question-list-overlay">
+                        <div className="question-list-modal">
+                            <h3>Select a Round</h3>
+                            <div className="question-list-items-container">
+                                {debateDetails?.questions?.map((q) => (
+                                    <button
+                                        key={q.round}
+                                        onClick={() => {
+                                            changeRound(q.round);
+                                            setShowQuestionList(false);
+                                        }}
+                                        disabled={actionLoading}
+                                        className={`question-list-item ${liveStatus?.currentRound === q.round ? "active" : ""}`}
+                                    >
+                                        <span className="round-number">Round {q.round}:</span>{" "}
+                                        {q.question.length > 60 ? q.question.slice(0, 60) + "..." : q.question}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setShowQuestionList(false)}
+                                className="close-question-list"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
 
             {/* Debug info */}
             {/* {process.env.NODE_ENV === 'development' && (

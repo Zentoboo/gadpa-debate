@@ -214,6 +214,7 @@
     margin-bottom: 20px;
     gap: 20px;
 }
+
 .candidate-info-small {
     display: flex;
     flex-direction: column;
@@ -702,7 +703,7 @@
 .floating-question-list-btn {
     position: fixed;
     bottom: 80px;
-    right: 20px;
+    right: 5%;
     background: var(--card-background);
     color: var(--text-white);
     border: none;
@@ -816,8 +817,8 @@
 /* ======================================= */
 .loading-status {
     position: fixed;
-    top: 20px;
-    left: 50%;
+    bottom: 80px;
+    right: 5%;
     transform: translateX(-50%);
     z-index: 9999;
     background: rgba(30, 32, 37, 0.75);

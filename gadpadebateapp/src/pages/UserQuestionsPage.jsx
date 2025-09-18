@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../css/Dashboard.css";
 
@@ -140,11 +141,14 @@ export default function UserQuestionsPage() {
                 </tbody>
             </table>
 
-            {notification && (
-                <div className="floating-notification">
-                    {notification}
-                </div>
-            )}
+            {notification &&
+                createPortal(
+                    <div className="floating-notification">
+                        {notification}
+                    </div>,
+                    document.body
+                )
+            }
         </div>
     );
 }

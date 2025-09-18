@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import GadpaBreathInOut from "../components/GadpaBreathInOut";
 import HeroTitle from "../components/HeroTitle";
-import FadeInSection from "../components/FadeInSection";
 import "../css/Home.css";
 import RevealSplitText from "../components/RevealSplitText";
 
-// Loading component
 function LoadingState() {
   return (
     <main>
@@ -19,7 +17,6 @@ function LoadingState() {
   );
 }
 
-// Error component
 function ErrorState({ error, onRetry }) {
   return (
     <main>
@@ -36,33 +33,32 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-// Debates table component
 function DebatesTable({ debates, onJoinDebate }) {
   return (
     <div className="debates-table-container">
       <table className="debates-table">
         <thead>
           <tr>
-            <th>Status</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Schedule</th>
-            <th>Action</th>
+            <th className="col-status">Status</th>
+            <th className="col-title">Title</th>
+            <th className="col-description">Description</th>
+            <th className="col-schedule">Schedule</th>
+            <th className="col-action">Action</th>
           </tr>
         </thead>
         <tbody>
           {debates.map((debate) => (
             <tr key={debate.id}>
-              <td data-label="Status">
+              <td className="col-status" data-label="Status">
                 <span className="status-live">LIVE</span>
               </td>
-              <td data-label="Title">{debate.title}</td>
-              <td data-label="Description">{debate.description}</td>
-              <td data-label="Schedule">
+              <td className="col-title" data-label="Title">{debate.title}</td>
+              <td className="col-description" data-label="Description">{debate.description}</td>
+              <td className="col-schedule" data-label="Schedule">
                 {debate.scheduledStartTime &&
                   new Date(debate.scheduledStartTime).toLocaleString()}
               </td>
-              <td data-label="Action">
+              <td className="col-action" data-label="Action">
                 <button
                   className="join-debate-btn"
                   onClick={() => onJoinDebate(debate.id)}
@@ -78,7 +74,7 @@ function DebatesTable({ debates, onJoinDebate }) {
   );
 }
 
-// No debates component
+
 function NoDebates() {
   return (
     <div className="no-debates">
@@ -140,7 +136,6 @@ function Home() {
       {/* Hero Section */}
       <section className="hero-section" style={{ position: "relative", overflow: "hidden" }}>
         <GadpaBreathInOut />
-        {/* <p>Indonesian Student Election Management System</p> */}
 
         <div className="debates" style={{ maxWidth: "1200px" }}>
           <HeroTitle />
@@ -157,7 +152,7 @@ function Home() {
       </section>
       <section style={{ padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
         {/* Top: Purpose + Features */}
-        <div style={{ backgroundColor: "rgba(21, 0, 0, 0.5)", width: "100%" }}>
+        <div style={{ backgroundColor: "transparent", width: "100%" }}>
           <div className="purpose-features-container content-wrapper">
             {/* Left: Purpose */}
             <div className="purpose-container">
@@ -185,11 +180,11 @@ function Home() {
         </div>
 
         {/* Bottom: About */}
-        <div style={{ backgroundColor: "rgba(0, 18, 0, 0.5)", width: "100%" }}>
+        <div style={{ backgroundColor: "transparent", width: "100%" }}>
           <div className="about-container content-wrapper">
             <RevealSplitText tag="h2">About</RevealSplitText>
             <RevealSplitText tag="p">
-              The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM). 
+              The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
               As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
             </RevealSplitText>
             <Link to="/about" className="info-link">

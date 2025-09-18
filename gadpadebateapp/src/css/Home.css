@@ -70,6 +70,10 @@ section {
     min-height: 120vh;
 }
 
+.top-8 {
+    margin-top: 8vh;
+}
+
 /* ==================================== /
 / === Title Section === /
 / ==================================== */
@@ -149,6 +153,7 @@ section {
 / ==================================== */
 .debates {
     width: 100%;
+    overflow-x: auto;
 }
 
 .debates h2 {
@@ -186,15 +191,16 @@ section {
     margin-top: var(--spacing-sm);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border-radius: 12px;
-    border: 1px solid var(--border-color-debatetable);
+    border: 2px solid var(--border-color-debatetable);
 }
 
 .debates-table {
     width: 100%;
     background: var(--card-background);
     overflow: hidden;
-    min-width: 600px;
+    min-width: 300px;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .debates-table th,
@@ -203,6 +209,35 @@ section {
     text-align: left;
     vertical-align: middle;
     border-bottom: 1px solid var(--border-color-debatetable);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.col-status {
+    width: 10%;
+}
+
+.col-title {
+    width: 20%;
+}
+
+.col-description {
+    width: 30%;
+}
+
+.col-schedule {
+    width: 20%;
+}
+
+.col-action {
+    width: 20%;
+}
+
+@media (max-width: 768px) {
+    .debates-table .col-description,
+    .debates-table .col-schedule {
+        display: none;
+    }
 }
 
 .debates-table th {
@@ -538,64 +573,6 @@ section {
     .title p {
         font-size: 1.2rem;
     }
-
-    .debates h2,
-    .content-section h2 {
-        font-size: 2rem;
-    }
-
-    .debates-table-container {
-        margin: 0 -1rem;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
-    .debates-table {
-        border: none;
-        background: none;
-        min-width: auto;
-    }
-
-    .debates-table thead {
-        display: none;
-    }
-
-    .debates-table tr {
-        display: block;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--border-color-debatetable);
-        border-radius: 8px;
-        background: var(--card-background);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .debates-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid var(--border-color-debatetable);
-        padding: var(--spacing-sm);
-        font-size: 0.9rem;
-    }
-
-    .debates-table td:last-child {
-        border-bottom: none;
-    }
-
-    .debates-table td:before {
-        content: attr(data-label);
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--accent-color);
-        font-family: var(--font-heading);
-        font-size: 0.8rem;
-        flex: 0 0 auto;
-    }
-
-    .debates-table .status-live {
-        justify-content: flex-end;
-    }
-
 }
 
 /* ==================================== /

@@ -241,15 +241,13 @@ export default function DebatePage() {
     const isSuccess = questionMessage.toLowerCase().includes('successfully');
 
     return (
-        <main>
-            {/* === SECTION 1: Debate Info, Current Question, and Fire Support === */}
+        <main className="top-8">
             <section>
                 <div className="debate-header">
                     <div className="debate-details">
                         <h1 className="debate-title">{debate.title}</h1>
                         <p className="debate-description">{debate.description}</p>
                     </div>
-
                     <div className="debate-info">
                         Round {debate.currentRound} out of {debate.totalRounds}
                     </div>
@@ -267,7 +265,7 @@ export default function DebatePage() {
 
                         {/* Fire Interaction Section */}
                         <div className={`fire-section fade-in ${isShaking ? "shake" : ""}`}>
-                            <h2 className="fire-title">🔥 Show Your Support 🔥</h2>
+                            <h2 className="fire-title">🔥 Heat 🔥</h2>
                             <div className="fire-total">Total fires: {total}</div>
                             <div className="fire-btn-wrapper">
                                 <button onClick={sendFire} className="fire-button">

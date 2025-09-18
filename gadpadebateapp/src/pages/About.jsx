@@ -41,7 +41,7 @@ export default function About() {
     }, [location.pathname]);
 
     return (
-        <div>
+        <main className="top-8">
             <BackgroundPulse />
             <section>
                 <div className="header-section">
@@ -103,6 +103,6 @@ export default function About() {
                     </Link>
                 </div>
             </FadeInSection>
-        </div>
+        </main>
     );
 }

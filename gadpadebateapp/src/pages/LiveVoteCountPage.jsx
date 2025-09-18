@@ -265,20 +265,20 @@ export default function LiveDebateCandidatesVotingPage() {
                                 <p>No candidates found.</p>
                             ) : (
                                 candidates.map(candidate => (
-                                    <div key={candidate.id} className="candidate-voting-card">
-                                        <div className="candidate-info">
+                                    <div key={candidate.id} className="candidate-voting-card-small">
+                                        <div className="candidate-info-small">
                                             <div className="candidate-image-container">
                                                 {candidate.imageUrl ? (
-                                                    <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image" />
+                                                    <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image-small" />
                                                 ) : (
-                                                    <div className="candidate-image-placeholder">
+                                                    <div className="candidate-image-placeholder-small">
                                                         #{candidate.candidateNumber}
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="candidate-details">
-                                                <h4 className="candidate-name">{candidate.name}</h4>
-                                                <span className="candidate-number">Candidate #{candidate.candidateNumber}</span>
+                                                <h4 className="candidate-name-small">{candidate.name}</h4>
+                                                <span className="candidate-number-small">Candidate #{candidate.candidateNumber}</span>
                                             </div>
                                         </div>
 

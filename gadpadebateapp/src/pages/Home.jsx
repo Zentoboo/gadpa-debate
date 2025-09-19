@@ -150,13 +150,12 @@ function Home() {
           )}
         </div>
       </section>
-      <section style={{ padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
-        {/* Top: Purpose + Features */}
-        <div style={{ backgroundColor: "transparent", width: "100%" }}>
-          <div className="purpose-features-container content-wrapper">
-            {/* Left: Purpose */}
+      {/* Top: Purpose + Features */}
+      <section>
+        <div className="content-wrapper">
+          <div className="purpose-features-container">
             <div className="purpose-container">
-              <RevealSplitText tag="h2">Purpose</RevealSplitText>
+              <RevealSplitText tag="h2" className="reveal-title">Purpose</RevealSplitText>
               <RevealSplitText tag="p">
                 To enrich the quality and retention rate of GADPA Election 2025–2026.
                 To foster transparent, inclusive, and interactive participation among
@@ -167,7 +166,7 @@ function Home() {
 
             {/* Right: Features */}
             <div className="features-container">
-              <RevealSplitText tag="h2">Features</RevealSplitText>
+              <RevealSplitText tag="h2" className="reveal-title">Features</RevealSplitText>
               <RevealSplitText tag="p">
                 Real-time reactions and dynamic heatmaps allow the audience’s
                 engagement to be visualized instantly, creating a more interactive
@@ -178,19 +177,18 @@ function Home() {
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Bottom: About */}
-        <div style={{ backgroundColor: "transparent", width: "100%" }}>
-          <div className="about-container content-wrapper">
-            <RevealSplitText tag="h2">About</RevealSplitText>
-            <RevealSplitText tag="p">
-              The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
-              As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
-            </RevealSplitText>
-            <Link to="/about" className="info-link">
-              Learn More →
-            </Link>
-          </div>
+      <section>
+        <div className="about-container content-wrapper">
+          <RevealSplitText tag="h2" className="reveal-title">About</RevealSplitText>
+          <RevealSplitText tag="p">
+            The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
+            As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
+          </RevealSplitText>
+          <Link to="/about" className="info-link">
+            Learn More →
+          </Link>
         </div>
       </section>
     </main>

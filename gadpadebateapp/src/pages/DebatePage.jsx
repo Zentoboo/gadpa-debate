@@ -168,39 +168,49 @@ export default function DebatePage() {
     }, [debate?.isLive, debate?.countdown, fetchFireTotal]);
 
     const sendFire = (e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
+        const container = e.currentTarget.closest(".fire-section").querySelector(".fire-animations");
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
         fetch(`http://localhost:5076/debate/${debateId}/fire`, { method: "POST" })
             .then(async (res) => {
-                if (res.status === 429) {
-                    const data = await res.json();
-                    setMessage(`${data.message} Retry after ${data.retryAfterSeconds}s`);
-                    setIsShaking(true);
-                    setTimeout(() => setIsShaking(false), 600);
-                    const id = Date.now();
-                    setBursts((prev) => [...prev, { id }]);
-                    setTimeout(() => {
-                        setBursts((prev) => prev.filter((b) => b.id !== id));
-                    }, 1200);
-                } else if (res.ok) {
-                    const data = await res.json();
+                const data = await res.json();
+
+                if (res.ok) {
                     setMessage(data.message);
                     setTotal(data.total);
                     const id = Date.now();
                     setFires((prev) => [...prev, { id, x, y }]);
+
                     setTimeout(() => {
                         setFires((prev) => prev.filter((f) => f.id !== id));
                     }, 2000);
-                } else if (res.status === 400) {
-                    const data = await res.json();
+                }
+                else if (res.status === 400 || res.status === 429) {
                     setMessage(data.message);
-                    fetchDebateDetails();
+
+                    setIsShaking(true);
+                    setTimeout(() => setIsShaking(false), 500);
+
+                    const burstId = Date.now();
+                    setBursts((prev) => [...prev, { id: burstId }]);
+                    setTimeout(() => {
+                        setBursts((prev) => prev.filter((b) => b.id !== burstId));
+                    }, 1000);
+                }
+                else {
+                    setMessage("Something went wrong, please try again.");
                 }
             })
-            .catch(console.error);
+            .catch((err) => {
+                console.error(err);
+                setMessage("Failed to connect to server.");
+            });
     };
+
 
     if (loading) {
         return (
@@ -238,7 +248,7 @@ export default function DebatePage() {
 
     const hasReachedQuestionLimit = userQuestionsCount >= (debate.maxQuestionsPerUser || 3);
     const canSubmitQuestions = debate.allowUserQuestions && debate.isLive && !showCountdown && !hasReachedQuestionLimit;
-    const isSuccess = questionMessage.toLowerCase().includes('successfully');
+    const isSuccess = questionMessage?.toLowerCase().includes('successfully');
 
     return (
         <main className="top-8">
@@ -257,9 +267,19 @@ export default function DebatePage() {
                     <>
                         {/* Current Question Section */}
                         {debate.currentQuestion && (
-                            <div className="current-question-section fade-in">
-                                <div className="question-label">Current Question</div>
-                                <p className="current-question">{debate.currentQuestion}</p>
+                            <div className="debates-table-container fade-in" style={{ maxWidth: "1200px", marginBottom: "2rem" }}>
+                                <table className="debates-table questions-table">
+                                    <thead >
+                                        <tr>
+                                            <th>Current Question</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{debate.currentQuestion}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         )}
 
@@ -322,7 +342,7 @@ export default function DebatePage() {
             </section>
 
             {/* === SECTION 2: Candidates Display === */}
-            {debate?.candidates?.length > 0 && (
+            {debate.candidates?.length > 0 && (
                 <section>
                     <div className="candidates-section fade-in">
                         <h3 className="candidates-section-title">Candidates</h3>

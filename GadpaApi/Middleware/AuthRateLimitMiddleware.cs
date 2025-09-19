@@ -38,7 +38,7 @@ public class AuthRateLimitMiddleware
 
         if (!await CheckRateLimit(context, ip, path, limit))
         {
-            return; // Rate limit exceeded, response already set
+            return;
         }
 
         await _next(context);

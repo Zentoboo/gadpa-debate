@@ -2,13 +2,18 @@
     visibility: hidden;
     line-height: 1.4;
     font-size: 1.6rem;
-    max-width: 500px;
+    max-width: 600px;
     font-family: var(--font-code), sans-serif;
-    text-transform: lowercase;
 }
 
 .line {
     position: relative;
     overflow: hidden;
     display: inline-flex;
+}
+
+.reveal-title {
+    color: var(--accent-color);
+    font-family: var(--font-heading);
+    text-transform: uppercase;
 }

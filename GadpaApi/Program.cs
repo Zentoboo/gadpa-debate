@@ -63,12 +63,12 @@ public class Program
         if (File.Exists(".env"))
         {
             DotNetEnv.Env.Load(".env");
-            Console.WriteLine("✅ Loaded .env file");
+            Console.WriteLine("Loaded .env file");
             Console.WriteLine($"JWT_SECRET_KEY loaded: {(!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET_KEY")) ? "YES" : "NO")}");
         }
         else
         {
-            Console.WriteLine("❌ .env file not found");
+            Console.WriteLine(".env file not found");
         }
 
         var builder = WebApplication.CreateBuilder(args);
@@ -76,11 +76,11 @@ public class Program
         // Configure Kestrel server for high concurrent connections
         builder.WebHost.ConfigureKestrel(options =>
         {
-            options.Limits.MaxConcurrentConnections = 500; // Increased from default 100
-            options.Limits.MaxConcurrentUpgradedConnections = 500; // For WebSocket/SignalR
+            options.Limits.MaxConcurrentConnections = 500;
+            options.Limits.MaxConcurrentUpgradedConnections = 500;
             options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(30);
             options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
-            options.Limits.MaxRequestBodySize = 1024 * 1024; // 1MB limit
+            options.Limits.MaxRequestBodySize = 1024 * 1024;
         });
 
         // EF Core + Mssql with connection pooling for concurrent access
@@ -115,7 +115,7 @@ public class Program
             var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
                          ?? builder.Configuration["Jwt:Key"];
 
-            Console.WriteLine($"🔑 Using JWT key (first 20 chars): {jwtKey?.Substring(0, Math.Min(20, jwtKey?.Length ?? 0))}...");
+            Console.WriteLine($"Using JWT key (first 20 chars): {jwtKey?.Substring(0, Math.Min(20, jwtKey?.Length ?? 0))}...");
 
             if (string.IsNullOrEmpty(jwtKey) || jwtKey.Contains("REPLACE_WITH"))
             {
@@ -150,7 +150,7 @@ public class Program
                 var allowedOrigins = Environment.GetEnvironmentVariable("FRONTEND_URLS")?.Split(',')
                                    ?? new[] { "http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:3001" };
 
-                Console.WriteLine($"🌐 CORS allowed origins: {string.Join(", ", allowedOrigins)}");
+                Console.WriteLine($"CORS allowed origins: {string.Join(", ", allowedOrigins)}");
 
                 b.WithOrigins(allowedOrigins)
                  .AllowAnyMethod()
@@ -173,11 +173,11 @@ public class Program
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(1);
             options.HandshakeTimeout = TimeSpan.FromSeconds(15);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            options.MaximumReceiveMessageSize = 1024 * 64; // 64KB max message size
-            options.StreamBufferCapacity = 10; // Buffer capacity for streams
-            options.MaximumParallelInvocationsPerClient = 5; // Prevent client spam
-            options.EnableDetailedErrors = false; // Disable for performance
-        }).AddMessagePackProtocol(); // More efficient than JSON for high load
+            options.MaximumReceiveMessageSize = 1024 * 64;
+            options.StreamBufferCapacity = 10;
+            options.MaximumParallelInvocationsPerClient = 5;
+            options.EnableDetailedErrors = false;
+        }).AddMessagePackProtocol();
 
         // Background timer service for live debate updates
         builder.Services.AddSingleton<GadpaDebateApi.Services.DebateTimerService>();
@@ -1554,7 +1554,7 @@ public class Program
             });
 
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-        // Map SignalR Hub for real-time features
+        
         app.MapHub<GadpaDebateApi.Hubs.DebateHub>("/debateHub");
 
         app.Run();

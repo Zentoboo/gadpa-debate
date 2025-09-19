@@ -70,33 +70,15 @@ body {
 /* ==================================== */
 /* === Current Question Section === */
 /* ==================================== */
-.current-question-section {
-    background: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: var(--spacing-md);
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    margin-bottom: var(--spacing-md);
-}
 
-.question-label {
-    font-family: var(--font-heading);
-    color: var(--accent-color);
+.questions-table th {
     font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: var(--spacing-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-align: center;
 }
 
-.current-question {
-    font-size: clamp(1.2rem, 4vw, 1.8rem);
-    font-family: var(--font-body);
-    color: var(--heading-color);
-    line-height: 1.6;
-    margin: 0;
-    font-weight: 500;
+.questions-table td {
+    font-size: 1rem;
+    text-align: center;
 }
 
 /* ==================================== */
@@ -221,7 +203,9 @@ body {
 .fire-emoji {
     position: absolute;
     font-size: 2rem;
+    pointer-events: none;
     animation: fireFloatWavy 2s ease-out forwards;
+    transform: translate(-50%, -50%)
 }
 
 @keyframes fireFloatWavy {

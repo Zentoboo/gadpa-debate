@@ -333,7 +333,6 @@ export default function DebateManagerDashboard() {
             <div className="dashboard-header"><h1>Debate Manager Dashboard</h1></div>
 
             {/* Live Status Section */}
-            <h2 className="section-title">Live Debate Status</h2>
             <div className={`live-status ${liveStatus?.isActive ? "active" : ""}`}>
                 {liveStatus?.isLive ? (
                     <div>
@@ -624,23 +623,22 @@ export default function DebateManagerDashboard() {
             )}
 
             {/* Debates Table */}
-            <h2 className="section-title">All Debates</h2>
-            <div className="table-container">
+            <div className="dashboard-table-container">
                 <table className="dashboard-table">
                     <thead>
                         <tr>
-                            <th>Title</th>
-                            <th>Questions</th>
-                            <th>Created</th>
-                            <th>Scheduled Start</th>
-                            <th>Actions</th>
+                            <th className="col-title-dashboard">Title</th>
+                            <th className="col-question">Questions</th>
+                            <th className="col-created">Created</th>
+                            <th className="col-schedule">Scheduled Start</th>
+                            <th className="col-action">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {debates.length > 0 ? (
                             debates.map(d => (
                                 <tr key={d.id}>
-                                    <td>
+                                    <td className="col-title-dashboard">
                                         {d.title}
                                         {liveStatus?.isLive && liveStatus?.debate?.id === d.id && (
                                             <span style={{ color: "orange", fontSize: "0.8em", marginLeft: "0.5rem" }}>
@@ -648,10 +646,10 @@ export default function DebateManagerDashboard() {
                                             </span>
                                         )}
                                     </td>
-                                    <td>{d.questionCount}</td>
-                                    <td>{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}</td>
-                                    <td>{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "Not Scheduled"}</td>
-                                    <td>
+                                    <td className="col-question">{d.questionCount}</td>
+                                    <td className="col-created">{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}</td>
+                                    <td className="col-schedule">{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "Not Scheduled"}</td>
+                                    <td className="col-action">
                                         <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
                                         <button onClick={() => startEditDebate(d)}>Edit</button>
                                         <button onClick={() => deleteDebate(d.id)} disabled={liveStatus?.isLive && liveStatus?.debate?.id === d.id}>Delete</button>

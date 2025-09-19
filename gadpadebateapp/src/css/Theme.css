@@ -79,13 +79,15 @@ button {
     background: #be3030;
     color: #fff;
     border-radius: 4px;
-    padding: 0.6rem 1.2rem;
+    padding: 0.8rem 0.8rem;
     margin: 0.2rem;
     font-weight: normal;
-    font-size: 1rem;
+    font-size: 0.8rem;
     border: none;
     cursor: pointer;
     transition: background 0.2s;
+    font-family: var(--font-body);
+    text-transform: lowercase;
 }
 
 button:hover {

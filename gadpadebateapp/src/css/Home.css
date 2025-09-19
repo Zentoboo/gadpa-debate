@@ -13,6 +13,7 @@
     --card-background: rgba(20, 20, 20, 0.9);
     --footer-background: #0f0f12;
     --border-color-debatetable: rgba(100, 100, 100, 0.5);
+    --table-header-background: #1f1f1f;
 
     /* Header Specific */
     --header-background: rgba(30, 32, 37, 0.75);
@@ -193,7 +194,7 @@ section {
     overflow-x: auto;
     margin-top: var(--spacing-sm);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
+    border-radius: 8px;
     border: 2px solid var(--border-color-debatetable);
 }
 
@@ -245,7 +246,7 @@ section {
 }
 
 .debates-table th {
-    background: #1f1f1f;
+    background: var(--table-header-background);
     color: var(--accent-color);
     font-family: var(--font-heading);
     font-size: 0.95rem;
@@ -505,7 +506,7 @@ section {
 .cta-section {
     background: rgba(20, 20, 20, 0.9);
     border: 2px solid #10b981;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 2rem;
     text-align: center;
     margin-top: 1rem;
@@ -593,7 +594,7 @@ section {
 .step-card {
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: 0px;
     padding: var(--spacing-md);
     display: flex;
     flex-direction: column;

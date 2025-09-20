@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import "../css/FadeInSection.css";
+import gsap from "gsap";
 
 export default function FadeInSection({ children, className = "" }) {
     const ref = useRef();
@@ -11,9 +11,22 @@ export default function FadeInSection({ children, className = "" }) {
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
-                    el.classList.add("show");
+                    gsap.to(el, {
+                        opacity: 1,
+                        y: 0,
+                        duration: 1.2,
+                        delay: 0.6,
+                        ease: "power3.out"
+                    });
                 } else {
-                    el.classList.remove("show");
+                    if (entry.boundingClientRect.top > 0) {
+                        gsap.to(el, {
+                            opacity: 0,
+                            y: 50,
+                            duration: 0.6,
+                            ease: "power3.in"
+                        });
+                    }
                 }
             },
             { threshold: 0.1 }
@@ -24,7 +37,11 @@ export default function FadeInSection({ children, className = "" }) {
     }, []);
 
     return (
-        <section ref={ref} className={`hidden ${className}`}>
+        <section
+            ref={ref}
+            className={className}
+            style={{ opacity: 0, transform: "translateY(50px)" }}
+        >
             {children}
         </section>
     );

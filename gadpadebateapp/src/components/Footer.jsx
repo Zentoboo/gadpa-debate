@@ -52,29 +52,6 @@ export default function Footer() {
                     </p>
                 </div>
 
-                {/* Quick Links Section */}
-                <div className="footer-links">
-                    <h3>Quick Links</h3>
-                    <ul>
-                        {navLinks.map((link, index) => (
-                            <li key={index}>
-                                <a
-                                    href={link.href}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        const element = document.querySelector(link.href);
-                                        if (element) {
-                                            element.scrollIntoView({ behavior: 'smooth' });
-                                        }
-                                    }}
-                                >
-                                    {link.label}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
                 {/* Social Links Section */}
                 <div className="footer-socials">
                     <h3>Connect With Us</h3>
@@ -97,7 +74,7 @@ export default function Footer() {
 
             {/* Footer Bottom */}
             <div className="footer-bottom">
-                <p>© {currentYear} GADPA – All Rights Reserved</p>
+                <p>{currentYear} GADPA - Persatuan Pelajar Indonesia Xiamen University Malaysia</p>
             </div>
         </footer>
     );

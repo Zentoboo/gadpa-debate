@@ -7,19 +7,19 @@ export default function SectionBackgroundPulse() {
     useEffect(() => {
         if (!pulseRef.current) return;
 
-        gsap.set(pulseRef.current, { opacity: 0.01, scale: 0.8 });
+        gsap.set(pulseRef.current, { opacity: 0.07, scale: 0.8 });
 
         const tl = gsap.timeline({ repeat: -1 });
 
         tl.to(pulseRef.current, {
-            scale: 0.82,
+            scale: 0.78,
             opacity: 0.05,
             duration: 4,
             ease: "sine.out",
         })
             .to(pulseRef.current, {
                 scale: 0.8,
-                opacity: 0.01,
+                opacity: 0.07,
                 duration: 6,
                 ease: "sine.inOut",
             });

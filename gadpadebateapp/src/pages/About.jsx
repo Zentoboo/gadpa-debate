@@ -1,8 +1,8 @@
 import React, { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLocation } from "react-router-dom";
-import BackgroundPulse from "../components/BackgroundPulse";
 import FadeInSection from "../components/FadeInSection";
+import MapWithPingBackground from "../components/MapWithPingBackground";
 
 export default function About() {
     const location = useLocation();
@@ -36,35 +36,37 @@ export default function About() {
     }, []);
 
     useEffect(() => {
-        // Scroll to the top when the component mounts
         window.scrollTo(0, 0);
     }, [location.pathname]);
 
     return (
         <main className="top-8">
-            <BackgroundPulse />
-            <section>
-                <div className="header-section">
-                    <h1 className="title">About Public Debates</h1>
-                    <p className="subtitle">Learn about our debate platform and what makes it unique</p>
+            {/* Hero section with SVG background */}
+            <section className="hero-section">
+                <MapWithPingBackground />
+                <div className="hero-content">
+                    <div className="header-section">
+                        <h1 className="title">About Public Debates</h1>
+                    </div>
                 </div>
                 <div className="content-section">
-                    <h2>What is Gadpa Election 2025-2026?</h2>
-                    <p>
-                        The Gadpa Election 2025-2026 is a groundbreaking online platform dedicated to fostering
-                        healthy, respectful, and engaging public debates. We believe that open discussion is vital for
-                        a well-informed society, and our platform is designed to make it easy for users to connect,
-                        share their perspectives, and engage with others on important topics. Our core mission is to
-                        redefine online discourse by providing a space where diverse viewpoints can be expressed without
-                        fear of personal attacks or harassment.
-                    </p>
                     <h2>What is Gadpa?</h2>
                     <p>
-                        The Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is an Indonesian Student Association under the Indonesian Students Association of Malaysia (PPI Malaysia) and is one of the registered International Students Community under Xiamen University Malaysia's Extra- Curricular Activities Department (ECA) with International Student Ambassadors (ISA) category. PPI Xiamen University Malaysia was founded in 2019 with the aim of promoting and introducing Indonesian culture and traditions to students at Xiamen University Malaysia. Apart from that, PPI Xiamen University Malaysia is also a platform for students to develop their talents and abilities in order to improve their quality when they enter the workforce. In 2024, GADPA XMUM after we change category from clubs and societies. We are focusing on the Indonesian Students Community at Xiamen University Malaysia.
+                        Founded in 2019, the Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is part of PPI Malaysia and a registered international student community under XMUM's Extra-Curricular Activities Department (ECA) with the ISA category. GADPA promotes Indonesian culture and traditions, while providing students opportunities to develop their talents and skills for the workforce. In 2024, after changing its category from clubs and societies, GADPA XMUM now focuses on the Indonesian student community at Xiamen University Malaysia.
                     </p>
+                    {/* <iframe
+                        width="560"
+                        height="315"
+                        src="https://www.youtube.com/embed/4BDlXXR1vnQ"
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                    ></iframe> */}
                 </div>
             </section>
-            <FadeInSection>
+
+            <FadeInSection className="content-section">
                 <h2>How It Works</h2>
                 <div className="steps-section">
                     <div className="steps-section-cards" ref={cardsContainerRef}>
@@ -89,10 +91,18 @@ export default function About() {
                                 <p>See real-time visualizations of community engagement and debate intensity.</p>
                             </div>
                         </div>
+                        <div className="card step-card">
+                            <div className="step-number">4</div>
+                            <div className="step-content">
+                                <h4 className="card-title">Make Impact</h4>
+                                <p>Influence public opinion and contribute to meaningful democratic discourse.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </FadeInSection>
-            <FadeInSection>
+
+            <FadeInSection className="content-section">
                 <div className="cta-section">
                     <h3>Ready to Join the Conversation?</h3>
                     <p>

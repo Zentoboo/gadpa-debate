@@ -175,15 +175,18 @@ export default function LiveDebateCandidatesVotingPage() {
                         </span>
 
                         {/* Switch Mode Button */}
-                        <button
-                            onClick={() =>
-                                setViewMode(prev => prev === "candidates" ? "camera" : "candidates")
-                            }
-                            className="toggle-button"
-                            style={{ marginLeft: "1rem" }}
-                        >
-                            {viewMode === "candidates" ? "Switch to Camera Mode" : "Switch to Full Candidates Mode"}
-                        </button>
+                        <div>
+                            <button
+                                onClick={() =>
+                                    setViewMode(prev => prev === "candidates" ? "camera" : "candidates")
+                                }
+                                className="toggle-button"
+                                style={{ marginLeft: "1rem" }}
+                            >
+                                {viewMode === "candidates" ? "no" : "with"}
+                            </button>
+                            camera
+                        </div>
                     </div>
                 </div>
             </div>

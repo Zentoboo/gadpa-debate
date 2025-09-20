@@ -161,13 +161,13 @@
     padding: 1.5rem;
     margin-bottom: 2rem;
     border-radius: 8px;
-    border: 1px solid #4b5563;
-    background: #1f2937;
+    border: 1px solid var(--border-color-debatetable);
+    background: var(--table-header-background);
 }
 
 .live-status.active {
-    border: 2px solid #10b981;
-    background: #0f172a;
+    border: 2px solid var(--accent-color);
+    background: var(--darkblue-backgroud);
 }
 
 /* ============================ */

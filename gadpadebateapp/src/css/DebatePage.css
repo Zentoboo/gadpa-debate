@@ -79,6 +79,8 @@ body {
 .questions-table td {
     font-size: 1rem;
     text-align: center;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 /* ==================================== */

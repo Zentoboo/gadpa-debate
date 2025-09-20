@@ -1,0 +1,21 @@
+.gsapCursor.blink {
+    display: inline-block;
+    animation: 1s blinkCursor step-end infinite;
+    color: var(--accent-color);
+}
+
+.gsapCursor.hide {
+    display: none;
+}
+
+@keyframes blinkCursor {
+
+    from,
+    to {
+        color: transparent;
+    }
+
+    50% {
+        color: var(--accent-color);
+    }
+}

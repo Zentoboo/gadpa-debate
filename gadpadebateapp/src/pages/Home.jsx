@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import GadpaBreathInOut from "../components/GadpaBreathInOut";
-import HeroTitle from "../components/HeroTitle";
+import HomeHeroTitle from "../components/HeroTitle";
 import "../css/Home.css";
 import RevealSplitText from "../components/RevealSplitText";
 
@@ -138,7 +138,7 @@ function Home() {
         <GadpaBreathInOut />
 
         <div className="debates" style={{ maxWidth: "1200px" }}>
-          <HeroTitle />
+          <HomeHeroTitle />
           <h2>Debates</h2>
           {!liveStatus.isLive ? (
             <NoDebates />

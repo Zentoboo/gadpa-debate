@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import FadeInSection from "../components/FadeInSection";
 import MapWithPingBackground from "../components/MapWithPingBackground";
+import TypeIt from "../components/TypeIt";
 
 export default function About() {
     const location = useLocation();
@@ -45,12 +46,24 @@ export default function About() {
             <section className="hero-section">
                 <MapWithPingBackground />
                 <div className="hero-content">
-                    <div className="header-section">
-                        <h1 className="title">About Public Debates</h1>
-                    </div>
+                    <h1 className="about-hero-title">
+                        GADPA{" "}
+                        <TypeIt
+                            rotateWords
+                            autoPlay={true}
+                            duration={2}
+                            rotateWordsOptions={{
+                                wordsList: ["Debate", "Election", "Community", ""],
+                                cycle: false,
+                                clear: true,
+                                clearingDuration: 2,
+                                pauseAfterComplete: 3,
+                                pauseAfterClear: 0.5,
+                            }}
+                        />
+                    </h1>
                 </div>
                 <div className="content-section">
-                    <h2>What is Gadpa?</h2>
                     <p>
                         Founded in 2019, the Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is part of PPI Malaysia and a registered international student community under XMUM's Extra-Curricular Activities Department (ECA) with the ISA category. GADPA promotes Indonesian culture and traditions, while providing students opportunities to develop their talents and skills for the workforce. In 2024, after changing its category from clubs and societies, GADPA XMUM now focuses on the Indonesian student community at Xiamen University Malaysia.
                     </p>

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import "../css/HeroTitle.css";
 
-function HeroTitle() {
+function HomeHeroTitle() {
     const containerRef = useRef(null);
     const subtitleRef = useRef(null);
 
@@ -31,8 +32,8 @@ function HeroTitle() {
             } else {
                 tl.fromTo(
                     subtitleRef.current,
-                    { y: 20, opacity: 0 },
-                    { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" },
+                    { y: 40, opacity: 0 },
+                    { y: 0, opacity: 1, duration: 0.8, ease: "power2.out" },
                     "<"
                 );
             }
@@ -62,4 +63,4 @@ function HeroTitle() {
     );
 }
 
-export default HeroTitle;
+export default HomeHeroTitle;

@@ -12,8 +12,8 @@ export default function SectionBackgroundPulse() {
         const tl = gsap.timeline({ repeat: -1 });
 
         tl.to(pulseRef.current, {
-            scale: 0.78,
-            opacity: 0.05,
+            scale: 0.8,
+            opacity: 0.03,
             duration: 4,
             ease: "sine.out",
         })

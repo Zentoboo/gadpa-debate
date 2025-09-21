@@ -413,6 +413,26 @@ export default function DebatePage() {
                 </div>
             ) : (
                 <main className="top-8">
+                    {isAuthenticated && (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await fetch(`http://localhost:5076/debate/${debateId}/logout`, {
+                                        method: "POST",
+                                        credentials: "include",
+                                    });
+                                } catch (err) {
+                                    console.error("Logout failed:", err);
+                                } finally {
+                                    setIsAuthenticated(false);
+                                    setShowPasswordModal(true);
+                                }
+                            }}
+                            className="logout-button"
+                        >
+                            Logout
+                        </button>
+                    )}
                     <section>
                         <div className="debate-header">
                             <div className="debate-details">

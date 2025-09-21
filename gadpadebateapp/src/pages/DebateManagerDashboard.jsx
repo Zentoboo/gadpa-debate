@@ -36,6 +36,8 @@ export default function DebateManagerDashboard() {
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
         candidates: [],
+        requirePassword: false,
+        accessPassword: "",
     });
 
     const [editDebate, setEditDebate] = useState({
@@ -45,7 +47,8 @@ export default function DebateManagerDashboard() {
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
-        candidates: [],
+        candidates: [], requirePassword: false,
+        accessPassword: "",
     });
 
     const authFetch = (url, options = {}) =>
@@ -113,6 +116,8 @@ export default function DebateManagerDashboard() {
                     ? toUtcFromLocal(newDebate.scheduledStartTime)
                     : null,
                 candidates: newDebate.candidates,
+                requirePassword: newDebate.requirePassword,
+                accessPassword: newDebate.accessPassword,
             }),
         })
             .then(res => {
@@ -128,6 +133,8 @@ export default function DebateManagerDashboard() {
                     maxQuestionsPerUser: 3,
                     scheduledStartTime: "",
                     candidates: [],
+                    requirePassword: false,
+                    accessPassword: "",
                 });
                 setIsCreating(false);
                 refreshDebates();
@@ -152,6 +159,8 @@ export default function DebateManagerDashboard() {
                         ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
                         : "",
                     candidates: fullDebate.candidates || [],
+                    requirePassword: fullDebate.requirePassword || false,
+                    accessPassword: fullDebate.accessPassword || "",
                 });
                 setEditingDebateId(debate.id);
                 setIsCreating(false);
@@ -181,6 +190,8 @@ export default function DebateManagerDashboard() {
                 ? toUtcFromLocal(editDebate.scheduledStartTime)
                 : null,
             candidates: editDebate.candidates,
+            requirePassword: editDebate.requirePassword,
+            accessPassword: editDebate.accessPassword,
         };
 
         authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
@@ -204,6 +215,8 @@ export default function DebateManagerDashboard() {
                     maxQuestionsPerUser: 3,
                     scheduledStartTime: "",
                     candidates: [],
+                    requirePassword: false,
+                    accessPassword: "",
                 });
                 setEditingDebateId(null);
                 refreshDebates();
@@ -222,6 +235,8 @@ export default function DebateManagerDashboard() {
             maxQuestionsPerUser: 3,
             scheduledStartTime: "",
             candidates: [],
+            requirePassword: false,
+            accessPassword: "",
         });
     };
 
@@ -411,6 +426,25 @@ export default function DebateManagerDashboard() {
                                 onChange={(e) => setNewDebate((prev) => ({ ...prev, scheduledStartTime: e.target.value }))}
                             />
                         </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={newDebate.requirePassword}
+                                onChange={(e) => setNewDebate((prev) => ({ ...prev, requirePassword: e.target.checked }))}
+                            /> Require Password
+                        </label>
+                        {newDebate.requirePassword && (
+                            <label>
+                                Access Password:
+                                <input
+                                    type="text"
+                                    value={newDebate.accessPassword}
+                                    onChange={(e) => setNewDebate((prev) => ({ ...prev, accessPassword: e.target.value }))}
+                                    placeholder="(min 4 chars)"
+                                    className="auth-input"
+                                />
+                            </label>
+                        )}
                     </div>
                     <h4>Questions</h4>
                     <table className="questions-table">
@@ -537,6 +571,25 @@ export default function DebateManagerDashboard() {
                                 onChange={(e) => setEditDebate((prev) => ({ ...prev, scheduledStartTime: e.target.value }))}
                             />
                         </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={editDebate.requirePassword}
+                                onChange={(e) => setEditDebate((prev) => ({ ...prev, requirePassword: e.target.checked }))}
+                            /> Require Password
+                        </label>
+                        {editDebate.requirePassword && (
+                            <label>
+                                Access Password:
+                                <input
+                                    type="text"
+                                    value={editDebate.accessPassword}
+                                    onChange={(e) => setEditDebate((prev) => ({ ...prev, accessPassword: e.target.value }))}
+                                    placeholder="Enter access password (min 4 chars)"
+                                    className="auth-input"
+                                />
+                            </label>
+                        )}
                     </div>
                     <h4>Questions</h4>
                     <table className="questions-table">
@@ -631,6 +684,7 @@ export default function DebateManagerDashboard() {
                             <th className="col-question">Questions</th>
                             <th className="col-created">Created</th>
                             <th className="col-schedule">Scheduled Start</th>
+                            <th className="col-password">Password</th>
                             <th className="col-action">Actions</th>
                         </tr>
                     </thead>
@@ -649,6 +703,9 @@ export default function DebateManagerDashboard() {
                                     <td className="col-question">{d.questionCount}</td>
                                     <td className="col-created">{new Date(d.createdAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}</td>
                                     <td className="col-schedule">{d.scheduledStartTime ? new Date(d.scheduledStartTime).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : "Not Scheduled"}</td>
+                                    <td className="col-password">
+                                        {d.requirePassword ? "Password Locked" : "Open"}
+                                    </td>
                                     <td className="col-action">
                                         <button onClick={() => goLive(d.id)} disabled={liveStatus?.isLive || liveStatus?.isPreviewable}>Go Live</button>
                                         <button onClick={() => startEditDebate(d)}>Edit</button>

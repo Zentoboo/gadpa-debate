@@ -22,6 +22,14 @@ export default function DebatePage() {
     const [questionMessage, setQuestionMessage] = useState("");
     const [userQuestionsCount, setUserQuestionsCount] = useState(0);
 
+    // password authentication state
+    const [requiresPassword, setRequiresPassword] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [password, setPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
     // Fetch the specific debate details
     const fetchDebateDetails = useCallback(async () => {
         try {
@@ -33,9 +41,24 @@ export default function DebatePage() {
             }
             const data = await response.json();
             setDebate(data);
+            setRequiresPassword(data.requirePassword || false);
+
+            if (data.requirePassword) {
+                try {
+                    const testResponse = await fetch(
+                        `http://localhost:5076/debate/${debateId}/validate-session`,
+                        { credentials: "include" }
+                    );
+                    setIsAuthenticated(testResponse.ok);
+                    setShowPasswordModal(!testResponse.ok);
+                } catch (err) {
+                    setIsAuthenticated(false);
+                    setShowPasswordModal(true);
+                }
+            }
 
             // If debate is live and not in countdown, get the current fire total
-            if (data.isLive && !data.countdown) {
+            if (data.isLive && !data.countdown && (!data.requirePassword || isAuthenticated)) {
                 fetchFireTotal();
             }
 
@@ -52,13 +75,63 @@ export default function DebatePage() {
         } finally {
             setLoading(false);
         }
-    }, [debateId]);
+    }, [debateId]); // removed isAuthenticated to avoid race loops
+
+    // Submit password for authentication
+    const submitPassword = async () => {
+        if (!password.trim() || passwordSubmitting) return;
+
+        setPasswordSubmitting(true);
+        setPasswordError("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5076/debate/${debateId}/authenticate`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        password: password.trim(),
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setIsAuthenticated(true);
+                setShowPasswordModal(false);
+                setPassword("");
+                setPasswordError("");
+                // refresh debate details immediately after login
+                await fetchDebateDetails();
+            } else {
+                // stay in modal, just show error
+                setPasswordError(data.message || "Invalid password.");
+            }
+        } catch (error) {
+            setPasswordError("Failed to authenticate. Please try again.");
+        } finally {
+            setPasswordSubmitting(false);
+        }
+    };
+
+    // Autofocus password input when modal opens
+    useEffect(() => {
+        if (showPasswordModal) {
+            document.getElementById("password-input")?.focus();
+        }
+    }, [showPasswordModal]);
 
     // Fetch current fire total
     const fetchFireTotal = useCallback(async () => {
         try {
             const response = await fetch(
-                `http://localhost:5076/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`
+                `http://localhost:5076/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`,
+                { credentials: "include" }
             );
             if (response.ok) {
                 const data = await response.json();
@@ -73,6 +146,11 @@ export default function DebatePage() {
     const submitQuestion = async () => {
         if (!userQuestion.trim() || questionSubmitting) return;
 
+        if (requiresPassword && !isAuthenticated) {
+            setShowPasswordModal(true);
+            return;
+        }
+
         setQuestionSubmitting(true);
         setQuestionMessage("");
 
@@ -84,6 +162,7 @@ export default function DebatePage() {
                     headers: {
                         "Content-Type": "application/json",
                     },
+                    credentials: "include",
                     body: JSON.stringify({
                         question: userQuestion.trim(),
                     }),
@@ -95,7 +174,11 @@ export default function DebatePage() {
             if (response.ok) {
                 setQuestionMessage(data.message);
                 setUserQuestion("");
-                setUserQuestionsCount(prev => prev + 1);
+                setUserQuestionsCount((prev) => prev + 1);
+            } else if (response.status === 401) {
+                setIsAuthenticated(false);
+                setShowPasswordModal(true);
+                setQuestionMessage("Please authenticate to submit questions.");
             } else if (response.status === 429) {
                 setQuestionMessage(`${data.message} Retry after ${data.retryAfterSeconds}s`);
             } else {
@@ -117,7 +200,8 @@ export default function DebatePage() {
     useEffect(() => {
         if (!debate) return;
 
-        const isScheduledFuture = debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
+        const isScheduledFuture =
+            debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime);
 
         if (isScheduledFuture || (debate.isLive && debate.countdown)) {
             const interval = setInterval(() => {
@@ -168,14 +252,23 @@ export default function DebatePage() {
     }, [debate?.isLive, debate?.countdown, fetchFireTotal]);
 
     const sendFire = (e) => {
-        const container = e.currentTarget.closest(".fire-section").querySelector(".fire-animations");
+        if (requiresPassword && !isAuthenticated) {
+            setShowPasswordModal(true);
+            return;
+        }
+        const container = e.currentTarget
+            .closest(".fire-section")
+            .querySelector(".fire-animations");
         if (!container) return;
 
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        fetch(`http://localhost:5076/debate/${debateId}/fire`, { method: "POST" })
+        fetch(`http://localhost:5076/debate/${debateId}/fire`, {
+            method: "POST",
+            credentials: "include",
+        })
             .then(async (res) => {
                 const data = await res.json();
 
@@ -188,8 +281,11 @@ export default function DebatePage() {
                     setTimeout(() => {
                         setFires((prev) => prev.filter((f) => f.id !== id));
                     }, 2000);
-                }
-                else if (res.status === 400 || res.status === 429) {
+                } else if (res.status === 401) {
+                    setIsAuthenticated(false);
+                    setShowPasswordModal(true);
+                    setMessage("Please authenticate to continue.");
+                } else if (res.status === 400 || res.status === 429) {
                     setMessage(data.message);
 
                     setIsShaking(true);
@@ -200,8 +296,7 @@ export default function DebatePage() {
                     setTimeout(() => {
                         setBursts((prev) => prev.filter((b) => b.id !== burstId));
                     }, 1000);
-                }
-                else {
+                } else {
                     setMessage("Something went wrong, please try again.");
                 }
             })
@@ -210,7 +305,6 @@ export default function DebatePage() {
                 setMessage("Failed to connect to server.");
             });
     };
-
 
     if (loading) {
         return (
@@ -225,7 +319,9 @@ export default function DebatePage() {
             <div className="debate-page-container">
                 <div className="status-section fade-in">
                     <p className="error-message">{error}</p>
-                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                    <button className="back-button" onClick={() => navigate("/")}>
+                        Back to Home
+                    </button>
                 </div>
             </div>
         );
@@ -236,178 +332,308 @@ export default function DebatePage() {
             <div className="debate-page-container">
                 <div className="status-section fade-in">
                     <h1 className="status-title">Debate Not Found</h1>
-                    <p className="status-message">The debate may have ended or does not exist.</p>
-                    <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
+                    <p className="status-message">
+                        The debate may have ended or does not exist.
+                    </p>
+                    <button className="back-button" onClick={() => navigate("/")}>
+                        Back to Home
+                    </button>
                 </div>
             </div>
         );
     }
 
-    const showCountdown = (debate.scheduledStartTime && new Date() < new Date(debate.scheduledStartTime)) ||
+    const showCountdown =
+        (debate.scheduledStartTime &&
+            new Date() < new Date(debate.scheduledStartTime)) ||
         (debate.isLive && debate.countdown);
 
-    const hasReachedQuestionLimit = userQuestionsCount >= (debate.maxQuestionsPerUser || 3);
-    const canSubmitQuestions = debate.allowUserQuestions && debate.isLive && !showCountdown && !hasReachedQuestionLimit;
-    const isSuccess = questionMessage?.toLowerCase().includes('successfully');
+    const hasReachedQuestionLimit =
+        userQuestionsCount >= (debate.maxQuestionsPerUser || 3);
+    const canSubmitQuestions =
+        debate.allowUserQuestions &&
+        debate.isLive &&
+        !showCountdown &&
+        !hasReachedQuestionLimit;
+    const isSuccess = questionMessage?.toLowerCase().includes("successfully");
 
     return (
-        <main className="top-8">
-            <section>
-                <div className="debate-header">
-                    <div className="debate-details">
-                        <h1 className="debate-title">{debate.title}</h1>
-                        <p className="debate-description">{debate.description}</p>
-                    </div>
-                    <div className="debate-info">
-                        Round {debate.currentRound} out of {debate.totalRounds}
+        <>
+            {requiresPassword && !isAuthenticated ? (
+                // Show password modal only
+                <div className="password-modal-container">
+                    <div className="password-modal">
+                        <p className="modal-title">Protected Debate</p>
+                        <p className="modal-description">
+                            This debate requires a password to access.
+                        </p>
+                        <div className="modal-body">
+                            <label htmlFor="password-input">Password:</label>
+                            <input
+                                id="password-input"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                onKeyDown={(e) =>
+                                    e.key === "Enter" && submitPassword()
+                                }
+                                placeholder="Enter password"
+                                className="password-input"
+                                disabled={passwordSubmitting}
+                            />
+                            {passwordError && (
+                                <p className="password-error">{passwordError}</p>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            <button
+                                onClick={submitPassword}
+                                disabled={
+                                    passwordSubmitting || !password.trim()
+                                }
+                                className="auth-button"
+                            >
+                                {passwordSubmitting
+                                    ? "Authenticating..."
+                                    : "Submit"}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowPasswordModal(false);
+                                    setPassword("");
+                                    setPasswordError("");
+                                    navigate("/");
+                                }}
+                                className="cancel-button"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                {debate.isLive && !showCountdown ? (
-                    <>
-                        {/* Current Question Section */}
-                        {debate.currentQuestion && (
-                            <div className="debates-table-container fade-in" style={{ maxWidth: "1200px", marginBottom: "2rem" }}>
-                                <table className="debates-table questions-table">
-                                    <thead >
-                                        <tr>
-                                            <th>Current Question</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>{debate.currentQuestion}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+            ) : (
+                <main className="top-8">
+                    <section>
+                        <div className="debate-header">
+                            <div className="debate-details">
+                                <h1 className="debate-title">{debate.title}</h1>
+                                <p className="debate-description">
+                                    {debate.description}
+                                </p>
                             </div>
-                        )}
+                            <div className="debate-info">
+                                Round {debate.currentRound} out of{" "}
+                                {debate.totalRounds}
+                            </div>
+                        </div>
 
-                        {/* Fire Interaction Section */}
-                        <div className={`fire-section fade-in ${isShaking ? "shake" : ""}`}>
-                            <h2 className="fire-title">🔥 Heat 🔥</h2>
-                            <div className="fire-total">Total fires: {total}</div>
-                            <div className="fire-btn-wrapper">
-                                <button onClick={sendFire} className="fire-button">
-                                    DETONATE
-                                </button>
-                                <div className="fire-animations">
-                                    {fires.map((fire) => (
-                                        <span
-                                            key={fire.id}
-                                            className="fire-emoji"
-                                            style={{
-                                                left: `${fire.x}px`,
-                                                top: `${fire.y}px`,
-                                            }}
+                        {debate.isLive && !showCountdown ? (
+                            <>
+                                {/* Current Question Section */}
+                                {debate.currentQuestion && (
+                                    <div
+                                        className="debates-table-container fade-in"
+                                        style={{
+                                            maxWidth: "1200px",
+                                            marginBottom: "2rem",
+                                        }}
+                                    >
+                                        <table className="debates-table questions-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Current Question</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                        {debate.currentQuestion}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {/* Fire Interaction Section */}
+                                <div
+                                    className={`fire-section fade-in ${isShaking ? "shake" : ""
+                                        }`}
+                                >
+                                    <h2 className="fire-title">🔥 Heat 🔥</h2>
+                                    <div className="fire-total">
+                                        Total fires: {total}
+                                    </div>
+                                    <div className="fire-btn-wrapper">
+                                        <button
+                                            onClick={sendFire}
+                                            className="fire-button"
                                         >
-                                            🔥
+                                            DETONATE
+                                        </button>
+                                        <div className="fire-animations">
+                                            {fires.map((fire) => (
+                                                <span
+                                                    key={fire.id}
+                                                    className="fire-emoji"
+                                                    style={{
+                                                        left: `${fire.x}px`,
+                                                        top: `${fire.y}px`,
+                                                    }}
+                                                >
+                                                    🔥
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {bursts.map((burst) => (
+                                        <span
+                                            key={burst.id}
+                                            className="burst-emoji"
+                                        >
+                                            💢
                                         </span>
                                     ))}
+                                    {message && (
+                                        <p className="fire-message">{message}</p>
+                                    )}
                                 </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Countdown or Not Live State Sections */}
+                                <div className="status-section fade-in">
+                                    <h1 className="status-title">
+                                        {showCountdown
+                                            ? "Debate Starting Soon!"
+                                            : "Debate Not Currently Live"}
+                                    </h1>
+                                    {showCountdown && (
+                                        <>
+                                            <div className="countdown-display">
+                                                {countdown}
+                                            </div>
+                                            <p className="status-message">
+                                                {countdown === "Starting now!"
+                                                    ? "The debate should be starting now! Refreshing..."
+                                                    : "Please check back when the countdown ends. The debate will begin automatically."}
+                                            </p>
+                                        </>
+                                    )}
+                                    {!showCountdown && (
+                                        <p className="status-message">
+                                            The debate may have ended or hasn't
+                                            started yet. Check the schedule for
+                                            upcoming debates.
+                                        </p>
+                                    )}
+                                    <button
+                                        className="back-button"
+                                        onClick={() => navigate("/")}
+                                    >
+                                        Back to Home
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </section>
+
+                    {/* === SECTION 2: Candidates Display === */}
+                    {debate.candidates?.length > 0 && (
+                        <section>
+                            <div className="candidates-section fade-in">
+                                <h3 className="candidates-section-title">
+                                    Candidates
+                                </h3>
+                                <ul className="candidates-list">
+                                    {debate.candidates.map((candidate, index) => (
+                                        <li
+                                            key={index}
+                                            className="candidate-item"
+                                        >
+                                            <span className="candidate-name">
+                                                {candidate.name}
+                                            </span>
+                                            <span className="candidate-votes">
+                                                Votes: {candidate.voteCount}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                            {bursts.map((burst) => (
-                                <span key={burst.id} className="burst-emoji">
-                                    💢
-                                </span>
-                            ))}
-                            {message && <p className="fire-message">{message}</p>}
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        {/* Countdown or Not Live State Sections */}
-                        <div className="status-section fade-in">
-                            <h1 className="status-title">
-                                {showCountdown ? "Debate Starting Soon!" : "Debate Not Currently Live"}
-                            </h1>
-                            {showCountdown && (
-                                <>
-                                    <div className="countdown-display">{countdown}</div>
-                                    <p className="status-message">
-                                        {countdown === "Starting now!" ?
-                                            "The debate should be starting now! Refreshing..." :
-                                            "Please check back when the countdown ends. The debate will begin automatically."
+                        </section>
+                    )}
+
+                    {/* === SECTION 3: User Question Submission === */}
+                    {debate.allowUserQuestions && (
+                        <section>
+                            <div className="question-submission-section fade-in">
+                                <h3 className="question-section-title">
+                                    Submit Your Question
+                                </h3>
+                                <div className="question-header">
+                                    <span
+                                        className={`question-status ${isSuccess ? "success" : "error"
+                                            }`}
+                                        style={{
+                                            display:
+                                                questionMessage ||
+                                                    hasReachedQuestionLimit
+                                                    ? "inline-block"
+                                                    : "none",
+                                        }}
+                                    >
+                                        {hasReachedQuestionLimit
+                                            ? `Max reached (${debate.maxQuestionsPerUser})`
+                                            : questionMessage}
+                                    </span>
+                                </div>
+                                <div className="question-form">
+                                    <textarea
+                                        value={userQuestion}
+                                        onChange={(e) =>
+                                            setUserQuestion(e.target.value)
                                         }
-                                    </p>
-                                </>
-                            )}
-                            {!showCountdown && (
-                                <p className="status-message">The debate may have ended or hasn't started yet. Check the schedule for upcoming debates.</p>
-                            )}
-                            <button className="back-button" onClick={() => navigate('/')}>Back to Home</button>
-                        </div>
-                    </>
-                )}
-            </section>
-
-            {/* === SECTION 2: Candidates Display === */}
-            {debate.candidates?.length > 0 && (
-                <section>
-                    <div className="candidates-section fade-in">
-                        <h3 className="candidates-section-title">Candidates</h3>
-                        <ul className="candidates-list">
-                            {debate.candidates.map((candidate, index) => (
-                                <li key={index} className="candidate-item">
-                                    <span className="candidate-name">{candidate.name}</span>
-                                    <span className="candidate-votes">Votes: {candidate.voteCount}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </section>
-            )}
-
-            {/* === SECTION 3: User Question Submission === */}
-            {debate.allowUserQuestions && (
-                <section>
-                    <div className="question-submission-section fade-in">
-                        <h3 className="question-section-title">Submit Your Question</h3>
-                        <div className="question-header">
-                            <span
-                                className={`question-status ${isSuccess ? 'success' : 'error'}`}
-                                style={{ display: (questionMessage || hasReachedQuestionLimit) ? 'inline-block' : 'none' }}
-                            >
-                                {hasReachedQuestionLimit
-                                    ? `Max reached (${debate.maxQuestionsPerUser})`
-                                    : questionMessage}
-                            </span>
-                        </div>
-                        <div className="question-form">
-                            <textarea
-                                value={userQuestion}
-                                onChange={(e) => setUserQuestion(e.target.value)}
-                                placeholder="Ask your question here..."
-                                maxLength={500}
-                                disabled={!canSubmitQuestions || questionSubmitting}
-                                className="question-textarea"
-                                rows={4}
-                            />
-                            <div className="question-form-footer">
-                                <div className="question-info">
-                                    <span className="char-count">
-                                        {userQuestion.length}/500
-                                    </span>
-                                    <span className="questions-count">
-                                        {userQuestionsCount}/{debate.maxQuestionsPerUser || 3} questions used
-                                    </span>
+                                        placeholder="Ask your question here..."
+                                        maxLength={500}
+                                        disabled={
+                                            !canSubmitQuestions ||
+                                            questionSubmitting
+                                        }
+                                        className="question-textarea"
+                                        rows={4}
+                                    />
+                                    <div className="question-form-footer">
+                                        <div className="question-info">
+                                            <span className="char-count">
+                                                {userQuestion.length}/500
+                                            </span>
+                                            <span className="questions-count">
+                                                {userQuestionsCount}/
+                                                {debate.maxQuestionsPerUser || 3}{" "}
+                                                questions used
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={submitQuestion}
+                                            disabled={
+                                                !canSubmitQuestions ||
+                                                questionSubmitting ||
+                                                userQuestion.trim().length < 5
+                                            }
+                                            className="submit-question-btn"
+                                        >
+                                            {questionSubmitting
+                                                ? "Submitting..."
+                                                : "Submit"}
+                                        </button>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={submitQuestion}
-                                    disabled={
-                                        !canSubmitQuestions ||
-                                        questionSubmitting ||
-                                        userQuestion.trim().length < 5
-                                    }
-                                    className="submit-question-btn"
-                                >
-                                    {questionSubmitting ? "Submitting..." : "Submit"}
-                                </button>
                             </div>
-                        </div>
-                    </div>
-                </section>
+                        </section>
+                    )}
+                </main>
             )}
-        </main>
+        </>
     );
 }

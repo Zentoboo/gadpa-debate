@@ -26,7 +26,9 @@ public record CreateDebateRequest(
     bool AllowUserQuestions = false,
     int MaxQuestionsPerUser = 3,
     DateTime? ScheduledStartTime = null,
-    List<CandidateDto>? Candidates = null
+    List<CandidateDto>? Candidates = null,
+    string? AccessPassword = null,
+    bool RequirePassword = false
 );
 
 public record UpdateDebateRequest(
@@ -36,7 +38,9 @@ public record UpdateDebateRequest(
     bool? AllowUserQuestions = null,
     int? MaxQuestionsPerUser = null,
     DateTime? ScheduledStartTime = null,
-    List<CandidateDto>? Candidates = null
+    List<CandidateDto>? Candidates = null,
+    string? AccessPassword = null,
+    bool? RequirePassword = null
 );
 public record UpdateCandidateVoteRequest(
     string CandidateName,
@@ -55,6 +59,18 @@ public record CandidateDto(
 }
 public record ChangeRoundRequest(int RoundNumber);
 public record SubmitQuestionRequest(string Question);
+public record DebatePasswordRequest(string Password);
+public record DebateAccessResponse(
+    bool Success,
+    string? Message = null,
+    string? SessionToken = null,
+    int? ExpiresInHours = null
+);
+public record SessionValidationResult(
+    bool IsValid,
+    int? DebateId = null,
+    string? Message = null
+);
 public class Program
 {
     public static void Main(string[] args)
@@ -161,6 +177,7 @@ public class Program
 
         // Token service and memory cache
         builder.Services.AddSingleton<TokenService>();
+        builder.Services.AddScoped<DebateSessionService>();
         builder.Services.AddMemoryCache();
 
         // Health checks
@@ -195,6 +212,28 @@ public class Program
         });
 
         var app = builder.Build();
+
+        string GetClientIp(HttpContext context)
+        {
+            if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
+            {
+                var first = xff.ToString().Split(',').First().Trim();
+                if (!string.IsNullOrWhiteSpace(first)) return first;
+            }
+            return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        async Task<bool> ValidateDebateSession(HttpContext context, AppDbContext db, DebateSessionService sessionService, int debateId)
+        {
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId);
+            if (debate == null || !debate.RequirePassword) return true;
+
+            var sessionToken = context.Request.Cookies["debate_session_" + debateId];
+            if (string.IsNullOrEmpty(sessionToken)) return false;
+
+            var validation = await sessionService.ValidateSessionAsync(debateId, sessionToken, GetClientIp(context));
+            return validation.IsValid;
+        }
 
         if (app.Environment.IsDevelopment())
         {
@@ -315,6 +354,7 @@ public class Program
                 id = debate.Id,
                 title = debate.Title,
                 description = debate.Description,
+                requirePassword = debate.RequirePassword,
                 currentRound = (isLive && !countdown) ? liveDebateStatus?.CurrentRound ?? 0 : 0,
                 totalRounds = debate.Questions.Count,
                 currentQuestion = (isLive && !countdown && liveDebateStatus != null) ? debate.Questions.FirstOrDefault(q => q.RoundNumber == liveDebateStatus.CurrentRound)?.Question : null,
@@ -337,6 +377,7 @@ public class Program
             HttpContext context,
             AppDbContext db,
             IMemoryCache cache,
+            DebateSessionService sessionService,
             int debateId,
             SubmitQuestionRequest request) =>
         {
@@ -378,6 +419,14 @@ public class Program
             // Check if IP is banned
             if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
                 return Results.Forbid();
+
+            // Check session validation for password-protected debates
+            if (debate.RequirePassword)
+            {
+                var isValidSession = await ValidateDebateSession(context, db, sessionService, debateId);
+                if (!isValidSession)
+                    return Results.Unauthorized();
+            }
 
             // Check user's question limit
             var userQuestionCount = await db.UserSubmittedQuestions
@@ -444,6 +493,7 @@ public class Program
             HttpContext context,
             AppDbContext db,
             IMemoryCache cache,
+            DebateSessionService sessionService,
             int debateId) =>
         {
             // First, find the specific live debate
@@ -456,20 +506,18 @@ public class Program
             if (debate.ScheduledStartTime.HasValue && DateTime.UtcNow < debate.ScheduledStartTime.Value && !liveDebate.IsActive)
                 return Results.BadRequest(new { message = "Debate countdown in progress. Interaction not allowed yet." });
 
-            string GetClientIp()
-            {
-                if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff))
-                {
-                    var first = xff.ToString().Split(',').First().Trim();
-                    if (!string.IsNullOrWhiteSpace(first)) return first;
-                }
-                return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            }
-
-            var ip = GetClientIp();
+            var ip = GetClientIp(context);
 
             if (await db.BannedIps.AnyAsync(b => b.IpAddress == ip))
                 return Results.Forbid();
+
+            // Check session validation for password-protected debates
+            if (debate.RequirePassword)
+            {
+                var isValidSession = await ValidateDebateSession(context, db, sessionService, debateId);
+                if (!isValidSession)
+                    return Results.Unauthorized();
+            }
 
             var key = $"fire:rl:{ip}:{liveDebate.Id}";
             var now = DateTime.UtcNow;
@@ -615,6 +663,101 @@ public class Program
             return Results.Ok(candidates);
         });
 
+        // Check if debate requires password
+        app.MapGet("/debate/{debateId}/password-required", async (AppDbContext db, int debateId) =>
+        {
+            var debate = await db.Debates.FirstOrDefaultAsync(d => d.Id == debateId);
+            if (debate == null)
+                return Results.NotFound(new { message = "Debate not found." });
+
+            return Results.Ok(new { requirePassword = debate.RequirePassword });
+        });
+
+        // Submit password for debate access
+        app.MapPost("/debate/{debateId}/authenticate", async (
+            HttpContext context,
+            AppDbContext db,
+            DebateSessionService sessionService,
+            int debateId,
+            DebatePasswordRequest request) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                return Results.BadRequest(new { message = "Password is required." });
+            }
+
+            var ip = GetClientIp(context);
+            var result = await sessionService.CreateSessionAsync(debateId, ip, request.Password);
+
+            if (!result.Success || string.IsNullOrEmpty(result.SessionToken))
+            {
+                // Clear any stale cookie if auth fails
+                context.Response.Cookies.Delete($"debate_session_{debateId}");
+
+                return Results.Json(new
+                {
+                    message = "Invalid password.",
+                    authenticated = false
+                }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = context.Request.IsHttps,
+                SameSite = context.Request.IsHttps ? SameSiteMode.None : SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddHours(result.ExpiresInHours ?? 24)
+            };
+
+            context.Response.Cookies.Append(
+                $"debate_session_{debateId}",
+                result.SessionToken,
+                cookieOptions
+            );
+
+            return Results.Ok(new
+            {
+                message = result.Message,
+                authenticated = true,
+                expiresInHours = result.ExpiresInHours
+            });
+        });
+
+
+        app.MapPost("/debate/{debateId}/logout", async (
+            HttpContext context,
+            DebateSessionService sessionService,
+            int debateId) =>
+        {
+            var sessionToken = context.Request.Cookies[$"debate_session_{debateId}"];
+            if (!string.IsNullOrEmpty(sessionToken))
+            {
+                var ip = GetClientIp(context);
+                await sessionService.DeactivateSessionAsync(sessionToken, ip);
+
+                // Clear the cookie
+                context.Response.Cookies.Delete($"debate_session_{debateId}");
+            }
+
+            return Results.Ok(new { message = "Logged out successfully" });
+        });
+
+        app.MapGet("/debate/{debateId}/validate-session", async (
+            HttpContext context,
+            AppDbContext db,
+            DebateSessionService sessionService,
+            int debateId) =>
+        {
+            var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var sessionToken = context.Request.Cookies[$"debate_session_{debateId}"];
+            if (string.IsNullOrEmpty(sessionToken))
+                return Results.Unauthorized();
+
+            var validation = await sessionService.ValidateSessionAsync(debateId, sessionToken, ip);
+            return validation.IsValid
+                ? Results.Ok(new { authenticated = true })
+                : Results.Unauthorized();
+        });
 
         // ===========================
         // ===== ADMIN ROUTES ========
@@ -862,6 +1005,8 @@ public class Program
                     d.AllowUserQuestions,
                     d.MaxQuestionsPerUser,
                     d.ScheduledStartTime,
+                    d.RequirePassword,
+                    d.AccessPassword,
                     questionCount = d.Questions.Count,
                     candidateCount = d.Candidates.Count,
                     userSubmittedCount = d.UserSubmittedQuestions.Count,
@@ -904,6 +1049,13 @@ public class Program
             if (request.MaxQuestionsPerUser < 1 || request.MaxQuestionsPerUser > 20)
                 return Results.BadRequest(new { message = "Max questions per user must be between 1 and 20." });
 
+            // Validate password settings
+            if (request.RequirePassword && string.IsNullOrWhiteSpace(request.AccessPassword))
+                return Results.BadRequest(new { message = "Access password is required when password protection is enabled." });
+
+            if (!string.IsNullOrWhiteSpace(request.AccessPassword) && request.AccessPassword.Length < 4)
+                return Results.BadRequest(new { message = "Access password must be at least 4 characters long." });
+
             // Validate candidates if provided
             if (request.Candidates != null && request.Candidates.Any())
             {
@@ -919,7 +1071,9 @@ public class Program
                 CreatedByUserId = userId,
                 AllowUserQuestions = request.AllowUserQuestions,
                 MaxQuestionsPerUser = request.MaxQuestionsPerUser,
-                ScheduledStartTime = request.ScheduledStartTime
+                ScheduledStartTime = request.ScheduledStartTime,
+                RequirePassword = request.RequirePassword,
+                AccessPassword = request.RequirePassword ? request.AccessPassword?.Trim() : null
             };
 
             db.Debates.Add(debate);
@@ -979,6 +1133,8 @@ public class Program
                 debate.AllowUserQuestions,
                 debate.MaxQuestionsPerUser,
                 debate.ScheduledStartTime,
+                debate.RequirePassword,
+                debate.AccessPassword,
                 questions = debate.Questions.Select(q => new { q.RoundNumber, q.Question }),
                 candidates = debate.Candidates.Select(c => new
                 {
@@ -1030,6 +1186,37 @@ public class Program
             // Update scheduled start time if provided
             if (request.ScheduledStartTime.HasValue)
                 debate.ScheduledStartTime = request.ScheduledStartTime.Value;
+
+            // Update password settings if provided
+            if (request.RequirePassword.HasValue)
+            {
+                debate.RequirePassword = request.RequirePassword.Value;
+
+                if (request.RequirePassword.Value)
+                {
+                    if (string.IsNullOrWhiteSpace(request.AccessPassword))
+                        return Results.BadRequest(new { message = "Access password is required when enabling password protection." });
+
+                    if (request.AccessPassword.Length < 4)
+                        return Results.BadRequest(new { message = "Access password must be at least 4 characters long." });
+
+                    debate.AccessPassword = request.AccessPassword.Trim();
+                }
+                else
+                {
+                    debate.AccessPassword = null;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(request.AccessPassword))
+            {
+                if (debate.RequirePassword)
+                {
+                    if (request.AccessPassword.Length < 4)
+                        return Results.BadRequest(new { message = "Access password must be at least 4 characters long." });
+
+                    debate.AccessPassword = request.AccessPassword.Trim();
+                }
+            }
 
             // Update questions if provided
             if (request.Questions != null && request.Questions.Count > 0)
@@ -1554,7 +1741,7 @@ public class Program
             });
 
         }).RequireAuthorization(policy => policy.RequireRole("DebateManager"));
-        
+
         app.MapHub<GadpaDebateApi.Hubs.DebateHub>("/debateHub");
 
         app.Run();

@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import FadeInSection from "../components/FadeInSection";
 import MapWithPingBackground from "../components/MapWithPingBackground";
 import TypeIt from "../components/TypeIt";
+import RevealSplitText from "../components/RevealSplitText";
 
 export default function About() {
     const location = useLocation();
@@ -64,9 +65,9 @@ export default function About() {
                     </h1>
                 </div>
                 <div className="content-section">
-                    <p>
+                    <RevealSplitText tag="p" style={{ maxWidth: "1200px"}}>
                         Founded in 2019, the Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is part of PPI Malaysia and a registered international student community under XMUM's Extra-Curricular Activities Department (ECA) with the ISA category. GADPA promotes Indonesian culture and traditions, while providing students opportunities to develop their talents and skills for the workforce. In 2024, after changing its category from clubs and societies, GADPA XMUM now focuses on the Indonesian student community at Xiamen University Malaysia.
-                    </p>
+                    </RevealSplitText>
                     {/* <iframe
                         width="560"
                         height="315"

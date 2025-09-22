@@ -361,31 +361,28 @@ export default function DebatePage() {
         <>
             {requiresPassword && !isAuthenticated ? (
                 // Show password modal only
-                <div className="password-modal-container">
-                    <div className="password-modal">
-                        <p className="modal-title">Protected Debate</p>
-                        <p className="modal-description">
+                <div className="auth-container">
+                    <div className="auth-card">
+                        <p className="auth-title">Protected Debate</p>
+                        <p className="small-text">
                             This debate requires a password to access.
                         </p>
-                        <div className="modal-body">
-                            <label htmlFor="password-input">Password:</label>
-                            <input
-                                id="password-input"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                onKeyDown={(e) =>
-                                    e.key === "Enter" && submitPassword()
-                                }
-                                placeholder="Enter password"
-                                className="password-input"
-                                disabled={passwordSubmitting}
-                            />
-                            {passwordError && (
-                                <p className="password-error">{passwordError}</p>
-                            )}
-                        </div>
-                        <div className="modal-footer">
+                        <input
+                            id="password-input"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={(e) =>
+                                e.key === "Enter" && submitPassword()
+                            }
+                            placeholder="Password"
+                            className="auth-input"
+                            disabled={passwordSubmitting}
+                        />
+                        {passwordError && (
+                            <p className="password-error">{passwordError}</p>
+                        )}
+                        <div style={{ gap: "0.4rem", display: "flex", flexDirection: "column" }}>
                             <button
                                 onClick={submitPassword}
                                 disabled={
@@ -518,6 +515,101 @@ export default function DebatePage() {
                                         <p className="fire-message">{message}</p>
                                     )}
                                 </div>
+
+                                {/* === SECTION 2: Candidates Display === */}
+                                {debate.candidates?.length > 0 && (
+                                    <div className="debate-table-container">
+                                        <table
+                                            className="debates-table questions-table"
+                                            style={{ maxWidth: "600px" }}
+                                        >
+                                            <thead>
+                                                <tr>
+                                                    <th>Candidates</th>
+                                                    <th>Votes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {debate.candidates.map((candidate, index) => (
+                                                    <tr key={index}>
+                                                        <td className="candidate-name">{candidate.name}</td>
+                                                        <td className="candidate-votes">{candidate.voteCount}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+
+                                {/* === SECTION 3: User Question Submission === */}
+                                {debate.allowUserQuestions && (
+                                    <section>
+                                        <div className="question-submission-section fade-in">
+                                            <h3 className="question-section-title">
+                                                Submit Your Question
+                                            </h3>
+                                            <div className="question-header">
+                                                <span
+                                                    className={`question-status ${isSuccess ? "success" : "error"
+                                                        }`}
+                                                    style={{
+                                                        display:
+                                                            questionMessage ||
+                                                                hasReachedQuestionLimit
+                                                                ? "inline-block"
+                                                                : "none",
+                                                    }}
+                                                >
+                                                    {hasReachedQuestionLimit
+                                                        ? `Max reached (${debate.maxQuestionsPerUser})`
+                                                        : questionMessage}
+                                                </span>
+                                            </div>
+                                            <div className="question-form">
+                                                <textarea
+                                                    value={userQuestion}
+                                                    onChange={(e) =>
+                                                        setUserQuestion(e.target.value)
+                                                    }
+                                                    placeholder="Ask your question here..."
+                                                    maxLength={500}
+                                                    disabled={
+                                                        !canSubmitQuestions ||
+                                                        questionSubmitting
+                                                    }
+                                                    className="question-textarea"
+                                                    rows={4}
+                                                />
+                                                <div className="question-form-footer">
+                                                    <div className="question-info">
+                                                        <span className="char-count">
+                                                            {userQuestion.length}/500
+                                                        </span>
+                                                        <span className="questions-count">
+                                                            {userQuestionsCount}/
+                                                            {debate.maxQuestionsPerUser || 3}{" "}
+                                                            questions used
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        onClick={submitQuestion}
+                                                        disabled={
+                                                            !canSubmitQuestions ||
+                                                            questionSubmitting ||
+                                                            userQuestion.trim().length < 5
+                                                        }
+                                                        className="submit-question-btn"
+                                                    >
+                                                        {questionSubmitting
+                                                            ? "Submitting..."
+                                                            : "Submit"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                )}
                             </>
                         ) : (
                             <>
@@ -557,101 +649,6 @@ export default function DebatePage() {
                             </>
                         )}
                     </section>
-
-                    {/* === SECTION 2: Candidates Display === */}
-                    {debate.candidates?.length > 0 && (
-                        <section>
-                            <div className="candidates-section fade-in">
-                                <h3 className="candidates-section-title">
-                                    Candidates
-                                </h3>
-                                <ul className="candidates-list">
-                                    {debate.candidates.map((candidate, index) => (
-                                        <li
-                                            key={index}
-                                            className="candidate-item"
-                                        >
-                                            <span className="candidate-name">
-                                                {candidate.name}
-                                            </span>
-                                            <span className="candidate-votes">
-                                                Votes: {candidate.voteCount}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* === SECTION 3: User Question Submission === */}
-                    {debate.allowUserQuestions && (
-                        <section>
-                            <div className="question-submission-section fade-in">
-                                <h3 className="question-section-title">
-                                    Submit Your Question
-                                </h3>
-                                <div className="question-header">
-                                    <span
-                                        className={`question-status ${isSuccess ? "success" : "error"
-                                            }`}
-                                        style={{
-                                            display:
-                                                questionMessage ||
-                                                    hasReachedQuestionLimit
-                                                    ? "inline-block"
-                                                    : "none",
-                                        }}
-                                    >
-                                        {hasReachedQuestionLimit
-                                            ? `Max reached (${debate.maxQuestionsPerUser})`
-                                            : questionMessage}
-                                    </span>
-                                </div>
-                                <div className="question-form">
-                                    <textarea
-                                        value={userQuestion}
-                                        onChange={(e) =>
-                                            setUserQuestion(e.target.value)
-                                        }
-                                        placeholder="Ask your question here..."
-                                        maxLength={500}
-                                        disabled={
-                                            !canSubmitQuestions ||
-                                            questionSubmitting
-                                        }
-                                        className="question-textarea"
-                                        rows={4}
-                                    />
-                                    <div className="question-form-footer">
-                                        <div className="question-info">
-                                            <span className="char-count">
-                                                {userQuestion.length}/500
-                                            </span>
-                                            <span className="questions-count">
-                                                {userQuestionsCount}/
-                                                {debate.maxQuestionsPerUser || 3}{" "}
-                                                questions used
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={submitQuestion}
-                                            disabled={
-                                                !canSubmitQuestions ||
-                                                questionSubmitting ||
-                                                userQuestion.trim().length < 5
-                                            }
-                                            className="submit-question-btn"
-                                        >
-                                            {questionSubmitting
-                                                ? "Submitting..."
-                                                : "Submit"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    )}
                 </main>
             )}
         </>

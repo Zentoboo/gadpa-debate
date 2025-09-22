@@ -269,34 +269,32 @@ body {
     background: var(--card-background);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    margin-bottom: var(--spacing-md);
 }
 
 .question-section-title {
+    color: var(--accent-color);
     font-family: var(--font-heading);
-    color: var(--heading-color);
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: var(--spacing-md);
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     text-align: center;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: var(--spacing-sm);
 }
 
 .question-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
     flex-wrap: wrap;
     gap: var(--spacing-sm);
 }
 
 .question-status {
     font-family: var(--font-code);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 6px;
@@ -325,7 +323,7 @@ body {
     padding: var(--spacing-sm);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.8rem;
     font-family: var(--font-body);
     resize: vertical;
     min-height: 120px;
@@ -348,6 +346,7 @@ body {
 
 .question-form-footer {
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
@@ -359,7 +358,7 @@ body {
     flex-direction: column;
     gap: 0.25rem;
     font-family: var(--font-code);
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--secondary-color);
 }
 
@@ -498,15 +497,6 @@ body {
     .fire-button {
         font-size: 1.5rem;
         padding: 1rem 2rem;
-    }
-
-    .question-form-footer {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .submit-question-btn {
-        width: 100%;
     }
 
     .question-header {

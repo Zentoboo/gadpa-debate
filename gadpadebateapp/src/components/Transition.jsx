@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useRef, useState, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import gsap from 'gsap';
-import TransitionContext from '../contexts/TransitionContext';
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import gsap from "gsap";
+import TransitionContext from "../contexts/TransitionContext";
 
 const TransitionComponent = ({ children }) => {
     const location = useLocation();
@@ -10,11 +10,6 @@ const TransitionComponent = ({ children }) => {
     const [displayLocation, setDisplayLocation] = useState(location);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const currentAnimationRef = useRef(null);
-
-    // Memoize rendered children
-    const renderedChildren = useMemo(() => {
-        return React.cloneElement(children, { location: displayLocation });
-    }, [children, displayLocation]);
 
     useEffect(() => {
         if (location.pathname !== displayLocation.pathname && !isTransitioning) {
@@ -36,7 +31,7 @@ const TransitionComponent = ({ children }) => {
                 }
             });
 
-            // Exit animation
+            // exit → swap → enter
             tl.to(container, {
                 opacity: 0,
                 duration: 0.5,
@@ -44,9 +39,9 @@ const TransitionComponent = ({ children }) => {
             })
                 .call(() => {
                     setDisplayLocation(location);
+                    window.scrollTo(0, 0);
                 })
                 .to({}, { duration: 0.05 })
-                // Enter animation
                 .to(container, {
                     opacity: 1,
                     duration: 0.5,
@@ -55,9 +50,8 @@ const TransitionComponent = ({ children }) => {
 
             currentAnimationRef.current = tl;
         }
-    }, [location.pathname, displayLocation.pathname, isTransitioning, toggleCompleted, location]);
+    }, [location, displayLocation, isTransitioning, toggleCompleted]);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (currentAnimationRef.current) {
@@ -70,12 +64,12 @@ const TransitionComponent = ({ children }) => {
         <div
             ref={containerRef}
             style={{
-                width: '100%',
-                height: '100%',
-                willChange: 'opacity'
+                width: "100%",
+                height: "100%",
+                willChange: "opacity"
             }}
         >
-            {renderedChildren}
+            {typeof children === "function" ? children(displayLocation) : children}
         </div>
     );
 };

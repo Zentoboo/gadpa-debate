@@ -67,24 +67,6 @@ body {
 }
 
 
-/* ==================================== */
-/* === Current Question Section === */
-/* ==================================== */
-.questions-table {
-    border: var(--border-color) 1px solid;
-}
-
-.questions-table th {
-    font-size: 1.2rem;
-    text-align: center;
-}
-
-.questions-table td {
-    font-size: 1rem;
-    text-align: center;
-    white-space: normal;
-    word-wrap: break-word;
-}
 
 /* ==================================== */
 /* === Fire Interaction Section === */

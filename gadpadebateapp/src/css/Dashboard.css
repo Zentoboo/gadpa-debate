@@ -308,6 +308,51 @@
     background: #b91c1c;
 }
 
+/* questions-table */
+.questions-table {
+    border: var(--border-color) 1px solid;
+    width: 100%;
+    table-layout: auto;
+    background: var(--card-background);
+    border-collapse: collapse;
+}
+
+.questions-table th {
+    font-size: 1rem;
+    text-align: center;
+    color: var(--accent-color);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-sm);
+    background: var(--table-header-background);
+}
+
+.questions-table th:nth-child(1),
+.questions-table th:nth-child(3) {
+    text-align: center;
+}
+
+
+.questions-table td {
+    font-size: 1rem;
+    text-align: center;
+    white-space: normal;
+    word-wrap: break-word;
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-sm);
+}
+
+.questions-table textarea {
+    margin: 0;
+}
+
+.col-number-q {
+    width: 4%;
+}
+.col-action-q {
+    width: 4%;
+}
+
 /* floating notification */
 .floating-notification {
     position: fixed;

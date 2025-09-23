@@ -438,28 +438,6 @@ section {
 /* ==================================== /
 / === Call to Action === /
 / ==================================== */
-.cta-section {
-    background: rgba(20, 20, 20, 0.9);
-    border: 2px solid #10b981;
-    border-radius: 8px;
-    padding: 2rem;
-    text-align: center;
-    margin-top: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.cta-section h3 {
-    color: #fff;
-    font-size: 1.4rem;
-    margin: 0 0 1rem 0;
-}
-
-.cta-section p {
-    color: #9ca3af;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin: 0;
-}
 
 .home-button {
     display: inline-block;
@@ -470,7 +448,6 @@ section {
     color: #fff;
     font-weight: 700;
     font-size: 1.1rem;
-    border-radius: 9999px;
     text-decoration: none;
     box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
     transition: transform 0.25s ease;
@@ -479,7 +456,7 @@ section {
 
 .home-button:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.6);
+    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.8);
 }
 
 @keyframes gradientFlow {

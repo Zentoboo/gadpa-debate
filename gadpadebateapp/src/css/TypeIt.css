@@ -1,7 +1,6 @@
 .gsapCursor.blink {
     display: inline-block;
     animation: 1s blinkCursor step-end infinite;
-    color: var(--accent-color);
 }
 
 .gsapCursor.hide {
@@ -12,10 +11,10 @@
 
     from,
     to {
-        color: transparent;
+        opacity: 0;
     }
 
     50% {
-        color: var(--accent-color);
+        opacity: 1;
     }
 }

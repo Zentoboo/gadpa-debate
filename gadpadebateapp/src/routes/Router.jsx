@@ -22,38 +22,39 @@ export default function Router({
 }) {
     return (
         <TransitionComponent>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/debate/:debateId" element={<DebatePage />} />
+            {(displayLocation) => (
+                <Routes location={displayLocation} key={displayLocation.pathname}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/debate/:debateId" element={<DebatePage />} />
 
-                {/* Admin */}
-                <Route path="/admin/login" element={<AdminLogin />} />
-                {adminRegisterEnabled && (
-                    <Route path="/admin/register" element={<AdminRegister />} />
-                )}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    {/* Admin */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    {adminRegisterEnabled && (
+                        <Route path="/admin/register" element={<AdminRegister />} />
+                    )}
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-                {/* Debate Manager */}
-                <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
-                {debateManagerRegisterEnabled && (
-                    <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
-                )}
-                <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
-                <Route
-                    path="/debate-manager/debates/:id/user-questions"
-                    element={<UserQuestionsPage />}
-                />
-                <Route
-                    path="/debate-manager/user-questions"
-                    element={<Navigate to="/debate-manager/dashboard" replace />}
-                />
-                <Route path="/debate-manager/debate" element={<LiveDebatePage />} />
-                <Route path="/debate-manager/vote" element={<LiveVoteCountPage />} />
+                    {/* Debate Manager */}
+                    <Route path="/debate-manager/login" element={<DebateManagerLogin />} />
+                    {debateManagerRegisterEnabled && (
+                        <Route path="/debate-manager/register" element={<DebateManagerRegister />} />
+                    )}
+                    <Route path="/debate-manager/dashboard" element={<DebateManagerDashboard />} />
+                    <Route
+                        path="/debate-manager/debates/:id/user-questions"
+                        element={<UserQuestionsPage />}
+                    />
+                    <Route
+                        path="/debate-manager/user-questions"
+                        element={<Navigate to="/debate-manager/dashboard" replace />}
+                    />
+                    <Route path="/debate-manager/debate" element={<LiveDebatePage />} />
+                    <Route path="/debate-manager/vote" element={<LiveVoteCountPage />} />
 
-                {/* Other */}
-                <Route path="*" element={<NotFound />} />
-            </Routes>
+                    <Route path="*" element={<NotFound />} />
+                </Routes>
+            )}
         </TransitionComponent>
     );
 }

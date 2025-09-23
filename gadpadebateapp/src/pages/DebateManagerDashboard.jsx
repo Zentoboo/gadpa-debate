@@ -448,11 +448,16 @@ export default function DebateManagerDashboard() {
                     </div>
                     <h4>Questions</h4>
                     <table className="questions-table">
+                        <colgroup>
+                            <col className="col-number-q" />
+                            <col className="col-question-q" />
+                            <col className="col-action-q" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Question</th>
-                                <th></th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -593,11 +598,16 @@ export default function DebateManagerDashboard() {
                     </div>
                     <h4>Questions</h4>
                     <table className="questions-table">
+                        <colgroup>
+                            <col className="col-number-q" />
+                            <col className="col-question-q" />
+                            <col className="col-action-q" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Question</th>
-                                <th></th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>

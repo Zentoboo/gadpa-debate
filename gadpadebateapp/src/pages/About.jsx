@@ -65,7 +65,7 @@ export default function About() {
                     </h1>
                 </div>
                 <div className="content-section">
-                    <RevealSplitText tag="p" style={{ maxWidth: "1200px"}}>
+                    <RevealSplitText tag="p" style={{ maxWidth: "1200px" }}>
                         Founded in 2019, the Indonesian Student Association of Xiamen University Malaysia (PPI Xiamen University Malaysia), known as Garuda Dwi Pantara (GADPA), is part of PPI Malaysia and a registered international student community under XMUM's Extra-Curricular Activities Department (ECA) with the ISA category. GADPA promotes Indonesian culture and traditions, while providing students opportunities to develop their talents and skills for the workforce. In 2024, after changing its category from clubs and societies, GADPA XMUM now focuses on the Indonesian student community at Xiamen University Malaysia.
                     </RevealSplitText>
                     {/* <iframe
@@ -117,10 +117,11 @@ export default function About() {
             </FadeInSection>
 
             <FadeInSection className="content-section">
-                <div className="cta-section">
-                    <h3>Ready to Join the Conversation?</h3>
+                <div>
                     <p>
-                        Head back to the home page to see what debates are currently live and join the discussion.
+                        <TypeIt
+                            word="Dive into the heat of the debate with us!"
+                        />
                     </p>
                     <Link to="/" className="home-button">
                         Leggo❤️‍🔥

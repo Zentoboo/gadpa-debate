@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../css/DebatePage.css";
+import TypeIt from "../components/TypeIt";
 
 export default function DebatePage() {
     const { debateId } = useParams();
@@ -518,7 +519,7 @@ export default function DebatePage() {
                                         <div className="debate-table-container">
                                             <table
                                                 className="debates-table questions-table"
-                                                style={{ maxWidth: "600px"}}
+                                                style={{ maxWidth: "600px" }}
                                             >
                                                 <thead>
                                                     <tr>
@@ -542,10 +543,23 @@ export default function DebatePage() {
 
                                 {/* === SECTION 3: User Question Submission === */}
                                 {debate.allowUserQuestions && (
-                                    <section style={{ padding: "2rem 0"}}>
+                                    <section style={{ padding: "2rem 0" }}>
                                         <div className="question-submission-section fade-in">
                                             <h3 className="question-section-title">
-                                                Submit Your Question
+                                                <TypeIt
+                                                    rotateWords
+                                                    autoPlay={true}
+                                                    duration={1}
+                                                    delay={2}
+                                                    rotateWordsOptions={{
+                                                        wordsList: ["Curious?", "Ask the candidates", "Submit your question"],
+                                                        cycle: true,
+                                                        clear: true,
+                                                        clearingDuration: 2,
+                                                        pauseAfterComplete: 2,
+                                                        pauseAfterClear: 0.5,
+                                                    }}
+                                                />
                                             </h3>
                                             <div className="question-header">
                                                 <span

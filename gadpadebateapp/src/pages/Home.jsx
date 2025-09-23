@@ -151,7 +151,7 @@ function Home() {
         </div>
       </section>
       {/* Top: Purpose + Features */}
-      <section>
+      <section className="edgy-edges">
         <div className="content-wrapper">
           <div className="purpose-features-container">
             <div className="purpose-container">
@@ -186,9 +186,9 @@ function Home() {
             The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
             As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
           </RevealSplitText>
-          <Link to="/about" className="info-link">
-            Learn More →
-          </Link>
+          <button className="button-link" onClick={() => navigate("/about")}>
+            <span className="button-link-content">Learn More</span>
+          </button>
         </div>
       </section>
     </main>

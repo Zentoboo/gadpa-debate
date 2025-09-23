@@ -26,7 +26,6 @@
     display: flex;
     flex-direction: column;
     min-height: 92vh;
-    background: var(--dark-background);
     color: var(--text-light);
     padding: 2rem;
     align-items: center;
@@ -131,8 +130,6 @@
     gap: 2rem;
     width: 100%;
     max-width: 1200px;
-    padding: 2rem 0;
-    border-top: 1px solid var(--border-color);
     align-items: stretch;
 }
 
@@ -454,7 +451,7 @@
 }
 
 .live-debate-question {
-    font-size: 2.4rem;
+    font-size: 1.6rem;
     font-weight: 500;
     color: var(--text-white);
     line-height: 1.4;
@@ -992,7 +989,7 @@
     }
 
     .live-debate-question {
-        font-size: 1.8rem;
+        font-size: 1.2rem;
     }
 
     .controls-grid-container {

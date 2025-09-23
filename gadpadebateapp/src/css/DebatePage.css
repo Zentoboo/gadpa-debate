@@ -66,6 +66,46 @@ body {
     font-size: 0.95rem;
 }
 
+.questions-table-debatepage {
+    width: 100%;
+    background: var(--card-background);
+    overflow: hidden;
+    min-width: 300px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: var(--border-color) 1px solid;
+}
+
+.questions-table-debatepage th,
+.questions-table-debatepage td {
+    padding: var(--spacing-sm);
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color-debatetable);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.questions-table-debatepage th {
+    background: var(--table-header-background);
+    color: var(--accent-color);
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.questions-table-debatepage td {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    font-family: var(--font-code);
+}
+
+.questions-table-debatepage th:nth-child(2),
+.questions-table-debatepage td:nth-child(2) {
+    text-align: center;
+}
 
 
 /* ==================================== */

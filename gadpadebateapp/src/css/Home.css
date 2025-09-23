@@ -73,7 +73,7 @@ section {
 
 .hero-section {
     position: relative;
-    min-height: 120vh;
+    min-height: 100vh;
 }
 
 .top-8 {
@@ -245,7 +245,7 @@ section {
     text-align: center;
     max-width: 1200px;
     margin: 0 auto;
-    min-height: 80vh;
+    min-height: 40vh;
 }
 
 .content-section h2 {
@@ -689,4 +689,175 @@ section {
     z-index: 2;
     text-align: center;
     padding: 2rem;
+}
+
+/* button */
+.button-link {
+    position: relative;
+    overflow: hidden;
+    height: 3rem;
+    padding: 0 2rem;
+    border-radius: 0;
+    background: #3d3a4e;
+    background-size: 400%;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+.button-link:hover {
+    background: #3d3a4e;
+}
+
+.button-link:hover::before {
+    transform: scaleX(1);
+}
+
+.button-link-content {
+    position: relative;
+    z-index: 1;
+    font: var(--font-code);
+    text-transform: uppercase;
+}
+
+.button-link::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    width: 100%;
+    height: inherit;
+    border-radius: inherit;
+    background: linear-gradient(82.3deg,
+            rgb(16, 185, 129, 1) 10.8%,
+            rgb(111, 88, 238) 94.3%);
+    transition: all 0.475s;
+}
+
+.button-link-2 {
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
+    padding: 0.7em 2em;
+    border: 2px solid var(--accent-color);
+    border-radius: 2px;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.1);
+    color: var(--accent-color);
+    text-decoration: none;
+    transition: 0.3s ease all;
+    z-index: 1;
+    background: transparent;
+}
+
+.button-link-2:hover {
+    background-color: transparent;
+}
+
+.button-link-2:before {
+    transition: 0.5s all ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    right: 50%;
+    bottom: 0;
+    opacity: 0;
+    content: '';
+    background-color: var(--accent-color);
+    z-index: -1;
+}
+
+.button-link-2:hover,
+.button-link-2:focus {
+    color: white;
+}
+
+.button-link-2:hover:before,
+.button-link-2:focus:before {
+    transition: 0.5s all ease;
+    left: 0;
+    right: 0;
+    opacity: 1;
+}
+
+.button-link-2:active {
+    transform: scale(0.9);
+}
+
+.button-link-2-red {
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
+    padding: 0.7em 2em;
+    border: 2px solid var(--warning-red);
+    border-radius: 2px;
+    position: relative;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.1);
+    color: var(--warning-red);
+    text-decoration: none;
+    transition: 0.3s ease all;
+    z-index: 1;
+    background: transparent;
+}
+
+.button-link-2-red:hover {
+    background-color: transparent;
+}
+
+.button-link-2-red:before {
+    transition: 0.5s all ease;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    right: 50%;
+    bottom: 0;
+    opacity: 0;
+    content: '';
+    background-color: var(--warning-red);
+    z-index: -1;
+}
+
+.button-link-2-red:hover,
+.button-link-2-red:focus {
+    color: white;
+}
+
+.button-link-2-red:hover:before,
+.button-link-2-red:focus:before {
+    transition: 0.5s all ease;
+    left: 0;
+    right: 0;
+    opacity: 1;
+}
+
+.button-link-2-red:active {
+    transform: scale(0.9);
+}
+
+/* edges */
+
+.edgy-edges {
+    background:
+        linear-gradient(to right, #10b981 2px, transparent 2px) 0 0,
+        linear-gradient(to right, #10b981 2px, transparent 2px) 0 100%,
+        linear-gradient(to left, #10b981 2px, transparent 2px) 100% 0,
+        linear-gradient(to left, #10b981 2px, transparent 2px) 100% 100%,
+        linear-gradient(to bottom, #10b981 2px, transparent 2px) 0 0,
+        linear-gradient(to bottom, #10b981 2px, transparent 2px) 100% 0,
+        linear-gradient(to top, #10b981 2px, transparent 2px) 0 100%,
+        linear-gradient(to top, #10b981 2px, transparent 2px) 100% 100%;
+
+    background-repeat: no-repeat;
+    background-size: 20px 20px;
+    margin: 1rem;
+    width: 80%;
+    min-height: 40vh;
 }

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import FadeInSection from "../components/FadeInSection";
 import MapWithPingBackground from "../components/MapWithPingBackground";
@@ -7,6 +7,7 @@ import TypeIt from "../components/TypeIt";
 import RevealSplitText from "../components/RevealSplitText";
 
 export default function About() {
+    const navigate = useNavigate();
     const location = useLocation();
     const cardsContainerRef = useRef(null);
 
@@ -116,18 +117,27 @@ export default function About() {
                 </div>
             </FadeInSection>
 
-            <FadeInSection className="content-section">
+            <section className="content-section edgy-edges">
                 <div>
                     <p>
                         <TypeIt
-                            word="Dive into the heat of the debate with us!"
+                            rotateWords
+                            autoPlay={true}
+                            rotateWordsOptions={{
+                                wordsList: ["Dive into the heat of debate!", "Join the discussion.", "Make your voice heard!"],
+                                cycle: true,
+                                clear: true,
+                                pauseAfterComplete: 3,
+                                pauseAfterClear: 0.5,
+                            }}
+                            charterPerSecond={8}
                         />
                     </p>
-                    <Link to="/" className="home-button">
-                        Leggo❤️‍🔥
-                    </Link>
+                    <button className="button-link-2" onClick={() => navigate("/")}>
+                        Leggo
+                    </button>
                 </div>
-            </FadeInSection>
+            </section>
         </main>
     );
 }

@@ -411,26 +411,6 @@ export default function DebatePage() {
                 </div>
             ) : (
                 <main className="top-8">
-                    {isAuthenticated && (
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await fetch(`http://localhost:5076/debate/${debateId}/logout`, {
-                                        method: "POST",
-                                        credentials: "include",
-                                    });
-                                } catch (err) {
-                                    console.error("Logout failed:", err);
-                                } finally {
-                                    setIsAuthenticated(false);
-                                    setShowPasswordModal(true);
-                                }
-                            }}
-                            className="logout-button"
-                        >
-                            Logout
-                        </button>
-                    )}
                     <section>
                         <div className="debate-header">
                             <div className="debate-details">
@@ -518,7 +498,7 @@ export default function DebatePage() {
                                     {debate.candidates?.length > 0 && (
                                         <div className="debate-table-container">
                                             <table
-                                                className="debates-table questions-table"
+                                                className="questions-table-debatepage"
                                                 style={{ maxWidth: "600px" }}
                                             >
                                                 <thead>
@@ -530,8 +510,8 @@ export default function DebatePage() {
                                                 <tbody>
                                                     {debate.candidates.map((candidate, index) => (
                                                         <tr key={index}>
-                                                            <td className="candidate-name">{candidate.name}</td>
-                                                            <td className="candidate-votes">{candidate.voteCount}</td>
+                                                            <td className="col-candidate-name" >{candidate.name}</td>
+                                                            <td className="col-candidate-votes">{candidate.voteCount}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -622,6 +602,28 @@ export default function DebatePage() {
                                         </div>
                                     </section>
                                 )}
+                                <section style={{ height: "30vh", minHeight: "4vh", justifyContent: "flex-start", display: "flex", alignItems: "center" }}>
+                                    {isAuthenticated && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await fetch(`http://localhost:5076/debate/${debateId}/logout`, {
+                                                        method: "POST",
+                                                        credentials: "include",
+                                                    });
+                                                } catch (err) {
+                                                    console.error("Logout failed:", err);
+                                                } finally {
+                                                    setIsAuthenticated(false);
+                                                    setShowPasswordModal(true);
+                                                }
+                                            }}
+                                            className="button-link-2-red"
+                                        >
+                                            logout of session
+                                        </button>
+                                    )}
+                                </section>
                             </>
                         ) : (
                             <>

@@ -7,6 +7,9 @@ import "../css/Header.css";
 export default function Header({ adminRegisterEnabled, debateManagerRegisterEnabled, onHide }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const location = useLocation();
+
+    const showReadingIndicator = ["/", "/about"].includes(location.pathname);
+
     const { isAdmin, isDebateManager, logout } = useAuth();
 
     useEffect(() => setMenuOpen(false), [location.pathname]);
@@ -19,7 +22,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                 {/* Logo */}
                 <Link to="/" className="logo">
                     <img src={logo} alt="gadpa logo" />
-                    <span>Gadpa Election 2025</span>
+                    <span>gadpa-election</span>
                 </Link>
 
                 {/* Mobile Menu Toggle */}
@@ -135,11 +138,14 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
 
                         {/* Hide Header (styled like a nav item) */}
                         <li>
-                            <button onClick={onHide} style={{opacity: 0.1}} className="nav-link-button">hide</button>
+                            <button onClick={onHide} style={{ opacity: 0.1 }} className="nav-link-button">hide</button>
                         </li>
                     </ul>
                 </nav>
             </div>
+            {showReadingIndicator && (
+                <div className="reading-indicator"></div>
+            )}
         </header>
     );
 }

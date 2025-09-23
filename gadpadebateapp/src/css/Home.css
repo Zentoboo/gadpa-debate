@@ -122,8 +122,8 @@ section {
     overflow-x: auto;
     margin-top: var(--spacing-sm);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    border: 2px solid var(--border-color-debatetable);
+    border-radius: 0px;
+    border: 1px solid var(--border-color-debatetable);
 }
 
 .debates-table {
@@ -145,30 +145,30 @@ section {
     white-space: nowrap;
 }
 
-.col-status {
+.col-status-home {
     width: 10%;
 }
 
-.col-title {
+.col-title-home {
+    width: 10%;
+}
+
+.col-description-home {
     width: 20%;
 }
 
-.col-description {
-    width: 30%;
-}
-
-.col-schedule {
+.col-schedule-home {
     width: 20%;
 }
 
-.col-action {
+.col-action-home {
     width: 20%;
 }
 
 @media (max-width: 768px) {
 
-    .debates-table .col-description,
-    .debates-table .col-schedule {
+    .debates-table .col-description-home,
+    .debates-table .col-schedule-home {
         display: none;
     }
 }

@@ -39,26 +39,26 @@ function DebatesTable({ debates, onJoinDebate }) {
       <table className="debates-table">
         <thead>
           <tr>
-            <th className="col-status">Status</th>
-            <th className="col-title">Title</th>
-            <th className="col-description">Description</th>
-            <th className="col-schedule">Schedule</th>
-            <th className="col-action">Action</th>
+            <th className="col-status-home">Status</th>
+            <th className="col-title-home">Title</th>
+            <th className="col-description-home">Description</th>
+            <th className="col-schedule-home">Schedule</th>
+            <th className="col-action-home">Action</th>
           </tr>
         </thead>
         <tbody>
           {debates.map((debate) => (
             <tr key={debate.id}>
-              <td className="col-status" data-label="Status">
+              <td className="col-status-home" data-label="Status">
                 <span className="status-live">LIVE</span>
               </td>
-              <td className="col-title" data-label="Title">{debate.title}</td>
-              <td className="col-description" data-label="Description">{debate.description}</td>
-              <td className="col-schedule" data-label="Schedule">
+              <td className="col-title-home" data-label="Title">{debate.title}</td>
+              <td className="col-description-home" data-label="Description">{debate.description}</td>
+              <td className="col-schedule-home" data-label="Schedule">
                 {debate.scheduledStartTime &&
                   new Date(debate.scheduledStartTime).toLocaleString()}
               </td>
-              <td className="col-action" data-label="Action">
+              <td className="col-action-home" data-label="Action">
                 <button
                   className="join-debate-btn"
                   onClick={() => onJoinDebate(debate.id)}

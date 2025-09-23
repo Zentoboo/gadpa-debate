@@ -471,80 +471,78 @@ export default function DebatePage() {
                                         </table>
                                     </div>
                                 )}
-
-                                {/* Fire Interaction Section */}
-                                <div
-                                    className={`fire-section fade-in ${isShaking ? "shake" : ""
-                                        }`}
-                                >
-                                    <h2 className="fire-title">🔥 Heat 🔥</h2>
-                                    <div className="fire-total">
-                                        Total fires: {total}
-                                    </div>
-                                    <div className="fire-btn-wrapper">
-                                        <button
-                                            onClick={sendFire}
-                                            className="fire-button"
-                                        >
-                                            DETONATE
-                                        </button>
-                                        <div className="fire-animations">
-                                            {fires.map((fire) => (
-                                                <span
-                                                    key={fire.id}
-                                                    className="fire-emoji"
-                                                    style={{
-                                                        left: `${fire.x}px`,
-                                                        top: `${fire.y}px`,
-                                                    }}
-                                                >
-                                                    🔥
-                                                </span>
-                                            ))}
+                                <div className="fire-event-and-candidates-section">
+                                    <div
+                                        className={`fire-section fade-in ${isShaking ? "shake" : ""
+                                            }`}
+                                    >
+                                        <h2 className="fire-title">🔥 Heat 🔥</h2>
+                                        <div className="fire-total">
+                                            Total fires: {total}
                                         </div>
+                                        <div className="fire-btn-wrapper">
+                                            <button
+                                                onClick={sendFire}
+                                                className="fire-button"
+                                            >
+                                                DETONATE
+                                            </button>
+                                            <div className="fire-animations">
+                                                {fires.map((fire) => (
+                                                    <span
+                                                        key={fire.id}
+                                                        className="fire-emoji"
+                                                        style={{
+                                                            left: `${fire.x}px`,
+                                                            top: `${fire.y}px`,
+                                                        }}
+                                                    >
+                                                        🔥
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {bursts.map((burst) => (
+                                            <span
+                                                key={burst.id}
+                                                className="burst-emoji"
+                                            >
+                                                💢
+                                            </span>
+                                        ))}
+                                        {message && (
+                                            <p className="fire-message">{message}</p>
+                                        )}
                                     </div>
-                                    {bursts.map((burst) => (
-                                        <span
-                                            key={burst.id}
-                                            className="burst-emoji"
-                                        >
-                                            💢
-                                        </span>
-                                    ))}
-                                    {message && (
-                                        <p className="fire-message">{message}</p>
+                                    {debate.candidates?.length > 0 && (
+                                        <div className="debate-table-container">
+                                            <table
+                                                className="debates-table questions-table"
+                                                style={{ maxWidth: "600px"}}
+                                            >
+                                                <thead>
+                                                    <tr>
+                                                        <th>Candidates</th>
+                                                        <th>Votes</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {debate.candidates.map((candidate, index) => (
+                                                        <tr key={index}>
+                                                            <td className="candidate-name">{candidate.name}</td>
+                                                            <td className="candidate-votes">{candidate.voteCount}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     )}
                                 </div>
-
-                                {/* === SECTION 2: Candidates Display === */}
-                                {debate.candidates?.length > 0 && (
-                                    <div className="debate-table-container">
-                                        <table
-                                            className="debates-table questions-table"
-                                            style={{ maxWidth: "600px" }}
-                                        >
-                                            <thead>
-                                                <tr>
-                                                    <th>Candidates</th>
-                                                    <th>Votes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {debate.candidates.map((candidate, index) => (
-                                                    <tr key={index}>
-                                                        <td className="candidate-name">{candidate.name}</td>
-                                                        <td className="candidate-votes">{candidate.voteCount}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
 
 
                                 {/* === SECTION 3: User Question Submission === */}
                                 {debate.allowUserQuestions && (
-                                    <section>
+                                    <section style={{ padding: "2rem 0"}}>
                                         <div className="question-submission-section fade-in">
                                             <h3 className="question-section-title">
                                                 Submit Your Question

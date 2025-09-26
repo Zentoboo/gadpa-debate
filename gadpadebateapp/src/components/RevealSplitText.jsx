@@ -88,10 +88,10 @@ export default function RevealSplitText({
     const defaultStyles = {
         h2: {
             fontSize: "2.4rem",
-            fontWeight: "bold"
+            fontWeight: "bold",
         },
         p: {
-            fontSize: "1.2rem"
+            fontSize: "1.2rem",
         },
     };
 

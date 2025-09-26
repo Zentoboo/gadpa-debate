@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import GadpaBreathInOut from "../components/GadpaBreathInOut";
 import HomeHeroTitle from "../components/HeroTitle";
 import "../css/Home.css";
 import RevealSplitText from "../components/RevealSplitText";
+import FadeInSection from "../components/FadeInSection";
 
 function LoadingState() {
   return (
@@ -74,7 +75,6 @@ function DebatesTable({ debates, onJoinDebate }) {
   );
 }
 
-
 function NoDebates() {
   return (
     <div className="no-debates">
@@ -88,6 +88,7 @@ function Home() {
   const [liveStatus, setLiveStatus] = useState({ isLive: false, debates: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [purposeTriggered, setPurposeTriggered] = useState(false); // ✅ add state
   const navigate = useNavigate();
 
   const fetchLiveStatus = async () => {
@@ -150,13 +151,19 @@ function Home() {
           )}
         </div>
       </section>
+
       {/* Top: Purpose + Features */}
-      <section className="edgy-edges">
+      <FadeInSection className="edgy-edges">
         <div className="content-wrapper">
           <div className="purpose-features-container">
             <div className="purpose-container">
-              <RevealSplitText tag="h2" className="reveal-title">Purpose</RevealSplitText>
-              <RevealSplitText tag="p">
+              <RevealSplitText
+                tag="h2"
+                className="reveal-title"
+              >
+                Purpose
+              </RevealSplitText>
+              <RevealSplitText tag="p" >
                 To enrich the quality and retention rate of GADPA Election 2025–2026.
                 To foster transparent, inclusive, and interactive participation among
                 Indonesian students. To strengthen democratic values and informed
@@ -166,8 +173,13 @@ function Home() {
 
             {/* Right: Features */}
             <div className="features-container">
-              <RevealSplitText tag="h2" className="reveal-title">Features</RevealSplitText>
-              <RevealSplitText tag="p">
+              <RevealSplitText
+                tag="h2"
+                className="reveal-title"
+              >
+                Features
+              </RevealSplitText>
+              <RevealSplitText tag="p" >
                 Real-time reactions and dynamic heatmaps allow the audience’s
                 engagement to be visualized instantly, creating a more interactive
                 atmosphere. Students can actively shape the debate by submitting their
@@ -177,11 +189,13 @@ function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </FadeInSection>
 
-      <section>
+      <FadeInSection>
         <div className="about-container content-wrapper">
-          <RevealSplitText tag="h2" className="reveal-title">About</RevealSplitText>
+          <RevealSplitText tag="h2" className="reveal-title">
+            About
+          </RevealSplitText>
           <RevealSplitText tag="p">
             The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
             As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
@@ -190,7 +204,7 @@ function Home() {
             <span className="button-link-content">Learn More</span>
           </button>
         </div>
-      </section>
+      </FadeInSection>
     </main>
   );
 }

@@ -24,7 +24,7 @@ export default function FadeInSection({ children, className = "" }) {
                             opacity: 0,
                             y: 50,
                             duration: 0.6,
-                            ease: "power3.in"
+                            ease: "power3.in",
                         });
                     }
                 }

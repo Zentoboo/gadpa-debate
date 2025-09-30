@@ -1,3 +1,4 @@
+import API_URL from "./config.jsx";
 import React, { useState, useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { API_CONFIG } from './config/api.js';
@@ -23,12 +24,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5076/admin/register-status")
+    fetch(`${API_URL}/admin/register-status`)
       .then((res) => res.json())
       .then((data) => setAdminRegisterEnabled(data.enabled))
       .catch(() => setAdminRegisterEnabled(true));
 
-    fetch("http://localhost:5076/debate-manager/register-status")
+    fetch(`${API_URL}/debate-manager/register-status`)
       .then((res) => res.json())
       .then((data) => setDebateManagerRegisterEnabled(data.enabled))
       .catch(() => setDebateManagerRegisterEnabled(true));

@@ -234,11 +234,8 @@ public class Program
             return validation.IsValid;
         }
 
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseOpenApi();
-            app.UseSwaggerUi();
-        }
+        app.UseOpenApi();
+        app.UseSwaggerUi();
 
         // CORS must come before Authentication and Authorization
         app.UseCors("ReactApp");

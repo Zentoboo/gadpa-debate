@@ -127,7 +127,6 @@ public class Program
         })
         .AddJwtBearer(options =>
         {
-            // Get JWT key from environment variable in production, fallback to config
             var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
                          ?? builder.Configuration["Jwt:Key"];
 

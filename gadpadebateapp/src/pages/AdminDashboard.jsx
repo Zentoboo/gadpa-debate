@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -38,7 +39,7 @@ export default function AdminDashboard() {
   }, [token, isAuthenticated]);
 
   const refreshBannedIps = () => {
-    authFetch("http://localhost:5076/admin/banned-ips")
+    authFetch(`${API_URL}/admin/banned-ips`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -48,7 +49,7 @@ export default function AdminDashboard() {
   };
 
   const refreshRegisterStatus = () => {
-    authFetch("http://localhost:5076/admin/register-status")
+    authFetch(`${API_URL}/admin/register-status`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
   };
 
   const refreshDebateManagerRegisterStatus = () => {
-    authFetch("http://localhost:5076/debate-manager/register-status")
+    authFetch(`${API_URL}/debate-manager/register-status`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -68,7 +69,7 @@ export default function AdminDashboard() {
   };
 
   const refreshLiveDebates = () => {
-    authFetch("http://localhost:5076/admin/live/all-status")
+    authFetch(`${API_URL}/admin/live/all-status`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -79,7 +80,7 @@ export default function AdminDashboard() {
 
   const banIp = () => {
     if (!ip.trim()) return;
-    authFetch("http://localhost:5076/admin/ban-ip", {
+    authFetch(`${API_URL}/admin/ban-ip`, {
       method: "POST",
       body: JSON.stringify({ IpAddress: ip.trim() }),
     })
@@ -95,7 +96,7 @@ export default function AdminDashboard() {
   };
 
   const unbanIp = (ipAddress) => {
-    authFetch("http://localhost:5076/admin/unban-ip", {
+    authFetch(`${API_URL}/admin/unban-ip`, {
       method: "POST",
       body: JSON.stringify({ IpAddress: ipAddress }),
     })
@@ -108,7 +109,7 @@ export default function AdminDashboard() {
   };
 
   const toggleRegister = () => {
-    authFetch("http://localhost:5076/admin/toggle-register", {
+    authFetch(`${API_URL}/admin/toggle-register`, {
       method: "POST",
     })
       .then((res) => {
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
   };
 
   const toggleDebateManagerRegister = () => {
-    authFetch("http://localhost:5076/admin/toggle-debate-manager-register", {
+    authFetch(`${API_URL}/admin/toggle-debate-manager-register`, {
       method: "POST",
     })
       .then((res) => {

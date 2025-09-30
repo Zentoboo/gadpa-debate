@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -33,7 +34,7 @@ export default function UserQuestionsPage() {
 
     const fetchQuestions = () => {
         setError(null);
-        authFetch(`http://localhost:5076/debate-manager/debates/${id}/user-questions`)
+        authFetch(`${API_URL}/debate-manager/debates/${id}/user-questions`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch questions");
                 return res.json();
@@ -44,14 +45,14 @@ export default function UserQuestionsPage() {
 
     const approveQuestion = (qid, approve) => {
         authFetch(
-            `http://localhost:5076/debate-manager/debates/${id}/user-questions/${qid}/approve?approve=${approve}`,
+            `${API_URL}/debate-manager/debates/${id}/user-questions/${qid}/approve?approve=${approve}`,
             { method: "POST" }
         ).then(() => fetchQuestions());
     };
 
     const addToRounds = (qid) => {
         authFetch(
-            `http://localhost:5076/debate-manager/debates/${id}/user-questions/${qid}/add-to-rounds`,
+            `${API_URL}/debate-manager/debates/${id}/user-questions/${qid}/add-to-rounds`,
             { method: "POST" }
         )
             .then(res => {

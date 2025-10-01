@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,7 +14,7 @@ export default function DebateManagerLogin() {
     const { login, isDebateManager } = useAuth();
 
     useEffect(() => {
-        fetch("http://localhost:5076/debate-manager/register-status")
+        fetch(`${API_URL}/debate-manager/register-status`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error('Failed to fetch register status');
@@ -47,7 +48,7 @@ export default function DebateManagerLogin() {
 
         setIsLoading(true);
 
-        fetch("http://localhost:5076/debate-manager/login", {
+        fetch(`${API_URL}/debate-manager/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username: username.trim(), password }),

@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -77,7 +78,7 @@ export default function DebateManagerDashboard() {
     }, [liveStatus?.isLive]);
 
     const refreshDebates = () => {
-        authFetch("http://localhost:5076/debate-manager/debates")
+        authFetch(`${API_URL}/debate-manager/debates`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch debates");
                 return res.json();
@@ -87,14 +88,14 @@ export default function DebateManagerDashboard() {
     };
 
     const refreshLiveStatus = () => {
-        authFetch("http://localhost:5076/debate-manager/live/status")
+        authFetch(`${API_URL}/debate-manager/live/status`)
             .then(res => res.json())
             .then(setLiveStatus)
             .catch(console.error);
     };
 
     const refreshHeatmap = () => {
-        authFetch("http://localhost:5076/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=5")
+        authFetch(`${API_URL}/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=5`)
             .then(res => res.json())
             .then(setHeatmapData)
             .catch(console.error);
@@ -104,7 +105,7 @@ export default function DebateManagerDashboard() {
         const validQuestions = newDebate.questions.filter(q => q.trim());
         if (!newDebate.title.trim() || validQuestions.length === 0) return;
 
-        authFetch("http://localhost:5076/debate-manager/debates", {
+        authFetch(`${API_URL}/debate-manager/debates`, {
             method: "POST",
             body: JSON.stringify({
                 title: newDebate.title.trim(),
@@ -143,7 +144,7 @@ export default function DebateManagerDashboard() {
     };
 
     const startEditDebate = (debate) => {
-        authFetch(`http://localhost:5076/debate-manager/debates/${debate.id}`)
+        authFetch(`${API_URL}/debate-manager/debates/${debate.id}`)
             .then(res => res.json())
             .then(fullDebate => {
                 const processedQuestions = (fullDebate.questions || []).map(q =>
@@ -194,7 +195,7 @@ export default function DebateManagerDashboard() {
             accessPassword: editDebate.accessPassword,
         };
 
-        authFetch(`http://localhost:5076/debate-manager/debates/${editingDebateId}`, {
+        authFetch(`${API_URL}/debate-manager/debates/${editingDebateId}`, {
             method: "PUT",
             body: JSON.stringify(requestBody),
         })
@@ -241,7 +242,7 @@ export default function DebateManagerDashboard() {
     };
 
     const goLive = (id) => {
-        authFetch(`http://localhost:5076/debate-manager/debates/${id}/go-live`, { method: "POST" })
+        authFetch(`${API_URL}/debate-manager/debates/${id}/go-live`, { method: "POST" })
             .then(res => res.json())
             .then(() => {
                 refreshLiveStatus();
@@ -257,7 +258,7 @@ export default function DebateManagerDashboard() {
 
         if (!window.confirm(confirmationMessage)) return;
 
-        authFetch("http://localhost:5076/debate-manager/live/end", { method: "POST" })
+        authFetch(`${API_URL}/debate-manager/live/end`, { method: "POST" })
             .then(async res => {
                 const responseData = await res.json();
                 if (!res.ok) {
@@ -276,7 +277,7 @@ export default function DebateManagerDashboard() {
 
     const deleteDebate = (id) => {
         if (!window.confirm("Are you sure you want to delete this debate?")) return;
-        authFetch(`http://localhost:5076/debate-manager/debates/${id}`, { method: "DELETE" })
+        authFetch(`${API_URL}/debate-manager/debates/${id}`, { method: "DELETE" })
             .then(res => res.json())
             .then(() => refreshDebates())
             .catch(console.error);

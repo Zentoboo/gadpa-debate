@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -46,8 +47,8 @@ export default function LiveDebatePage() {
         try {
             // Add cache busting parameter when needed
             const url = bustCache
-                ? `http://localhost:5076/debate/${debateId}?_t=${Date.now()}`
-                : `http://localhost:5076/debate/${debateId}`;
+                ? `${API_URL}/debate/${debateId}?_t=${Date.now()}`
+                : `${API_URL}/debate/${debateId}`;
 
             const response = await fetch(url);
             if (response.ok) {
@@ -74,8 +75,8 @@ export default function LiveDebatePage() {
         try {
             // Add cache busting for live status as well
             const statusUrl = bustCache
-                ? `http://localhost:5076/debate-manager/live/status?_t=${Date.now()}`
-                : "http://localhost:5076/debate-manager/live/status";
+                ? `${API_URL}/debate-manager/live/status?_t=${Date.now()}`
+                : `${API_URL}/debate-manager/live/status`;
 
             const res = await authFetch(statusUrl);
 
@@ -160,7 +161,7 @@ export default function LiveDebatePage() {
         setLoadingAction(roundNumber > liveStatus.currentRound ? "next" : "prev");
         setLastRoundChange(now);
 
-        authFetch("http://localhost:5076/debate-manager/live/change-round", {
+        authFetch(`${API_URL}/debate-manager/live/change-round`, {
             method: "POST",
             body: JSON.stringify({ roundNumber }),
         })
@@ -196,7 +197,7 @@ export default function LiveDebatePage() {
         setActionLoading(true);
         setLoadingAction("end");
 
-        authFetch("http://localhost:5076/debate-manager/live/end", {
+        authFetch(`${API_URL}/debate-manager/live/end`, {
             method: "POST",
         })
             .then(res => {
@@ -366,7 +367,7 @@ export default function LiveDebatePage() {
                     {(displayMode === "both" || displayMode === "heatmap") && debateId && (
                         <div className="heatmap-background">
                             <HeatmapChart
-                                fetchUrl={`http://localhost:5076/debate/${debateId}/heatmap-data`}
+                                fetchUrl={`${API_URL}/debate/${debateId}/heatmap-data`}
                                 intervalSeconds={10}
                                 onDataUpdate={handleDataUpdate}
                                 displayMode={displayMode === "both" ? "overlay" : "full"}

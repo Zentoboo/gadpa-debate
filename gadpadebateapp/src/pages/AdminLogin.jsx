@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,7 +14,7 @@ export default function AdminLogin() {
   const { login, isAdmin } = useAuth();
 
   useEffect(() => {
-    fetch("http://localhost:5076/admin/register-status")
+    fetch(`${API_URL}/admin/register-status`)
       .then((res) => {
         if (!res.ok) {
           throw new Error('Failed to fetch register status');
@@ -46,7 +47,7 @@ export default function AdminLogin() {
     }
 
     setIsLoading(true);
-    fetch("http://localhost:5076/admin/login", {
+    fetch(`${API_URL}/admin/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: username.trim(), password }),

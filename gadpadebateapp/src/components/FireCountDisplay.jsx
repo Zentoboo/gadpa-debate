@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useState, useEffect, useCallback } from "react";
 import "../css/LiveDebatePage.css";
 
@@ -24,7 +25,7 @@ export default function FireCountDisplay({ token, debateId, onFireCountUpdate })
 
             // Try to get fire count from heatmap data (more reliable)
             const heatmapResponse = await fetch(
-                `http://localhost:5076/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`
+                `${API_URL}/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`
             );
 
             if (heatmapResponse.ok) {
@@ -39,7 +40,7 @@ export default function FireCountDisplay({ token, debateId, onFireCountUpdate })
             }
 
             // Fallback: try to get from live status
-            const statusResponse = await authFetch("http://localhost:5076/debate-manager/live/status");
+            const statusResponse = await authFetch(`${API_URL}/debate-manager/live/status`);
             if (statusResponse.ok) {
                 const statusData = await statusResponse.json();
                 if (statusData.isLive && typeof statusData.totalFires === 'number') {
@@ -50,7 +51,7 @@ export default function FireCountDisplay({ token, debateId, onFireCountUpdate })
                 } else {
                     // If no totalFires in response, try manual heatmap fetch with auth
                     const authHeatmapResponse = await authFetch(
-                        "http://localhost:5076/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=1"
+                        `${API_URL}/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=1`
                     );
                     if (authHeatmapResponse.ok) {
                         const authHeatmapData = await authHeatmapResponse.json();

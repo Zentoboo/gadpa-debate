@@ -16,7 +16,7 @@ export default function DebateManagerRegister() {
     const { isDebateManager } = useAuth();
 
     useEffect(() => {
-        fetch("http://localhost:5076/debate-manager/register-status")
+        fetch(`${API_URL}/debate-manager/register-status`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error('Failed to fetch register status');
@@ -119,7 +119,7 @@ export default function DebateManagerRegister() {
 
         setIsLoading(true);
 
-        fetch("http://localhost:5076/debate-manager/register", {
+        fetch(`${API_URL}/debate-manager/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username: username.trim(), password }),

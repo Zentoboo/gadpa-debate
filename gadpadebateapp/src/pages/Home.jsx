@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import GadpaBreathInOut from "../components/GadpaBreathInOut";
@@ -88,13 +89,12 @@ function Home() {
   const [liveStatus, setLiveStatus] = useState({ isLive: false, debates: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [purposeTriggered, setPurposeTriggered] = useState(false); // ✅ add state
   const navigate = useNavigate();
 
   const fetchLiveStatus = async () => {
     try {
       setError(""); // Clear any previous errors
-      const response = await fetch("http://localhost:5076/debate/live-debates");
+      const response = await fetch(`${API_URL}/debate/live-debates`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

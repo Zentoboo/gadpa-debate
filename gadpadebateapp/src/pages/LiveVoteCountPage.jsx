@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -82,7 +83,7 @@ export default function LiveDebateCandidatesVotingPage() {
 
     const fetchLiveDebateData = () => {
         setError(null);
-        authFetch(`http://localhost:5076/debate-manager/live/current-with-candidates`)
+        authFetch(`${API_URL}/debate-manager/live/current-with-candidates`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch live debate data");
                 return res.json();
@@ -102,7 +103,7 @@ export default function LiveDebateCandidatesVotingPage() {
         setUpdating(candidateName);
         try {
             const response = await authFetch(
-                `http://localhost:5076/debate-manager/live/candidates/update-votes`,
+                `${API_URL}/debate-manager/live/candidates/update-votes`,
                 {
                     method: "POST",
                     body: JSON.stringify({

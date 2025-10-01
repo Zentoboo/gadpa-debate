@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import React, { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../css/DebatePage.css";
@@ -35,7 +36,7 @@ export default function DebatePage() {
     const fetchDebateDetails = useCallback(async () => {
         try {
             const response = await fetch(
-                `http://localhost:5076/debate/${debateId}`
+                `${API_URL}/debate/${debateId}`
             );
             if (!response.ok) {
                 throw new Error("Failed to fetch debate details.");
@@ -47,7 +48,7 @@ export default function DebatePage() {
             if (data.requirePassword) {
                 try {
                     const testResponse = await fetch(
-                        `http://localhost:5076/debate/${debateId}/validate-session`,
+                        `${API_URL}/debate/${debateId}/validate-session`,
                         { credentials: "include" }
                     );
                     setIsAuthenticated(testResponse.ok);
@@ -65,7 +66,7 @@ export default function DebatePage() {
 
             // Fetch user question count for this debate
             const countRes = await fetch(
-                `http://localhost:5076/debate/${debateId}/user-questions/count`
+                `${API_URL}/debate/${debateId}/user-questions/count`
             );
             if (countRes.ok) {
                 const countData = await countRes.json();
@@ -87,7 +88,7 @@ export default function DebatePage() {
 
         try {
             const response = await fetch(
-                `http://localhost:5076/debate/${debateId}/authenticate`,
+                `${API_URL}/debate/${debateId}/authenticate`,
                 {
                     method: "POST",
                     headers: {
@@ -131,7 +132,7 @@ export default function DebatePage() {
     const fetchFireTotal = useCallback(async () => {
         try {
             const response = await fetch(
-                `http://localhost:5076/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`,
+                `${API_URL}/debate/${debateId}/heatmap-data?intervalSeconds=10&lastMinutes=1`,
                 { credentials: "include" }
             );
             if (response.ok) {
@@ -157,7 +158,7 @@ export default function DebatePage() {
 
         try {
             const response = await fetch(
-                `http://localhost:5076/debate/${debateId}/submit-question`,
+                `${API_URL}/debate/${debateId}/submit-question`,
                 {
                     method: "POST",
                     headers: {
@@ -266,7 +267,7 @@ export default function DebatePage() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        fetch(`http://localhost:5076/debate/${debateId}/fire`, {
+        fetch(`${API_URL}/debate/${debateId}/fire`, {
             method: "POST",
             credentials: "include",
         })
@@ -607,7 +608,7 @@ export default function DebatePage() {
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    await fetch(`http://localhost:5076/debate/${debateId}/logout`, {
+                                                    await fetch(`${API_URL}/debate/${debateId}/logout`, {
                                                         method: "POST",
                                                         credentials: "include",
                                                     });

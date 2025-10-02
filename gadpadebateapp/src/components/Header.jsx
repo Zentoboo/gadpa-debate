@@ -22,7 +22,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                 {/* Logo */}
                 <Link to="/" className="logo">
                     <img src={logo} alt="gadpa logo" />
-                    <span>gadpa-election</span>
+                    <span>GADPA-ELECTION</span>
                 </Link>
 
                 {/* Mobile Menu Toggle */}
@@ -38,12 +38,12 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                     <ul>
                         <li>
                             <Link to="/" className={location.pathname === "/" ? "active" : ""}>
-                                home
+                                HOME
                             </Link>
                         </li>
                         <li>
                             <Link to="/about" className={location.pathname === "/about" ? "active" : ""}>
-                                about
+                                ABOUT
                             </Link>
                         </li>
 
@@ -56,7 +56,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/admin/login"
                                         className={location.pathname === "/admin/login" ? "active" : ""}
                                     >
-                                        admin-login
+                                        ADMIN-LOGIN
                                     </Link>
                                 </li>
                                 {adminRegisterEnabled && (
@@ -65,7 +65,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                             to="/admin/register"
                                             className={location.pathname === "/admin/register" ? "active" : ""}
                                         >
-                                            admin-register
+                                            ADMIN-REGISTER
                                         </Link>
                                     </li>
                                 )}
@@ -76,7 +76,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/debate-manager/login"
                                         className={location.pathname === "/debate-manager/login" ? "active" : ""}
                                     >
-                                        dm-login
+                                        DM-LOGIN
                                     </Link>
                                 </li>
                                 {debateManagerRegisterEnabled && (
@@ -85,7 +85,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                             to="/debate-manager/register"
                                             className={location.pathname === "/debate-manager/register" ? "active" : ""}
                                         >
-                                            dm-register
+                                            DM-REGISTER
                                         </Link>
                                     </li>
                                 )}
@@ -105,7 +105,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/admin/dashboard"
                                         className={location.pathname === "/admin/dashboard" ? "active" : ""}
                                     >
-                                        dashboard
+                                        DASHBOARD
                                     </Link>
                                 </li>
                                 <li>
@@ -127,7 +127,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                                         to="/debate-manager/dashboard"
                                         className={location.pathname === "/debate-manager/dashboard" ? "active" : ""}
                                     >
-                                        dashboard
+                                        DASHBOARD
                                     </Link>
                                 </li>
                                 <li>

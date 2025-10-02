@@ -98,35 +98,35 @@ export default function About() {
                 </div>
             </FadeInSection>
             <FadeInSection className="content-section">
-                <h2>how gadpa-debate works?</h2>
+                <h2>How gadpa.live Works</h2>
                 <div className="steps-section">
                     <div className="steps-section-cards" ref={cardsContainerRef}>
                         <div className="card step-card">
                             <div className="step-number">1</div>
                             <div className="step-content">
-                                <h4 className="card-title">Choose Your Side</h4>
-                                <p>Join a debate by selecting your preferred side of a public topic or election issue.</p>
+                                <h4 className="card-title">Check What’s Live</h4>
+                                <p>Visit the homepage to see if any debates are scheduled or currently live.</p>
                             </div>
                         </div>
                         <div className="card step-card">
                             <div className="step-number">2</div>
                             <div className="step-content">
-                                <h4 className="card-title">Participate & Engage</h4>
-                                <p>Contribute to the Heat by participating actively in the discussion rounds.</p>
+                                <h4 className="card-title">Join the Debate</h4>
+                                <p>Enter the debate session—no password needed, unless specified.</p>
                             </div>
                         </div>
                         <div className="card step-card">
                             <div className="step-number">3</div>
                             <div className="step-content">
-                                <h4 className="card-title">Watch the Heat Rise</h4>
-                                <p>See real-time visualizations of community engagement and debate intensity.</p>
+                                <h4 className="card-title">Raise the Heat</h4>
+                                <p>Show your support by interacting and sending heat to the candidates.</p>
                             </div>
                         </div>
                         <div className="card step-card">
                             <div className="step-number">4</div>
                             <div className="step-content">
-                                <h4 className="card-title">Make Impact</h4>
-                                <p>Influence public opinion and contribute to meaningful democratic discourse.</p>
+                                <h4 className="card-title">Cast Your Vote</h4>
+                                <p>Use your voting right to shape the future of XMUM’s Indonesian Community.</p>
                             </div>
                         </div>
                     </div>

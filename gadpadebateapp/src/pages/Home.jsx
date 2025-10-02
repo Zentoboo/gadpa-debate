@@ -10,11 +10,9 @@ import FadeInSection from "../components/FadeInSection";
 function LoadingState() {
   return (
     <main>
-      <section>
-        <div className="loading-state">
-          <h2>Loading debate status...</h2>
-        </div>
-      </section>
+      <div className="loading-state">
+        <p>Loading debate status...</p>
+      </div>
     </main>
   );
 }
@@ -22,15 +20,13 @@ function LoadingState() {
 function ErrorState({ error, onRetry }) {
   return (
     <main>
-      <section>
-        <div className="error-state">
-          <h2>Connection Error</h2>
-          <p>{error}</p>
-          <button className="retry-btn" onClick={onRetry}>
-            Retry
-          </button>
-        </div>
-      </section>
+      <div className="error-state">
+        <p>Connection Error</p>
+        <p>{error}</p>
+        <button className="retry-btn" onClick={onRetry}>
+          Retry
+        </button>
+      </div>
     </main>
   );
 }
@@ -93,16 +89,14 @@ function Home() {
 
   const fetchLiveStatus = async () => {
     try {
-      setError(""); // Clear any previous errors
+      setError("");
       const response = await fetch(`${API_URL}/debate/live-debates`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       setLiveStatus(data);
-    } catch (error) {
-      console.error("Failed to fetch live status:", error);
-      setError("Failed to connect to server. Please check if the API is running.");
+    } catch (err) {
+      console.error("Failed to fetch live status:", err);
+      setError("Could not load live debates. Showing static content only.");
     } finally {
       setLoading(false);
     }
@@ -110,8 +104,6 @@ function Home() {
 
   useEffect(() => {
     fetchLiveStatus();
-    const intervalId = setInterval(fetchLiveStatus, 30000);
-    return () => clearInterval(intervalId);
   }, []);
 
   const handleRetry = () => {
@@ -124,14 +116,6 @@ function Home() {
     navigate(`/debate/${debateId}`);
   };
 
-  if (loading) {
-    return <LoadingState />;
-  }
-
-  if (error) {
-    return <ErrorState error={error} onRetry={handleRetry} />;
-  }
-
   return (
     <main>
       {/* Hero Section */}
@@ -141,29 +125,31 @@ function Home() {
         <div className="debates" style={{ maxWidth: "1200px" }}>
           <HomeHeroTitle />
           <h2>Debates</h2>
-          {!liveStatus.isLive ? (
+
+          {loading ? (
+            <LoadingState />
+          ) : error ? (
+            <div className="error-inline">
+              <p>{error}</p>
+              <button className="retry-btn" style={{ display: "block", margin: "1rem auto" }} onClick={handleRetry}>
+                retry
+              </button>
+            </div>
+          ) : !liveStatus.isLive ? (
             <NoDebates />
           ) : (
-            <DebatesTable
-              debates={liveStatus.debates}
-              onJoinDebate={handleJoinDebate}
-            />
+            <DebatesTable debates={liveStatus.debates} onJoinDebate={handleJoinDebate} />
           )}
         </div>
       </section>
 
-      {/* Top: Purpose + Features */}
+      {/* Purpose + Features */}
       <FadeInSection className="edgy-edges">
         <div className="content-wrapper">
           <div className="purpose-features-container">
             <div className="purpose-container">
-              <RevealSplitText
-                tag="h2"
-                className="reveal-title"
-              >
-                Purpose
-              </RevealSplitText>
-              <RevealSplitText tag="p" >
+              <RevealSplitText tag="h2" className="reveal-title">Purpose</RevealSplitText>
+              <RevealSplitText tag="p">
                 To enrich the quality and retention rate of GADPA Election 2025–2026.
                 To foster transparent, inclusive, and interactive participation among
                 Indonesian students. To strengthen democratic values and informed
@@ -171,15 +157,9 @@ function Home() {
               </RevealSplitText>
             </div>
 
-            {/* Right: Features */}
             <div className="features-container">
-              <RevealSplitText
-                tag="h2"
-                className="reveal-title"
-              >
-                Features
-              </RevealSplitText>
-              <RevealSplitText tag="p" >
+              <RevealSplitText tag="h2" className="reveal-title">Features</RevealSplitText>
+              <RevealSplitText tag="p">
                 Real-time reactions and dynamic heatmaps allow the audience’s
                 engagement to be visualized instantly, creating a more interactive
                 atmosphere. Students can actively shape the debate by submitting their
@@ -191,14 +171,12 @@ function Home() {
         </div>
       </FadeInSection>
 
+      {/* About */}
       <FadeInSection>
         <div className="about-container content-wrapper">
-          <RevealSplitText tag="h2" className="reveal-title">
-            About
-          </RevealSplitText>
+          <RevealSplitText tag="h2" className="reveal-title">About</RevealSplitText>
           <RevealSplitText tag="p">
-            The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event organized by the Indonesian Society Club (PPI XMUM).
-            As our Indonesian community continues to grow, this year’s election aims to build on past successes by fostering greater transparency, inclusivity, and participation than ever before.
+            The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event...
           </RevealSplitText>
           <button className="button-link" onClick={() => navigate("/about")}>
             <span className="button-link-content">Learn More</span>

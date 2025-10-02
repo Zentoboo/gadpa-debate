@@ -40,9 +40,11 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     border: 2px solid var(--border-color-debatetable);
+    -webkit-overflow-scrolling: touch;
 }
 
 .dashboard-table {
+    min-width: 700px;
     width: 100%;
     background: var(--card-background);
     overflow: hidden;
@@ -62,29 +64,73 @@
 }
 
 .col-question {
-    width: 10%;
+    width: 8rem;
 }
 
 .col-title-dashboard {
-    width: 10%;
+    width: auto;
 }
 
 .col-created {
-    width: 20%;
+    width: 15rem;
 }
 
 .col-schedule {
-    width: 15%;
+    width: 10rem;
+}
+
+.col-password {
+    width: 10rem;
 }
 
 .col-action {
-    width: 35%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: auto;
+}
+
+.col-action button {
+    width: 120px;
+}
+
+.col-idq {
+    width: 1rem;
+}
+
+.col-questionq {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow: visible !important;
+}
+
+.col-statusq {
+    width: 6rem;
+}
+
+.col-actionsq {
+    width: 8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 1080px) {
+
+    .dashboard-table .col-created,
+    .dashboard-table .col-question {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
 
-    .dashboard-table .col-created,
-    .dashboard-table .col-question {
+    .dashboard-table .col-schedule,
+    .dashboard-table .col-password {
+        display: none;
+    }
+
+    .dashboard-table .col-submittedat,
+    .dashboard-table .col-statusq {
         display: none;
     }
 }
@@ -349,6 +395,7 @@
 .col-number-q {
     width: 4%;
 }
+
 .col-action-q {
     width: 4%;
 }

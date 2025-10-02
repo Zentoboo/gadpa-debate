@@ -87,11 +87,11 @@ export default function UserQuestionsPage() {
             <table className="dashboard-table" style={{ marginTop: "1rem" }}>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Question</th>
-                        <th>Submitted At</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th className="col-idq">ID</th>
+                        <th className="col-questionq">Question</th>
+                        <th className="col-submittedat">Submitted At</th>
+                        <th className="col-statusq">Status</th>
+                        <th className="col-actionsq">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -102,39 +102,41 @@ export default function UserQuestionsPage() {
                     ) : (
                         questions.map((q) => (
                             <tr key={q.id}>
-                                <td>{q.id}</td>
-                                <td>{q.question}</td>
-                                <td>
+                                <td className="col-idq">{q.id}</td>
+                                <td className="col-questionq">{q.question}</td>
+                                <td className="col-submittedat">
                                     {new Date(q.submittedAt).toLocaleString("en-MY", {
                                         timeZone: "Asia/Kuala_Lumpur",
                                     })}
                                 </td>
-                                <td>{q.isApproved ? "Approved" : "Pending"}</td>
-                                <td>
-                                    {!q.isApproved && (
-                                        <button
-                                            onClick={() => approveQuestion(q.id, true)}
-                                            className="table-button primary"
-                                        >
-                                            Approve
-                                        </button>
-                                    )}
-                                    {q.isApproved && (
-                                        <button
-                                            onClick={() => approveQuestion(q.id, false)}
-                                            className="table-button secondary"
-                                        >
-                                            Disapprove
-                                        </button>
-                                    )}
-                                    {q.isApproved && (
-                                        <button
-                                            onClick={() => addToRounds(q.id)}
-                                            className="table-button primary"
-                                        >
-                                            Add to Rounds
-                                        </button>
-                                    )}
+                                <td className="col-statusq">{q.isApproved ? "Approved" : "Pending"}</td>
+                                <td className="col-actionsq">
+                                    <div style={{display:"flex",flexDirection:"column"}}>
+                                        {!q.isApproved && (
+                                            <button
+                                                onClick={() => approveQuestion(q.id, true)}
+                                                className="table-button primary"
+                                            >
+                                                Approve
+                                            </button>
+                                        )}
+                                        {q.isApproved && (
+                                            <button
+                                                onClick={() => approveQuestion(q.id, false)}
+                                                className="table-button secondary"
+                                            >
+                                                Disapprove
+                                            </button>
+                                        )}
+                                        {q.isApproved && (
+                                            <button
+                                                onClick={() => addToRounds(q.id)}
+                                                className="table-button primary"
+                                            >
+                                                Add
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))

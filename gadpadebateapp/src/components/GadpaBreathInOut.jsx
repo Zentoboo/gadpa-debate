@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
+import gadpalogo from "../assets/gadpa-logo.png";
 
 export default function SectionBackgroundPulse() {
     const pulseRef = useRef();
@@ -34,7 +35,7 @@ export default function SectionBackgroundPulse() {
                 left: 0,
                 width: "100%",
                 height: "100%",
-                backgroundImage: "url(/src/assets/gadpa-logo.png)",
+                backgroundImage: `url(${gadpalogo})`,
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",
                 backgroundSize: "contain",

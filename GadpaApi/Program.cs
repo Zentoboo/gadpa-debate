@@ -99,19 +99,30 @@ public class Program
             options.Limits.MaxRequestBodySize = 1024 * 1024;
         });
 
-        // EF Core + Mssql with connection pooling for concurrent access
+        // EF Core + SQLite for local development (change to UseSqlServer for production)
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            options.UseSqlServer(connectionString, sqlServerOptions =>
+
+            // Check if it's SQLite or SQL Server based on connection string
+            if (connectionString?.Contains("Data Source") == true && !connectionString.Contains("Server="))
             {
-                sqlServerOptions.CommandTimeout(30);
-                sqlServerOptions.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorNumbersToAdd: null
-                );
-            });
+                // SQLite for local development
+                options.UseSqlite(connectionString);
+            }
+            else
+            {
+                // SQL Server for production
+                options.UseSqlServer(connectionString, sqlServerOptions =>
+                {
+                    sqlServerOptions.CommandTimeout(30);
+                    sqlServerOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null
+                    );
+                });
+            }
 
             options.EnableServiceProviderCaching();
             options.EnableSensitiveDataLogging(false);
@@ -211,6 +222,48 @@ public class Program
         });
 
         var app = builder.Build();
+
+        // Initialize database for local development
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+            var connectionString = config.GetConnectionString("DefaultConnection");
+            Console.WriteLine($"Environment: {env.EnvironmentName}");
+            Console.WriteLine($"Connection String: {connectionString}");
+            Console.WriteLine($"Is SQLite: {db.Database.IsSqlite()}");
+
+            if (env.IsDevelopment())
+            {
+                try
+                {
+                    // For SQLite in development, use EnsureCreated instead of migrations
+                    if (db.Database.IsSqlite())
+                    {
+                        Console.WriteLine("Creating SQLite database...");
+                        var created = db.Database.EnsureCreated();
+                        Console.WriteLine($"SQLite database {(created ? "created successfully" : "already existed")}");
+
+                        // Verify tables exist
+                        var canConnect = db.Database.CanConnect();
+                        Console.WriteLine($"Can connect to database: {canConnect}");
+                    }
+                    else
+                    {
+                        // For SQL Server in production, use migrations
+                        Console.WriteLine("Running SQL Server migrations...");
+                        db.Database.Migrate();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Database initialization error: {ex.Message}");
+                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                }
+            }
+        }
 
         string GetClientIp(HttpContext context)
         {

@@ -396,8 +396,89 @@
     width: 4%;
 }
 
+.col-question-q {
+    width: 92%;
+}
+
 .col-action-q {
     width: 4%;
+}
+
+/* ============================ */
+/* === Candidates Table     === */
+/* ============================ */
+
+.candidates-table {
+    width: 100%;
+    background: var(--card-background);
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.candidates-table th,
+.candidates-table td {
+    padding: var(--spacing-sm);
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color-debatetable);
+}
+
+.candidates-table th {
+    background: var(--table-header-background);
+    color: var(--accent-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.candidates-table td {
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.candidates-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Column widths for candidates table */
+.candidates-table .col-number-c {
+    width: 20px;
+    text-align: center;
+}
+
+.candidates-table .col-name-c {
+    width: 25%;
+}
+
+.candidates-table .col-image-c {
+    width: 30%;
+}
+
+.candidates-table .col-preview-c {
+    width: 100px;
+    text-align: center;
+}
+
+.candidates-table .col-action-c {
+    width: 120px;
+    text-align: center;
+}
+
+.candidates-table .col-number-c,
+.candidates-table th:nth-child(1) {
+    text-align: center;
+}
+
+.candidates-table .col-preview-c,
+.candidates-table th:nth-child(4) {
+    text-align: center;
+}
+
+.candidates-table .col-action-c,
+.candidates-table th:nth-child(5) {
+    text-align: center;
 }
 
 /* floating notification */

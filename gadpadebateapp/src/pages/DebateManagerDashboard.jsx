@@ -527,7 +527,14 @@ export default function DebateManagerDashboard() {
                     <button onClick={addQuestion}>+ Add Question</button>
 
                     <h4>Candidates</h4>
-                    <table className="dashboard-table">
+                    <table className="candidates-table">
+                        <colgroup>
+                            <col className="col-number-c" />
+                            <col className="col-name-c" />
+                            <col className="col-image-c" />
+                            <col className="col-preview-c" />
+                            <col className="col-action-c" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -683,7 +690,14 @@ export default function DebateManagerDashboard() {
                     <button onClick={addEditQuestion}>+ Add Question</button>
 
                     <h4>Candidates</h4>
-                    <table className="dashboard-table">
+                    <table className="candidates-table">
+                        <colgroup>
+                            <col className="col-number-c" />
+                            <col className="col-name-c" />
+                            <col className="col-image-c" />
+                            <col className="col-preview-c" />
+                            <col className="col-action-c" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>

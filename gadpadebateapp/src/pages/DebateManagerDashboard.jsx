@@ -14,19 +14,27 @@ export default function DebateManagerDashboard() {
     const [editingDebateId, setEditingDebateId] = useState(null);
     const [heatmapData, setHeatmapData] = useState(null);
 
-    // Convert datetime-local (local browser time) → UTC ISO
     const toUtcFromLocal = (localString) => {
         if (!localString) return null;
         const d = new Date(localString);
         return d.toISOString();
     };
 
-    // Convert UTC → datetime-local string for input
     const toLocalDateTimeInputValue = (utcString) => {
         if (!utcString) return "";
         const d = new Date(utcString);
         const pad = (n) => String(n).padStart(2, "0");
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    // Helper function to convert file to base64
+    const fileToBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
     };
 
     const [newDebate, setNewDebate] = useState({
@@ -48,7 +56,8 @@ export default function DebateManagerDashboard() {
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
-        candidates: [], requirePassword: false,
+        candidates: [],
+        requirePassword: false,
         accessPassword: "",
     });
 
@@ -116,7 +125,10 @@ export default function DebateManagerDashboard() {
                 scheduledStartTime: newDebate.scheduledStartTime
                     ? toUtcFromLocal(newDebate.scheduledStartTime)
                     : null,
-                candidates: newDebate.candidates,
+                candidates: newDebate.candidates.map(c => ({
+                    name: c.name,
+                    imageData: c.imageData
+                })),
                 requirePassword: newDebate.requirePassword,
                 accessPassword: newDebate.accessPassword,
             }),
@@ -159,7 +171,10 @@ export default function DebateManagerDashboard() {
                     scheduledStartTime: fullDebate.scheduledStartTime
                         ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
                         : "",
-                    candidates: fullDebate.candidates || [],
+                    candidates: (fullDebate.candidates || []).map(c => ({
+                        name: c.name,
+                        imageData: c.imageData || null
+                    })),
                     requirePassword: fullDebate.requirePassword || false,
                     accessPassword: fullDebate.accessPassword || "",
                 });
@@ -190,7 +205,10 @@ export default function DebateManagerDashboard() {
             scheduledStartTime: editDebate.scheduledStartTime
                 ? toUtcFromLocal(editDebate.scheduledStartTime)
                 : null,
-            candidates: editDebate.candidates,
+            candidates: editDebate.candidates.map(c => ({
+                name: c.name,
+                imageData: c.imageData
+            })),
             requirePassword: editDebate.requirePassword,
             accessPassword: editDebate.accessPassword,
         };
@@ -295,7 +313,7 @@ export default function DebateManagerDashboard() {
     const handleAddCandidate = () => {
         setNewDebate(prev => ({
             ...prev,
-            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+            candidates: [...prev.candidates, { name: "", imageData: null }]
         }));
     };
 
@@ -305,6 +323,30 @@ export default function DebateManagerDashboard() {
             updatedCandidates[index][field] = value;
             return { ...prev, candidates: updatedCandidates };
         });
+    };
+
+    const handleCandidateImageUpload = async (index, file) => {
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const base64 = await fileToBase64(file);
+            handleUpdateCandidate(index, 'imageData', base64);
+        } catch (error) {
+            alert('Failed to process image');
+            console.error(error);
+        }
     };
 
     const handleRemoveCandidate = (index) => {
@@ -318,7 +360,7 @@ export default function DebateManagerDashboard() {
     const handleAddEditCandidate = () => {
         setEditDebate(prev => ({
             ...prev,
-            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+            candidates: [...prev.candidates, { name: "", imageData: null }]
         }));
     };
 
@@ -328,6 +370,28 @@ export default function DebateManagerDashboard() {
             updatedCandidates[index][field] = value;
             return { ...prev, candidates: updatedCandidates };
         });
+    };
+
+    const handleEditCandidateImageUpload = async (index, file) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const base64 = await fileToBase64(file);
+            handleUpdateEditCandidate(index, 'imageData', base64);
+        } catch (error) {
+            alert('Failed to process image');
+            console.error(error);
+        }
     };
 
     const handleRemoveEditCandidate = (index) => {
@@ -359,7 +423,6 @@ export default function DebateManagerDashboard() {
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
                                 </div>
-                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         ) : (
                             <>
@@ -370,7 +433,6 @@ export default function DebateManagerDashboard() {
                                     <button onClick={() => navigate("/debate-manager/vote")} className="table-button primary">Voting →</button>
                                     <button onClick={endLive} className="table-button danger">End Live Debate</button>
                                 </div>
-                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         )}
                     </div>
@@ -490,7 +552,8 @@ export default function DebateManagerDashboard() {
                             <tr>
                                 <th>#</th>
                                 <th>Name</th>
-                                <th>Image URL</th>
+                                <th>Image</th>
+                                <th>Preview</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -509,12 +572,20 @@ export default function DebateManagerDashboard() {
                                     </td>
                                     <td>
                                         <input
-                                            type="text"
-                                            value={c.imageUrl}
-                                            onChange={(e) => handleUpdateCandidate(i, "imageUrl", e.target.value)}
-                                            className="auth-input"
-                                            placeholder="Image URL"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleCandidateImageUpload(i, e.target.files[0])}
+                                            style={{ fontSize: "0.9rem" }}
                                         />
+                                    </td>
+                                    <td>
+                                        {c.imageData && (
+                                            <img
+                                                src={c.imageData}
+                                                alt={c.name}
+                                                style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
+                                            />
+                                        )}
                                     </td>
                                     <td>
                                         <button className="danger" onClick={() => handleRemoveCandidate(i)}>
@@ -640,7 +711,8 @@ export default function DebateManagerDashboard() {
                             <tr>
                                 <th>#</th>
                                 <th>Name</th>
-                                <th>Image URL</th>
+                                <th>Image</th>
+                                <th>Preview</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -659,12 +731,20 @@ export default function DebateManagerDashboard() {
                                     </td>
                                     <td>
                                         <input
-                                            type="text"
-                                            value={c.imageUrl}
-                                            onChange={(e) => handleUpdateEditCandidate(i, "imageUrl", e.target.value)}
-                                            className="auth-input"
-                                            placeholder="Image URL"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleEditCandidateImageUpload(i, e.target.files[0])}
+                                            style={{ fontSize: "0.9rem" }}
                                         />
+                                    </td>
+                                    <td>
+                                        {c.imageData && (
+                                            <img
+                                                src={c.imageData}
+                                                alt={c.name}
+                                                style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
+                                            />
+                                        )}
                                     </td>
                                     <td>
                                         <button className="danger" onClick={() => handleRemoveEditCandidate(i)}>
@@ -727,7 +807,7 @@ export default function DebateManagerDashboard() {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="5" style={{ textAlign: "center", color: "#666" }}>No debates found.</td>
+                                <td colSpan="6" style={{ textAlign: "center", color: "#666" }}>No debates found.</td>
                             </tr>
                         )}
                     </tbody>

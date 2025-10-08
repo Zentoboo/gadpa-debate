@@ -200,7 +200,8 @@ public class Candidate
     public int DebateId { get; set; }
     public int CandidateNumber { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string ImageUrl { get; set; } = string.Empty;
+    // Changed: Store base64 image data instead of URL
+    public string? ImageData { get; set; } = null;
     public int VoteCount { get; set; } = 0;
 
     [ForeignKey("DebateId")]

@@ -15,7 +15,6 @@ export default function LiveDebateCandidatesVotingPage() {
     const [notification, setNotification] = useState(null);
     const [updating, setUpdating] = useState(null);
 
-    // NEW: toggle between "candidates" (default) and "camera" mode
     const [viewMode, setViewMode] = useState("candidates");
 
     const authFetch = (url, options = {}) =>
@@ -161,7 +160,6 @@ export default function LiveDebateCandidatesVotingPage() {
 
     return (
         <div className="live-debate-container">
-            {/* Header Section */}
             <div className="live-debate-header">
                 <h2 className="live-debate-title">
                     {debateData?.debate?.title || "Live Debate"}
@@ -175,7 +173,6 @@ export default function LiveDebateCandidatesVotingPage() {
                             Total Votes: {candidates.reduce((sum, c) => sum + c.voteCount, 0)} 📩
                         </span>
 
-                        {/* Switch Mode Button */}
                         <div>
                             <button
                                 onClick={() =>
@@ -192,9 +189,7 @@ export default function LiveDebateCandidatesVotingPage() {
                 </div>
             </div>
 
-            {/* MAIN CONTENT */}
             {viewMode === "candidates" ? (
-                // === FULL CANDIDATES MODE ===
                 <div className="candidates-voting-section">
                     <div className="candidates-grid">
                         {candidates.length === 0 ? (
@@ -204,8 +199,8 @@ export default function LiveDebateCandidatesVotingPage() {
                                 <div key={candidate.id} className="candidate-voting-card">
                                     <div className="candidate-info">
                                         <div className="candidate-image-container">
-                                            {candidate.imageUrl ? (
-                                                <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image" />
+                                            {candidate.imageData ? (
+                                                <img src={candidate.imageData} alt={candidate.name} className="candidate-image" />
                                             ) : (
                                                 <div className="candidate-image-placeholder">
                                                     #{candidate.candidateNumber}
@@ -243,9 +238,7 @@ export default function LiveDebateCandidatesVotingPage() {
                     </div>
                 </div>
             ) : (
-                // === CAMERA MODE ===
                 <div className="camera-candidates-grid">
-                    {/* Camera */}
                     <div className="camera-section">
                         <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxWidth: "800px", borderRadius: "8px" }} />
                         <div style={{ marginTop: "10px", display: "flex", justifyContent: "center", gap: "1rem" }}>
@@ -263,7 +256,6 @@ export default function LiveDebateCandidatesVotingPage() {
                         </div>
                     </div>
 
-                    {/* Candidates */}
                     <div className="candidates-voting-section">
                         <div className="candidates-grid-tight">
                             {candidates.length === 0 ? (
@@ -273,8 +265,8 @@ export default function LiveDebateCandidatesVotingPage() {
                                     <div key={candidate.id} className="candidate-voting-card-small">
                                         <div className="candidate-info-small">
                                             <div className="candidate-image-container">
-                                                {candidate.imageUrl ? (
-                                                    <img src={candidate.imageUrl} alt={candidate.name} className="candidate-image-small" />
+                                                {candidate.imageData ? (
+                                                    <img src={candidate.imageData} alt={candidate.name} className="candidate-image-small" />
                                                 ) : (
                                                     <div className="candidate-image-placeholder-small">
                                                         #{candidate.candidateNumber}

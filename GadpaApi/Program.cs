@@ -52,7 +52,7 @@ public record UpdateCandidateVoteRequest(
 
 public record CandidateDto(
     string Name,
-    string ImageUrl = ""
+    string? ImageData = null
 )
 {
     public bool IsValid() => !string.IsNullOrWhiteSpace(Name);
@@ -315,7 +315,7 @@ public class Program
                         id = c.Id,
                         candidateNumber = c.CandidateNumber,
                         name = c.Name,
-                        imageUrl = c.ImageUrl,
+                        imageData = c.ImageData,
                         voteCount = c.VoteCount
                     }),
                     allowUserQuestions = debate.AllowUserQuestions && !countdown
@@ -360,7 +360,7 @@ public class Program
                     id = c.Id,
                     candidateNumber = c.CandidateNumber,
                     name = c.Name,
-                    imageUrl = c.ImageUrl,
+                    imageData = c.ImageData,
                     voteCount = c.VoteCount
                 }),
                 allowUserQuestions = allowUserQuestions && !countdown,
@@ -652,7 +652,7 @@ public class Program
         {
             var candidates = await db.Candidates
                 .Where(c => c.DebateId == debateId)
-                .Select(c => new { c.Id, c.CandidateNumber, c.Name, c.ImageUrl, c.VoteCount })
+                .Select(c => new { c.Id, c.CandidateNumber, c.Name, c.ImageData, c.VoteCount })
                 .OrderBy(c => c.CandidateNumber)
                 .ToListAsync();
 
@@ -1021,7 +1021,7 @@ public class Program
                         {
                             c.Id,
                             c.Name,
-                            c.ImageUrl,
+                            c.ImageData,
                             c.CandidateNumber
                         })
                         .ToList()
@@ -1093,7 +1093,7 @@ public class Program
                     DebateId = debate.Id,
                     CandidateNumber = index + 1,
                     Name = c.Name.Trim(),
-                    ImageUrl = c.ImageUrl?.Trim() ?? "",
+                    ImageData = c.ImageData?.Trim() ?? "",
                     VoteCount = 0,
                     Debate = debate
                 }).ToList();
@@ -1137,7 +1137,7 @@ public class Program
                     c.Id,
                     c.CandidateNumber,
                     c.Name,
-                    c.ImageUrl,
+                    c.ImageData,
                     c.VoteCount
                 })
             });
@@ -1255,7 +1255,7 @@ public class Program
                         DebateId = debate.Id,
                         CandidateNumber = index + 1,
                         Name = c.Name.Trim(),
-                        ImageUrl = c.ImageUrl?.Trim() ?? "",
+                        ImageData = c.ImageData?.Trim(),
                         VoteCount = 0,
                         Debate = debate
                     }).ToList();
@@ -1625,7 +1625,7 @@ public class Program
                         id = c.Id,
                         candidateNumber = c.CandidateNumber,
                         name = c.Name,
-                        imageUrl = c.ImageUrl,
+                        imageData = c.ImageData,
                         voteCount = c.VoteCount
                     }).ToList()
                 },
@@ -1657,7 +1657,7 @@ public class Program
                 id = c.Id,
                 candidateNumber = c.CandidateNumber,
                 name = c.Name,
-                imageUrl = c.ImageUrl,
+                imageData = c.ImageData,
                 voteCount = c.VoteCount
             }).ToList();
 
@@ -1718,7 +1718,7 @@ public class Program
                 candidateId = candidate.Id,
                 candidateNumber = candidate.CandidateNumber,
                 name = candidate.Name,
-                imageUrl = candidate.ImageUrl,
+                imageData = candidate.ImageData,
                 voteCount = candidate.VoteCount,
                 debateId = liveDebate.DebateId
             });
@@ -1731,7 +1731,7 @@ public class Program
                     id = candidate.Id,
                     candidateNumber = candidate.CandidateNumber,
                     name = candidate.Name,
-                    imageUrl = candidate.ImageUrl,
+                    imageData = candidate.ImageData,
                     voteCount = candidate.VoteCount
                 }
             });

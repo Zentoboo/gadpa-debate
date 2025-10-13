@@ -18,17 +18,19 @@ namespace GadpaApi.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.8")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128)
+                .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("GadpaDebateApi.Data.AppSetting", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -43,16 +45,17 @@ namespace GadpaApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AppSettings");
+                    b.ToTable("AppSettings", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.BannedIp", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
@@ -60,16 +63,17 @@ namespace GadpaApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BannedIps");
+                    b.ToTable("BannedIps", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.Candidate", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("CandidateNumber")
                         .HasColumnType("int");
@@ -91,16 +95,17 @@ namespace GadpaApi.Migrations
 
                     b.HasIndex("DebateId");
 
-                    b.ToTable("Candidates");
+                    b.ToTable("Candidates", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.Debate", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("AccessPassword")
                         .HasColumnType("nvarchar(max)");
@@ -136,16 +141,17 @@ namespace GadpaApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Debates");
+                    b.ToTable("Debates", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.DebateQuestion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -164,16 +170,17 @@ namespace GadpaApi.Migrations
 
                     b.HasIndex("DebateId");
 
-                    b.ToTable("DebateQuestions");
+                    b.ToTable("DebateQuestions", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.DebateSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -204,16 +211,17 @@ namespace GadpaApi.Migrations
                     b.HasIndex("SessionToken")
                         .IsUnique();
 
-                    b.ToTable("DebateSessions");
+                    b.ToTable("DebateSessions", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.FireEvent", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("FireCount")
                         .HasColumnType("int");
@@ -232,16 +240,17 @@ namespace GadpaApi.Migrations
 
                     b.HasIndex("LiveDebateId");
 
-                    b.ToTable("FireEvents");
+                    b.ToTable("FireEvents", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.LiveDebate", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("CurrentRound")
                         .HasColumnType("int");
@@ -267,16 +276,17 @@ namespace GadpaApi.Migrations
 
                     b.HasIndex("DebateManagerId");
 
-                    b.ToTable("LiveDebates");
+                    b.ToTable("LiveDebates", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -292,16 +302,17 @@ namespace GadpaApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.UserSubmittedQuestion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
+                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<int>("DebateId")
                         .HasColumnType("int");
@@ -324,7 +335,7 @@ namespace GadpaApi.Migrations
 
                     b.HasIndex("DebateId");
 
-                    b.ToTable("UserSubmittedQuestions");
+                    b.ToTable("UserSubmittedQuestions", (string)null);
                 });
 
             modelBuilder.Entity("GadpaDebateApi.Data.Candidate", b =>

@@ -1,0 +1,18 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=gadpa-local.db"
+  },
+  "Jwt": {
+    "Key": "local-development-secret-key-min-32-chars-long-for-testing-only",
+    "Issuer": "GadpaDebateApi",
+    "Audience": "GadpaDebateUsers"
+  }
+}

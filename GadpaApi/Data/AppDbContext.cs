@@ -8,6 +8,13 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // Suppress pending model changes warning for local development
+        optionsBuilder.ConfigureWarnings(warnings =>
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     public DbSet<FireEvent> FireEvents => Set<FireEvent>();
     public DbSet<BannedIp> BannedIps => Set<BannedIp>();
     public DbSet<User> Users => Set<User>();

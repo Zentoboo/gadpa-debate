@@ -22,7 +22,7 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                 {/* Logo */}
                 <Link to="/" className="logo">
                     <img src={logo} alt="gadpa logo" />
-                    <span>GADPA-ELECTION</span>
+                    <span>GADPA-KONGRES</span>
                 </Link>
 
                 {/* Mobile Menu Toggle */}

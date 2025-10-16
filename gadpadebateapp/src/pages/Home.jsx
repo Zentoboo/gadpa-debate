@@ -124,7 +124,7 @@ function Home() {
 
         <div className="debates" style={{ maxWidth: "1200px" }}>
           <HomeHeroTitle />
-          <h2>Debates</h2>
+          <h2>Sessions</h2>
 
           {loading ? (
             <LoadingState />

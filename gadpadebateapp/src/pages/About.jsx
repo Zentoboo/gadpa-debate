@@ -105,21 +105,21 @@ export default function About() {
                             <div className="step-number">1</div>
                             <div className="step-content">
                                 <h4 className="card-title">Check What’s Live</h4>
-                                <p>Visit the homepage to see if any debates are scheduled or currently live.</p>
+                                <p>Visit the homepage to see if any sessions are scheduled or currently live.</p>
                             </div>
                         </div>
                         <div className="card step-card">
                             <div className="step-number">2</div>
                             <div className="step-content">
-                                <h4 className="card-title">Join the Debate</h4>
-                                <p>Enter the debate session—no password needed, unless specified.</p>
+                                <h4 className="card-title">Join the Session</h4>
+                                <p>Enter the session — no password needed, unless specified.</p>
                             </div>
                         </div>
                         <div className="card step-card">
                             <div className="step-number">3</div>
                             <div className="step-content">
                                 <h4 className="card-title">Raise the Heat</h4>
-                                <p>Show your support by interacting and sending heat to the candidates.</p>
+                                <p>Show your support by interacting and sending heat.</p>
                             </div>
                         </div>
                         <div className="card step-card">

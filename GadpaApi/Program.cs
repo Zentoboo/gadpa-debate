@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.SignalR;
 using DotNetEnv;
 
 namespace GadpaDebateApi;
-
 // ---- DTOs ----
 public record AdminCredentials(string Username, string Password);
 public record DebateManagerCredentials(string Username, string Password);

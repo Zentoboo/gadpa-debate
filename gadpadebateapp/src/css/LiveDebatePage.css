@@ -453,7 +453,7 @@
 }
 
 .live-debate-question {
-    font-size: 1.6rem;
+    font-size: 2rem;
     font-weight: 500;
     color: var(--text-white);
     line-height: 1.4;
@@ -1002,7 +1002,7 @@
     }
 
     .live-debate-question {
-        font-size: 1.2rem;
+        font-size: 1.8rem;
     }
 
     .controls-grid-container {
@@ -1079,7 +1079,7 @@
     }
 
     .live-debate-question {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
     }
 
     .timer-section-container {

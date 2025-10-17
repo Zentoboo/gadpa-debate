@@ -75,8 +75,8 @@ function DebatesTable({ debates, onJoinDebate }) {
 function NoDebates() {
   return (
     <div className="no-debates">
-      <h3>No Live Debates Currently</h3>
-      <p>Check back later for live debate sessions.</p>
+      <h3>Nothing to show currently</h3>
+      <p>Check back later for live sessions.</p>
     </div>
   );
 }
@@ -176,7 +176,7 @@ function Home() {
         <div className="about-container content-wrapper">
           <RevealSplitText tag="h2" className="reveal-title">About</RevealSplitText>
           <RevealSplitText tag="p">
-            The Garuda Dwi Pantara (GADPA) Election is an annual democratic voting event...
+            GADPA is an Indonesian cultural club at Xiamen University Malaysia, dedicated to promoting Indonesian traditions, language, and community through creative events and collaborations.
           </RevealSplitText>
           <button className="button-link" onClick={() => navigate("/about")}>
             <span className="button-link-content">Learn More</span>

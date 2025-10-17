@@ -51,23 +51,25 @@ export default function Header({ adminRegisterEnabled, debateManagerRegisterEnab
                         {!isAuthenticated && (
                             <>
                                 {/* Admin Auth */}
-                                <li>
-                                    <Link
-                                        to="/admin/login"
-                                        className={location.pathname === "/admin/login" ? "active" : ""}
-                                    >
-                                        ADMIN-LOGIN
-                                    </Link>
-                                </li>
                                 {adminRegisterEnabled && (
-                                    <li>
-                                        <Link
-                                            to="/admin/register"
-                                            className={location.pathname === "/admin/register" ? "active" : ""}
-                                        >
-                                            ADMIN-REGISTER
-                                        </Link>
-                                    </li>
+                                    <>
+                                        <li>
+                                            <Link
+                                                to="/admin/login"
+                                                className={location.pathname === "/admin/login" ? "active" : ""}
+                                            >
+                                                ADMIN-LOGIN
+                                            </Link>
+                                        </li>
+                                        <li>
+                                            <Link
+                                                to="/admin/register"
+                                                className={location.pathname === "/admin/register" ? "active" : ""}
+                                            >
+                                                ADMIN-REGISTER
+                                            </Link>
+                                        </li>
+                                    </>
                                 )}
 
                                 {/* Debate Manager Auth */}

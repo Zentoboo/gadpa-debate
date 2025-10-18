@@ -427,7 +427,6 @@ export default function LiveDebatePage() {
                                 "Next →"
                             )}
                         </button>
-                        <button className="control-button bell">ping</button>
                     </div>
                 </div>
             </div>

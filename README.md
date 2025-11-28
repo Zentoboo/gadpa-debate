@@ -1,4 +1,4 @@
-```markdown
+
 # GADPA Debate Platform
 
 A full-stack web application for managing and hosting debates for the GADPA 2025 presidential election. This version improves scalability, maintainability, and audience interaction features.

@@ -55,10 +55,10 @@ function HomeHeroTitle() {
                     <div className="herotitle-inner">PPI XMUM</div>
                 </div>
                 <div className="herotitle-outer">
-                    <div className="herotitle-inner">Gadpa Election 2025-2026</div>
+                    <div className="herotitle-inner">Gadpa Kongres 2025-2026</div>
                 </div>
             </div>
-            <p ref={subtitleRef}>Indonesian Student Election Management System</p>
+            <p ref={subtitleRef}>Kongres PPI XMUM Management System</p>
         </div>
     );
 }

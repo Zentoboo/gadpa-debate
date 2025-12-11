@@ -12,21 +12,27 @@ export default function DebateManagerDashboard() {
     const [liveStatus, setLiveStatus] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [editingDebateId, setEditingDebateId] = useState(null);
-    const [heatmapData, setHeatmapData] = useState(null);
 
-    // Convert datetime-local (local browser time) → UTC ISO
     const toUtcFromLocal = (localString) => {
         if (!localString) return null;
         const d = new Date(localString);
         return d.toISOString();
     };
 
-    // Convert UTC → datetime-local string for input
     const toLocalDateTimeInputValue = (utcString) => {
         if (!utcString) return "";
         const d = new Date(utcString);
         const pad = (n) => String(n).padStart(2, "0");
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const fileToBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
     };
 
     const [newDebate, setNewDebate] = useState({
@@ -48,7 +54,8 @@ export default function DebateManagerDashboard() {
         allowUserQuestions: false,
         maxQuestionsPerUser: 3,
         scheduledStartTime: "",
-        candidates: [], requirePassword: false,
+        candidates: [],
+        requirePassword: false,
         accessPassword: "",
     });
 
@@ -72,7 +79,6 @@ export default function DebateManagerDashboard() {
         if (!liveStatus?.isLive) return;
         const interval = setInterval(() => {
             refreshLiveStatus();
-            refreshHeatmap();
         }, 5000);
         return () => clearInterval(interval);
     }, [liveStatus?.isLive]);
@@ -94,13 +100,6 @@ export default function DebateManagerDashboard() {
             .catch(console.error);
     };
 
-    const refreshHeatmap = () => {
-        authFetch(`${API_URL}/debate-manager/live/heatmap?intervalSeconds=10&lastMinutes=5`)
-            .then(res => res.json())
-            .then(setHeatmapData)
-            .catch(console.error);
-    };
-
     const createDebate = () => {
         const validQuestions = newDebate.questions.filter(q => q.trim());
         if (!newDebate.title.trim() || validQuestions.length === 0) return;
@@ -116,7 +115,10 @@ export default function DebateManagerDashboard() {
                 scheduledStartTime: newDebate.scheduledStartTime
                     ? toUtcFromLocal(newDebate.scheduledStartTime)
                     : null,
-                candidates: newDebate.candidates,
+                candidates: newDebate.candidates.map(c => ({
+                    name: c.name,
+                    imageData: c.imageData
+                })),
                 requirePassword: newDebate.requirePassword,
                 accessPassword: newDebate.accessPassword,
             }),
@@ -159,7 +161,10 @@ export default function DebateManagerDashboard() {
                     scheduledStartTime: fullDebate.scheduledStartTime
                         ? toLocalDateTimeInputValue(fullDebate.scheduledStartTime)
                         : "",
-                    candidates: fullDebate.candidates || [],
+                    candidates: (fullDebate.candidates || []).map(c => ({
+                        name: c.name,
+                        imageData: c.imageData || null
+                    })),
                     requirePassword: fullDebate.requirePassword || false,
                     accessPassword: fullDebate.accessPassword || "",
                 });
@@ -190,7 +195,10 @@ export default function DebateManagerDashboard() {
             scheduledStartTime: editDebate.scheduledStartTime
                 ? toUtcFromLocal(editDebate.scheduledStartTime)
                 : null,
-            candidates: editDebate.candidates,
+            candidates: editDebate.candidates.map(c => ({
+                name: c.name,
+                imageData: c.imageData
+            })),
             requirePassword: editDebate.requirePassword,
             accessPassword: editDebate.accessPassword,
         };
@@ -246,7 +254,6 @@ export default function DebateManagerDashboard() {
             .then(res => res.json())
             .then(() => {
                 refreshLiveStatus();
-                refreshHeatmap();
             })
             .catch(err => alert(err.message));
     };
@@ -268,7 +275,6 @@ export default function DebateManagerDashboard() {
             })
             .then(() => {
                 refreshLiveStatus();
-                setHeatmapData(null);
             })
             .catch(err => {
                 alert(`Failed to end debate: ${err.message}`);
@@ -291,11 +297,10 @@ export default function DebateManagerDashboard() {
     const removeEditQuestion = (i) => setEditDebate(prev => ({ ...prev, questions: prev.questions.filter((_, idx) => idx !== i) }));
     const updateEditQuestion = (i, val) => setEditDebate(prev => ({ ...prev, questions: prev.questions.map((q, idx) => idx === i ? val : q) }));
 
-    // Handlers for new debate candidates
     const handleAddCandidate = () => {
         setNewDebate(prev => ({
             ...prev,
-            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+            candidates: [...prev.candidates, { name: "", imageData: null }]
         }));
     };
 
@@ -307,6 +312,28 @@ export default function DebateManagerDashboard() {
         });
     };
 
+    const handleCandidateImageUpload = async (index, file) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const base64 = await fileToBase64(file);
+            handleUpdateCandidate(index, 'imageData', base64);
+        } catch (error) {
+            alert('Failed to process image');
+            console.error(error);
+        }
+    };
+
     const handleRemoveCandidate = (index) => {
         setNewDebate(prev => ({
             ...prev,
@@ -314,11 +341,10 @@ export default function DebateManagerDashboard() {
         }));
     };
 
-    // Handlers for edit debate candidates
     const handleAddEditCandidate = () => {
         setEditDebate(prev => ({
             ...prev,
-            candidates: [...prev.candidates, { name: "", imageUrl: "" }]
+            candidates: [...prev.candidates, { name: "", imageData: null }]
         }));
     };
 
@@ -328,6 +354,28 @@ export default function DebateManagerDashboard() {
             updatedCandidates[index][field] = value;
             return { ...prev, candidates: updatedCandidates };
         });
+    };
+
+    const handleEditCandidateImageUpload = async (index, file) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const base64 = await fileToBase64(file);
+            handleUpdateEditCandidate(index, 'imageData', base64);
+        } catch (error) {
+            alert('Failed to process image');
+            console.error(error);
+        }
     };
 
     const handleRemoveEditCandidate = (index) => {
@@ -348,18 +396,16 @@ export default function DebateManagerDashboard() {
         <div className="dashboard-container">
             <div className="dashboard-header"><h1>Debate Manager Dashboard</h1></div>
 
-            {/* Live Status Section */}
             <div className={`live-status ${liveStatus?.isActive ? "active" : ""}`}>
                 {liveStatus?.isLive ? (
                     <div>
                         <p><strong>Debate:</strong> {liveStatus.debate.title}</p>
                         {liveStatus.isPreviewable ? (
                             <>
-                                <p style={{ color: "orange" }}> Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()} </p>
+                                <p style={{ color: "orange" }}>Scheduled: {new Date(liveStatus.debate.scheduledStartTime).toLocaleString()}</p>
                                 <div className="table-actions" style={{ marginTop: "1rem" }}>
                                     <button onClick={endLive} className="table-button danger">Cancel Scheduled Debate</button>
                                 </div>
-                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         ) : (
                             <>
@@ -370,20 +416,17 @@ export default function DebateManagerDashboard() {
                                     <button onClick={() => navigate("/debate-manager/vote")} className="table-button primary">Voting →</button>
                                     <button onClick={endLive} className="table-button danger">End Live Debate</button>
                                 </div>
-                                <p>ending a debate nulls the schedule automatically.</p>
                             </>
                         )}
                     </div>
                 ) : <p style={{ color: "#9ca3af" }}>No debate is currently live.</p>}
             </div>
 
-            {/* Create Form */}
             <h2>My Debates</h2>
             <button onClick={() => { setIsCreating(!isCreating); if (editingDebateId) cancelEdit(); }} className="table-button primary" style={{ marginBottom: "1rem" }}>
                 {isCreating ? "Cancel" : "+ New Debate"}
             </button>
 
-            {/* Create Form */}
             {isCreating && (
                 <div className="form-box">
                     <h3>Create New Debate</h3>
@@ -400,7 +443,6 @@ export default function DebateManagerDashboard() {
                         onChange={(e) => setNewDebate((prev) => ({ ...prev, description: e.target.value }))}
                         className="auth-input"
                     />
-                    {/* Settings */}
                     <div className="settings">
                         <label>
                             <input
@@ -485,12 +527,20 @@ export default function DebateManagerDashboard() {
                     <button onClick={addQuestion}>+ Add Question</button>
 
                     <h4>Candidates</h4>
-                    <table className="dashboard-table">
+                    <table className="candidates-table">
+                        <colgroup>
+                            <col className="col-number-c" />
+                            <col className="col-name-c" />
+                            <col className="col-image-c" />
+                            <col className="col-preview-c" />
+                            <col className="col-action-c" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Name</th>
-                                <th>Image URL</th>
+                                <th>Image</th>
+                                <th>Preview</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -509,12 +559,20 @@ export default function DebateManagerDashboard() {
                                     </td>
                                     <td>
                                         <input
-                                            type="text"
-                                            value={c.imageUrl}
-                                            onChange={(e) => handleUpdateCandidate(i, "imageUrl", e.target.value)}
-                                            className="auth-input"
-                                            placeholder="Image URL"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleCandidateImageUpload(i, e.target.files[0])}
+                                            style={{ fontSize: "0.9rem" }}
                                         />
+                                    </td>
+                                    <td>
+                                        {c.imageData && (
+                                            <img
+                                                src={c.imageData}
+                                                alt={c.name}
+                                                style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
+                                            />
+                                        )}
                                     </td>
                                     <td>
                                         <button className="danger" onClick={() => handleRemoveCandidate(i)}>
@@ -525,15 +583,13 @@ export default function DebateManagerDashboard() {
                             ))}
                         </tbody>
                     </table>
-                    <button onClick={handleAddCandidate}>+ Add Candidate</button>
-                    <div></div>
-                    <button onClick={createDebate} className="auth-button" style={{ marginTop: "1rem" }}>
+                    <button onClick={handleAddCandidate} style={{ marginBottom: "1rem" }}>+ Add Candidate</button>
+                    <button onClick={createDebate} className="auth-button">
                         Create Debate
                     </button>
                 </div>
             )}
 
-            {/* Edit Form */}
             {editingDebateId && (
                 <div className="form-box">
                     <h3>Edit Debate</h3>
@@ -550,7 +606,6 @@ export default function DebateManagerDashboard() {
                         onChange={(e) => setEditDebate((prev) => ({ ...prev, description: e.target.value }))}
                         className="auth-input"
                     />
-                    {/* Settings */}
                     <div className="settings">
                         <label>
                             <input
@@ -635,12 +690,20 @@ export default function DebateManagerDashboard() {
                     <button onClick={addEditQuestion}>+ Add Question</button>
 
                     <h4>Candidates</h4>
-                    <table className="dashboard-table">
+                    <table className="candidates-table">
+                        <colgroup>
+                            <col className="col-number-c" />
+                            <col className="col-name-c" />
+                            <col className="col-image-c" />
+                            <col className="col-preview-c" />
+                            <col className="col-action-c" />
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Name</th>
-                                <th>Image URL</th>
+                                <th>Image</th>
+                                <th>Preview</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -659,12 +722,20 @@ export default function DebateManagerDashboard() {
                                     </td>
                                     <td>
                                         <input
-                                            type="text"
-                                            value={c.imageUrl}
-                                            onChange={(e) => handleUpdateEditCandidate(i, "imageUrl", e.target.value)}
-                                            className="auth-input"
-                                            placeholder="Image URL"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleEditCandidateImageUpload(i, e.target.files[0])}
+                                            style={{ fontSize: "0.9rem" }}
                                         />
+                                    </td>
+                                    <td>
+                                        {c.imageData && (
+                                            <img
+                                                src={c.imageData}
+                                                alt={c.name}
+                                                style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" }}
+                                            />
+                                        )}
                                     </td>
                                     <td>
                                         <button className="danger" onClick={() => handleRemoveEditCandidate(i)}>
@@ -675,9 +746,8 @@ export default function DebateManagerDashboard() {
                             ))}
                         </tbody>
                     </table>
-                    <button onClick={handleAddEditCandidate}>+ Add Candidate</button>
-                    <div></div>
-                    <button onClick={saveEditDebate} className="auth-button" style={{ marginTop: "1rem" }}>
+                    <button onClick={handleAddEditCandidate} style={{ marginBottom: "1rem" }}>+ Add Candidate</button>
+                    <button onClick={saveEditDebate} className="auth-button">
                         Save Changes
                     </button>
                     <button onClick={cancelEdit} className="auth-button danger" style={{ marginLeft: "1rem" }}>
@@ -686,7 +756,6 @@ export default function DebateManagerDashboard() {
                 </div>
             )}
 
-            {/* Debates Table */}
             <div className="dashboard-table-container">
                 <table className="dashboard-table">
                     <thead>
@@ -727,7 +796,7 @@ export default function DebateManagerDashboard() {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="5" style={{ textAlign: "center", color: "#666" }}>No debates found.</td>
+                                <td colSpan="6" style={{ textAlign: "center", color: "#666" }}>No debates found.</td>
                             </tr>
                         )}
                     </tbody>

@@ -40,9 +40,11 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     border: 2px solid var(--border-color-debatetable);
+    -webkit-overflow-scrolling: touch;
 }
 
 .dashboard-table {
+    min-width: 700px;
     width: 100%;
     background: var(--card-background);
     overflow: hidden;
@@ -62,29 +64,73 @@
 }
 
 .col-question {
-    width: 10%;
+    width: 8rem;
 }
 
 .col-title-dashboard {
-    width: 10%;
+    width: auto;
 }
 
 .col-created {
-    width: 20%;
+    width: 15rem;
 }
 
 .col-schedule {
-    width: 15%;
+    width: 10rem;
+}
+
+.col-password {
+    width: 10rem;
 }
 
 .col-action {
-    width: 35%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: auto;
+}
+
+.col-action button {
+    width: 120px;
+}
+
+.col-idq {
+    width: 1rem;
+}
+
+.col-questionq {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow: visible !important;
+}
+
+.col-statusq {
+    width: 6rem;
+}
+
+.col-actionsq {
+    width: 8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 1080px) {
+
+    .dashboard-table .col-created,
+    .dashboard-table .col-question {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
 
-    .dashboard-table .col-created,
-    .dashboard-table .col-question {
+    .dashboard-table .col-schedule,
+    .dashboard-table .col-password {
+        display: none;
+    }
+
+    .dashboard-table .col-submittedat,
+    .dashboard-table .col-statusq {
         display: none;
     }
 }
@@ -349,8 +395,90 @@
 .col-number-q {
     width: 4%;
 }
+
+.col-question-q {
+    width: 92%;
+}
+
 .col-action-q {
     width: 4%;
+}
+
+/* ============================ */
+/* === Candidates Table     === */
+/* ============================ */
+
+.candidates-table {
+    width: 100%;
+    background: var(--card-background);
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.candidates-table th,
+.candidates-table td {
+    padding: var(--spacing-sm);
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color-debatetable);
+}
+
+.candidates-table th {
+    background: var(--table-header-background);
+    color: var(--accent-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.candidates-table td {
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.candidates-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Column widths for candidates table */
+.candidates-table .col-number-c {
+    width: 20px;
+    text-align: center;
+}
+
+.candidates-table .col-name-c {
+    width: 25%;
+}
+
+.candidates-table .col-image-c {
+    width: 30%;
+}
+
+.candidates-table .col-preview-c {
+    width: 100px;
+    text-align: center;
+}
+
+.candidates-table .col-action-c {
+    width: 120px;
+    text-align: center;
+}
+
+.candidates-table .col-number-c,
+.candidates-table th:nth-child(1) {
+    text-align: center;
+}
+
+.candidates-table .col-preview-c,
+.candidates-table th:nth-child(4) {
+    text-align: center;
+}
+
+.candidates-table .col-action-c,
+.candidates-table th:nth-child(5) {
+    text-align: center;
 }
 
 /* floating notification */

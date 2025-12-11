@@ -7,6 +7,8 @@
     --tertiary-blue: #1d4ed8;
     --danger-red: #dc2626;
     --danger-red-hover: #b91c1c;
+    --bell-bg: #C9A227;
+    --bell-bg-hover: #A9741A;
     --warning-red: #ef4444;
     --neutral-gray: #6b7280;
     --neutral-gray-hover: #4b5563;
@@ -64,15 +66,15 @@
     font-size: 2rem;
     color: var(--text-white);
     margin: 0;
-    font-weight: 700;
-    font-family: "Poppins", sans-serif;
+    font-weight: 300;
+    font-family: var(--font-body);
 }
 
 .live-debate-subtitle {
     font-size: 1rem;
     color: var(--text-dark);
     font-weight: 400;
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-code);
     text-align: right;
     white-space: nowrap;
 }
@@ -451,7 +453,7 @@
 }
 
 .live-debate-question {
-    font-size: 1.6rem;
+    font-size: 2rem;
     font-weight: 500;
     color: var(--text-white);
     line-height: 1.4;
@@ -511,10 +513,10 @@
     align-items: center;
     gap: 1.5rem;
     width: 100%;
+    font-family: var(--font-code);
 }
 
 .timer-display {
-    font-family: 'Poppins', sans-serif;
     font-size: 3.5rem;
     font-weight: 700;
     color: var(--primary-blue);
@@ -615,6 +617,7 @@
     border-radius: 4px;
     cursor: pointer;
     color: var(--text-white);
+    font-family: var(--font-code);
     transition: all 0.2s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     white-space: nowrap;
@@ -654,6 +657,15 @@
     transform: none;
 }
 
+.control-button.bell {
+    background-color: var(--bell-bg);
+}
+
+.control-button.bell:hover {
+    background-color: var(--bell-bg-hover);
+}
+
+
 .live-debate-controls {
     background: var(--card-background);
     border-radius: 12px;
@@ -684,6 +696,7 @@
     border-radius: 4px;
     cursor: pointer;
     color: var(--text-dark);
+    font-family: var(--font-code);
     background: transparent;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -989,7 +1002,7 @@
     }
 
     .live-debate-question {
-        font-size: 1.2rem;
+        font-size: 1.8rem;
     }
 
     .controls-grid-container {
@@ -1066,7 +1079,7 @@
     }
 
     .live-debate-question {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
     }
 
     .timer-section-container {

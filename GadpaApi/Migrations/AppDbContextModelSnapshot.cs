@@ -81,8 +81,7 @@ namespace GadpaApi.Migrations
                     b.Property<int>("DebateId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
+                    b.Property<string>("ImageData")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")

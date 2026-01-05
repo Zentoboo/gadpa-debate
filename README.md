@@ -99,7 +99,7 @@ The platform uses JWT tokens for authentication:
 **Roles:**
 - `Admin` - Full platform access
 - `DebateManager` - Debate creation and management
-- `User` - Audience participation and viewing
+- `User` - Audience participation and viewing (does not require login)
 
 ## Key Features Implementation
 
@@ -144,7 +144,7 @@ cd LoadTests
 dotnet run
 ```
 
-## 📝 API Documentation
+## API Documentation
 
 Full API documentation available at `/swagger` when running the backend.
 
